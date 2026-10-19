@@ -33,6 +33,16 @@ sem internet o site cai para fontes monoespaçadas do sistema.
 hash (`#/jogos/<id>`), então funciona em qualquer hospedagem estática (GitHub Pages, Netlify,
 Vercel, S3, uma pasta qualquer) sem configurar redirecionamentos.
 
+O repositório segue o GitHub Flow: a `main` é protegida e só recebe pull request com o check
+`build` (workflow `CI`: `npm ci` + `npm run build`) passando. A publicação no GitHub Pages
+(<https://earthw0rm.github.io/sampa-challenges/>) é feita pelo workflow
+`Publicar no GitHub Pages`, disparado por uma tag `vX.Y.Z` num commit da `main`:
+
+```bash
+git switch main && git pull
+git tag v1.0.0 && git push origin v1.0.0
+```
+
 ## Como está organizado
 
 ```
