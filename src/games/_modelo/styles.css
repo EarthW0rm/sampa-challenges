@@ -1,0 +1,45 @@
+/* Prefixe tudo com .__ID__ para o estilo não vazar para o hub nem para outros jogos. */
+.__ID__ {
+  --bg: #16121f;
+  --text: #f4efe2;
+  --muted: #c9c0d8;
+  --accent: #ffd36b;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+.__ID__ .screen {
+  max-width: 992px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.__ID__ h1 { margin: 0; font-family: 'Press Start 2P', monospace; font-size: 24px; color: var(--accent); }
+.__ID__ p { margin: 0; color: var(--muted); }
+
+.__ID__ canvas {
+  width: 100%;
+  max-width: 960px;
+  height: auto;
+  aspect-ratio: 320 / 200;
+  image-rendering: pixelated;
+  border: 4px solid #2e2540;
+}
+
+.__ID__ button {
+  font: inherit;
+  color: inherit;
+  min-height: 44px;
+  padding: 0 16px;
+  background: #2e2540;
+  border: 2px solid #3a3150;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.__ID__ button:hover { border-color: var(--accent); }

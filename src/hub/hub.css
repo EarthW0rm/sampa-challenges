@@ -1,0 +1,139 @@
+/* Estilos globais do hub. Cada jogo tem os seus, escopados na própria classe raiz. */
+:root {
+  --hub-bg: #16121f;
+  --hub-panel: #221b30;
+  --hub-panel-2: #2e2540;
+  --hub-line: #3a3150;
+  --hub-text: #f4efe2;
+  --hub-muted: #c9c0d8;
+  --hub-accent: #f5b860;
+  --hub-accent-2: #ffd36b;
+  --hub-ink: #1b1220;
+  --hub-pixel: 'Press Start 2P', ui-monospace, monospace;
+  --hub-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--hub-bg);
+  color: var(--hub-text);
+  font-family: var(--hub-mono);
+}
+
+a { color: var(--hub-accent); }
+a:hover { color: var(--hub-accent-2); }
+a:focus-visible { outline: 2px solid var(--hub-accent-2); outline-offset: 2px; }
+
+/* ------------------------------------------------------------ home */
+
+.hub-home {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 48px 16px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.hub-hero { display: flex; flex-direction: column; gap: 14px; text-align: center; align-items: center; }
+.hub-kicker { margin: 0; color: var(--hub-muted); font-size: 14px; }
+.hub-hero h1 {
+  margin: 0;
+  font-family: var(--hub-pixel);
+  font-size: clamp(24px, 6vw, 52px);
+  line-height: 1.2;
+  color: var(--hub-accent);
+  text-shadow: 4px 4px 0 var(--hub-ink);
+}
+.hub-lead { margin: 0; font-size: 16px; color: var(--hub-text); }
+
+.hub-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 24px;
+}
+
+.hub-card { --card-accent: var(--hub-accent); }
+.hub-card-link {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: inherit;
+  text-decoration: none;
+  background: var(--hub-panel);
+  border: 3px solid var(--hub-line);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+.hub-card-link:hover, .hub-card-link:focus-visible {
+  color: inherit;
+  border-color: var(--card-accent);
+  transform: translateY(-3px);
+}
+.hub-cover { aspect-ratio: 320 / 200; background: var(--hub-ink); }
+.hub-cover img { display: block; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+
+.hub-card-body { flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 18px; }
+.hub-card-body h2 { margin: 0; font-family: var(--hub-pixel); font-size: 16px; line-height: 1.4; color: var(--card-accent); }
+.hub-card-body p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--hub-muted); }
+.hub-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.hub-tag {
+  font-size: 12px;
+  padding: 3px 8px;
+  border: 1px solid var(--hub-line);
+  border-radius: 999px;
+  color: var(--hub-text);
+}
+.hub-card-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.hub-play { font-family: var(--hub-pixel); font-size: 12px; color: var(--hub-text); }
+.hub-card-link:hover .hub-play { color: var(--card-accent); }
+.hub-record { font-size: 13px; color: var(--hub-accent-2); }
+
+.hub-empty, .hub-footer { margin: 0; text-align: center; color: var(--hub-muted); font-size: 13px; }
+.hub-footer code { color: var(--hub-text); background: var(--hub-panel); padding: 2px 6px; border-radius: 3px; }
+
+/* ------------------------------------------------------------ jogo */
+
+.hub-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 44px;
+  padding: 0 16px;
+  background: var(--hub-ink);
+  border-bottom: 2px solid var(--hub-line);
+}
+.hub-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-family: var(--hub-pixel);
+  font-size: 10px;
+  text-decoration: none;
+}
+.hub-bar-title { color: var(--hub-muted); font-size: 13px; }
+
+.hub-message {
+  min-height: 50vh;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px;
+  font-family: var(--hub-pixel);
+  font-size: 12px;
+  line-height: 1.6;
+}

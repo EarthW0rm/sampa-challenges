@@ -1,0 +1,6 @@
+node_modules
+dist
+.DS_Store
+*.log
+_to_delete/
+__pycache__/

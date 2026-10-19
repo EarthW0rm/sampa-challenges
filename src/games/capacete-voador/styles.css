@@ -1,0 +1,279 @@
+/* Estilos escopados em .capacete-voador: não vazam para o hub nem para outros jogos. */
+.capacete-voador {
+  --bg: #16121f;
+  --panel: #221b30;
+  --panel-2: #2e2540;
+  --line: #3a3150;
+  --text: #f4efe2;
+  --muted: #c9c0d8;
+  --accent: #f5b860;
+  --accent-2: #ffd36b;
+  --danger: #ff7a6b;
+  --ink: #1b1220;
+  --pixel: 'Press Start 2P', ui-monospace, monospace;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+.capacete-voador, .capacete-voador * { box-sizing: border-box; }
+
+.capacete-voador {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+}
+
+.capacete-voador button, .capacete-voador input, .capacete-voador select { font: inherit; color: inherit; }
+
+.capacete-voador button {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 2px solid var(--line);
+  background: var(--panel-2);
+  border-radius: 4px;
+}
+.capacete-voador button:hover { border-color: var(--accent); }
+.capacete-voador button:focus-visible, .capacete-voador input:focus-visible, .capacete-voador select:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+
+.capacete-voador .loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  font-family: var(--pixel);
+  font-size: 14px;
+}
+
+/* ------------------------------------------------------------ menu */
+
+.capacete-voador .menu {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.capacete-voador .menu-header { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.capacete-voador .menu-header h1 { margin: 0; font-family: var(--pixel); font-size: clamp(24px, 6vw, 44px); color: var(--accent); }
+.capacete-voador .menu-header p { margin: 0; color: var(--muted); }
+.capacete-voador .logo-row { display: flex; align-items: flex-end; gap: 24px; }
+.capacete-voador .logo-row img { width: 96px; height: 96px; image-rendering: pixelated; }
+.capacete-voador .logo-row .logo-flip { transform: scaleX(-1); }
+.capacete-voador .menu-header .rules { font-size: 14px; max-width: 560px; color: var(--text); }
+.capacete-voador .logo-row .logo-banana { width: 32px; height: 32px; margin-bottom: 64px; }
+
+.capacete-voador .menu-form { display: flex; flex-direction: column; gap: 24px; }
+
+.capacete-voador fieldset {
+  margin: 0;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.capacete-voador legend { font-family: var(--pixel); font-size: 11px; padding: 0 8px; color: var(--accent-2); }
+
+.capacete-voador .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.capacete-voador .card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 2px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  cursor: pointer;
+}
+.capacete-voador .card input { position: absolute; opacity: 0; pointer-events: none; }
+.capacete-voador .card:has(input:focus-visible) { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+.capacete-voador .card.selected { border-color: var(--accent); background: var(--panel-2); }
+.capacete-voador .card-title { font-weight: 600; }
+.capacete-voador .card-desc { font-size: 13px; color: var(--muted); }
+
+.capacete-voador .row { display: flex; flex-wrap: wrap; gap: 16px; }
+.capacete-voador .field { display: flex; flex-direction: column; gap: 6px; flex: 1 1 180px; }
+.capacete-voador .field span { font-size: 13px; color: var(--muted); }
+.capacete-voador .field input, .capacete-voador .field select {
+  min-height: 44px;
+  padding: 0 12px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 4px;
+}
+.capacete-voador .field input:disabled { opacity: 0.7; }
+
+.capacete-voador .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.capacete-voador .chip { min-height: 36px; font-size: 13px; padding: 0 12px; }
+.capacete-voador .chip.selected { border-color: var(--accent); }
+
+.capacete-voador .check { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.capacete-voador .check input { width: 20px; height: 20px; accent-color: var(--accent); }
+
+.capacete-voador .start {
+  align-self: center;
+  min-width: 220px;
+  min-height: 56px;
+  font-family: var(--pixel);
+  font-size: 16px;
+  background: var(--accent);
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.capacete-voador .start:hover { background: var(--accent-2); }
+
+/* ------------------------------------------------------------ jogo */
+
+.capacete-voador .game {
+  max-width: 992px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.capacete-voador .game-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.capacete-voador .bar-actions { display: flex; gap: 8px; }
+.capacete-voador .mode-label { color: var(--muted); font-size: 14px; text-align: center; flex: 1; }
+
+.capacete-voador .stage { position: relative; border: 4px solid var(--panel-2); }
+.capacete-voador .stage canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 640 / 400;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.capacete-voador .player-panel {
+  position: absolute;
+  top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: var(--pixel);
+  font-size: 11px;
+  line-height: 1.6;
+  text-shadow: 2px 2px 0 var(--ink);
+  max-width: 44%;
+}
+.capacete-voador .player-panel.left { left: 10px; }
+.capacete-voador .player-panel.right { right: 10px; align-items: flex-end; text-align: right; }
+.capacete-voador .player-panel h2 { margin: 0; font-size: 12px; font-weight: 400; }
+.capacete-voador .player-panel.active h2 { color: var(--accent-2); }
+.capacete-voador .moto-hp { display: flex; align-items: center; gap: 4px; font-size: 9px; color: var(--muted); }
+.capacete-voador .player-panel.right .moto-hp { justify-content: flex-end; }
+.capacete-voador .pip { width: 10px; height: 8px; background: #4a4552; border: 1px solid var(--ink); }
+.capacete-voador .pip.on { background: #5fd17a; }
+.capacete-voador .last-shot { color: var(--muted); font-size: 9px; }
+.capacete-voador .computer-shot { color: var(--accent-2); }
+.capacete-voador .thinking { animation: capacete-blink 0.8s steps(2) infinite; }
+@keyframes capacete-blink { 50% { opacity: 0.3; } }
+
+.capacete-voador .aim-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(22, 18, 31, 0.86);
+  border: 2px solid var(--line);
+  border-radius: 4px;
+  text-shadow: none;
+}
+.capacete-voador .aim-form label { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.capacete-voador .aim-form input {
+  width: 72px;
+  min-height: 36px;
+  padding: 0 8px;
+  font-family: var(--pixel);
+  font-size: 11px;
+  background: var(--ink);
+  border: 2px solid var(--line);
+  border-radius: 3px;
+  text-align: right;
+}
+.capacete-voador .aim-form button {
+  font-family: var(--pixel);
+  font-size: 11px;
+  min-height: 40px;
+  background: var(--accent);
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.capacete-voador .aim-error { margin: 0; color: var(--danger); font-size: 9px; }
+
+.capacete-voador .scoreboard {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  font-family: var(--pixel);
+  font-size: 11px;
+  white-space: nowrap;
+  padding: 6px 10px;
+  background: rgba(22, 18, 31, 0.7);
+  border-radius: 3px;
+}
+.capacete-voador .scoreboard .wind { color: var(--accent-2); }
+
+.capacete-voador .banner {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  font-family: var(--pixel);
+  font-size: clamp(12px, 2.2vw, 20px);
+  text-shadow: 3px 3px 0 var(--ink);
+  color: var(--text);
+  text-align: center;
+  pointer-events: none;
+}
+
+.capacete-voador .overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(22, 18, 31, 0.6);
+}
+.capacete-voador .overlay-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 28px 32px;
+  background: var(--panel);
+  border: 4px solid var(--accent);
+  border-radius: 4px;
+  text-align: center;
+}
+.capacete-voador .overlay-box h2 { margin: 0; font-family: var(--pixel); font-size: 18px; color: var(--accent-2); }
+.capacete-voador .overlay-box p { margin: 0; font-family: var(--pixel); font-size: 14px; }
+.capacete-voador .overlay-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+.capacete-voador .hint { margin: 0; color: var(--muted); font-size: 13px; text-align: center; }
+
+/* Telas estreitas: painéis saem de cima do canvas */
+@media (max-width: 720px) {
+  .capacete-voador .stage { display: flex; flex-direction: column; }
+  .capacete-voador .player-panel, .capacete-voador .scoreboard {
+    position: static;
+    transform: none;
+    max-width: none;
+    padding: 10px;
+    background: var(--panel);
+  }
+  .capacete-voador .player-panel.right { align-items: flex-start; text-align: left; }
+  .capacete-voador .scoreboard { order: -1; justify-content: space-between; border-radius: 0; }
+}
