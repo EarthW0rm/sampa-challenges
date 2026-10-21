@@ -1,0 +1,269 @@
+/* Estilos escopados em .xadrez-paulistano: não vazam para o hub nem para outros jogos. */
+.xadrez-paulistano {
+  --bg: #16121f;
+  --panel: #221b30;
+  --panel-2: #2e2540;
+  --line: #3a3150;
+  --text: #f4efe2;
+  --muted: #c9c0d8;
+  --accent: #ffd36b;
+  --accent-2: #e4d9c0;
+  --green: #5fd17a;
+  --red: #ff4d5e;
+  --ink: #1b1220;
+  --pixel: 'Press Start 2P', ui-monospace, monospace;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+.xadrez-paulistano, .xadrez-paulistano * { box-sizing: border-box; }
+
+.xadrez-paulistano {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+}
+
+.xadrez-paulistano img { image-rendering: pixelated; }
+
+.xadrez-paulistano button, .xadrez-paulistano input, .xadrez-paulistano select { font: inherit; color: inherit; }
+
+.xadrez-paulistano button {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 2px solid var(--line);
+  background: var(--panel-2);
+  border-radius: 4px;
+}
+.xadrez-paulistano button:hover:not(:disabled) { border-color: var(--accent); }
+.xadrez-paulistano button:disabled { opacity: 0.45; cursor: default; }
+.xadrez-paulistano button:focus-visible, .xadrez-paulistano input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.xadrez-paulistano button.primary { background: var(--accent); border-color: var(--accent); color: var(--ink); }
+.xadrez-paulistano button.danger { border-color: var(--red); color: var(--red); }
+
+.xadrez-paulistano .loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  font-family: var(--pixel);
+  font-size: 14px;
+}
+
+/* ------------------------------------------------------------ menu */
+
+.xadrez-paulistano .menu {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.xadrez-paulistano .menu-header { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.xadrez-paulistano .menu-header h1 { margin: 0; font-family: var(--pixel); font-size: clamp(20px, 5.5vw, 40px); color: var(--accent); }
+.xadrez-paulistano .menu-header p { margin: 0; color: var(--muted); }
+.xadrez-paulistano .logo-row { display: flex; align-items: flex-end; gap: 12px; }
+.xadrez-paulistano .logo-row img { width: 80px; height: 80px; }
+
+.xadrez-paulistano .menu-form { display: flex; flex-direction: column; gap: 24px; }
+
+.xadrez-paulistano fieldset {
+  margin: 0;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.xadrez-paulistano legend { font-family: var(--pixel); font-size: 11px; padding: 0 8px; color: var(--accent); }
+
+.xadrez-paulistano .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.xadrez-paulistano .cards-3 { grid-template-columns: repeat(3, 1fr); }
+.xadrez-paulistano .card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 2px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  cursor: pointer;
+}
+.xadrez-paulistano .card input { position: absolute; opacity: 0; pointer-events: none; }
+.xadrez-paulistano .card:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.xadrez-paulistano .card.selected { border-color: var(--accent); background: var(--panel-2); }
+.xadrez-paulistano .card-title { font-weight: 600; }
+.xadrez-paulistano .card-desc { font-size: 13px; color: var(--muted); }
+.xadrez-paulistano .card-piece { align-items: center; text-align: center; padding: 10px 6px; }
+.xadrez-paulistano .card-piece img { width: 60px; height: 60px; }
+.xadrez-paulistano .piece-pair { display: flex; }
+.xadrez-paulistano .piece-pair img { width: 40px; height: 60px; object-fit: cover; object-position: center; }
+
+/* barra de nível 1–100 */
+.xadrez-paulistano .level { display: flex; flex-direction: column; gap: 10px; }
+.xadrez-paulistano .level-head { display: flex; align-items: baseline; gap: 14px; }
+.xadrez-paulistano .level-num { font-family: var(--pixel); font-size: 28px; color: var(--accent); min-width: 3ch; }
+.xadrez-paulistano .level-name { font-family: var(--pixel); font-size: 12px; color: var(--accent-2); }
+.xadrez-paulistano .level-row { display: flex; align-items: center; gap: 10px; }
+.xadrez-paulistano .level-step { min-width: 44px; padding: 0; font-family: var(--pixel); font-size: 14px; }
+.xadrez-paulistano .level-scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); padding: 0 54px; }
+.xadrez-paulistano .level-hint { margin: 0; font-size: 13px; color: var(--muted); min-height: 2.6em; }
+
+.xadrez-paulistano input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.xadrez-paulistano input[type='range']::-webkit-slider-runnable-track {
+  height: 14px;
+  border: 2px solid var(--line);
+  background: linear-gradient(to right, transparent var(--fill), var(--panel) var(--fill)), linear-gradient(to right, var(--green), var(--accent), var(--red));
+}
+.xadrez-paulistano input[type='range']::-moz-range-track {
+  height: 10px;
+  border: 2px solid var(--line);
+  background: linear-gradient(to right, transparent var(--fill), var(--panel) var(--fill)), linear-gradient(to right, var(--green), var(--accent), var(--red));
+}
+.xadrez-paulistano input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 30px;
+  margin-top: -10px;
+  border: 3px solid var(--ink);
+  background: var(--text);
+  box-shadow: inset -3px -3px 0 #c9b994;
+}
+.xadrez-paulistano input[type='range']::-moz-range-thumb {
+  width: 16px;
+  height: 24px;
+  border: 3px solid var(--ink);
+  border-radius: 0;
+  background: var(--text);
+  box-shadow: inset -3px -3px 0 #c9b994;
+}
+
+.xadrez-paulistano .row { display: flex; flex-wrap: wrap; gap: 16px; }
+.xadrez-paulistano .field { display: flex; flex-direction: column; gap: 6px; flex: 1 1 180px; }
+.xadrez-paulistano .field span { font-size: 13px; color: var(--muted); }
+.xadrez-paulistano .field input {
+  min-height: 44px;
+  padding: 0 12px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 4px;
+}
+
+.xadrez-paulistano .check { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.xadrez-paulistano .check input { width: 20px; height: 20px; accent-color: var(--accent); }
+
+.xadrez-paulistano .start {
+  align-self: center;
+  min-width: 220px;
+  min-height: 56px;
+  font-family: var(--pixel);
+  font-size: 16px;
+  background: var(--accent);
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.xadrez-paulistano .start:hover { background: #ffe08f; }
+
+/* ------------------------------------------------------------ jogo */
+
+.xadrez-paulistano .game {
+  max-width: 992px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.xadrez-paulistano .game-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.xadrez-paulistano .bar-actions { display: flex; gap: 8px; }
+.xadrez-paulistano .mode-label { color: var(--muted); font-size: 14px; text-align: center; flex: 1; }
+
+.xadrez-paulistano .stage { position: relative; border: 4px solid var(--panel-2); }
+.xadrez-paulistano .stage canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 640 / 400;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.xadrez-paulistano .overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  background: rgba(22, 18, 31, 0.6);
+}
+.xadrez-paulistano .overlay-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px;
+  max-width: 100%;
+  background: var(--panel);
+  border: 4px solid var(--accent);
+  border-radius: 4px;
+  text-align: center;
+}
+.xadrez-paulistano .overlay-box h2 { margin: 0; font-family: var(--pixel); font-size: clamp(12px, 2.4vw, 18px); color: var(--accent); }
+.xadrez-paulistano .overlay-box p { margin: 0; max-width: 420px; color: var(--muted); }
+.xadrez-paulistano .overlay-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+.xadrez-paulistano .promo-options { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.xadrez-paulistano .promo { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 8px; min-width: 72px; }
+.xadrez-paulistano .promo img { width: 48px; height: 48px; }
+.xadrez-paulistano .promo span { font-size: 13px; }
+.xadrez-paulistano .link { background: none; border-color: transparent; color: var(--muted); text-decoration: underline; }
+
+.xadrez-paulistano .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+.xadrez-paulistano .moves { border: 2px solid var(--line); border-radius: 6px; padding: 12px 14px; }
+.xadrez-paulistano .moves h2 { margin: 0 0 8px; font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--accent); }
+.xadrez-paulistano .moves-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  max-height: 120px;
+  overflow-y: auto;
+  font-size: 14px;
+}
+.xadrez-paulistano .moves-list li { white-space: nowrap; }
+.xadrez-paulistano .move-n { color: var(--muted); }
+.xadrez-paulistano .moves-empty { margin: 0; color: var(--muted); font-size: 14px; }
+
+.xadrez-paulistano .hint { margin: 0; color: var(--muted); font-size: 13px; text-align: center; }
+
+@media (max-width: 720px) {
+  .xadrez-paulistano .game { padding: 8px; }
+  .xadrez-paulistano .stage { border-width: 2px; }
+  .xadrez-paulistano .mode-label { order: 3; flex-basis: 100%; }
+  .xadrez-paulistano .cards-3 { gap: 8px; }
+  .xadrez-paulistano .card-piece img { width: 44px; height: 44px; }
+  .xadrez-paulistano .piece-pair img { width: 30px; height: 44px; }
+  .xadrez-paulistano .level-scale { padding: 0; }
+}
