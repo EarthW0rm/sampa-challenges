@@ -10,6 +10,8 @@ descobre os jogos sozinho; para adicionar um, basta criar a pasta.
 | **Cachorro Loko** | `src/games/cachorro-loko` | Arcade de esteiras: o vira-lata motoboy pega os pedidos do LOKO DOG antes que caiam na rua. Poderes, bombas e recorde. |
 | **Corredor SP** | `src/games/corredor-sp` | Enduro pseudo-3D na 23 de Maio, Radial Leste e Nações Unidas: costure o trânsito pelo corredor, dê grau, arremesse capacetes e pegue pacotes. |
 | **Pinball Paulista** | `src/games/pinball-paulista` | Mesa de pinball vertical na Avenida Paulista: bumpers-semáforo, Minhocão que prende a bola, letras MOTOBOY, multiball, tilt e recorde. |
+| **Xadrez Paulistano** | `src/games/xadrez-paulistano` | Xadrez num tabuleiro de calçada paulistana em frente à Catedral da Sé. 2 jogadores ou contra o computador do nível 1 ao 100 (IA em Web Worker). |
+| **Sinuca de Bar** | `src/games/sinuca-de-bar` | Sinuca de boteco com a regra da casa: lisas × listradas (mata a 8) ou ímpares × pares (mata a 15). 2 jogadores ou contra o computador (3 níveis). |
 
 Cada jogo tem um `README.md` (como jogar, regras, parâmetros) e um `CLAUDE.md` (guia técnico para
 quem for mexer no código, pessoa ou IA).
@@ -68,6 +70,10 @@ src/
     capacete-voador/       um jogo (veja o README.md dele)
     cachorro-loko/         outro jogo
     corredor-sp/           o enduro (pseudo-3D)
+    pinball-paulista/      pinball vertical
+    xadrez-paulistano/     xadrez (IA em Web Worker)
+    sinuca-de-bar/         sinuca de boteco (física própria e IA em Web Worker)
+  shared/sprites/          biblioteca única de sprites em HD 2× (cachorros, itens, efeitos)
     _modelo/               modelo usado por `npm run novo-jogo` (fica fora do hub)
 scripts/novo-jogo.mjs      cria um jogo a partir do _modelo
 tools/pixelart/            scripts Python que desenharam os sprites (veja abaixo)
@@ -110,7 +116,9 @@ Para tirar um jogo do hub, apague a pasta ou renomeie para começar com `_`.
   caixas, itens, efeitos) já são desenhados em alta definição (2× nativo); os demais (cenário,
   trânsito, prédios) são 1× e ganham o dobro de detalhe com o Scale2x ao carregar (`game/hires.ts`
   de cada jogo). O Cachorro Loko mantém a lógica em 320×200 e desenha com `ctx.setTransform(2, …)`;
-  Capacete Voador e Corredor SP trabalham em 640×400; o Pinball Paulista é vertical (lógica em 240×400, canvas 480×800).
+  Capacete Voador e Corredor SP trabalham em 640×400; o Pinball Paulista é vertical (lógica em 240×400, canvas 480×800);
+  Xadrez Paulistano e Sinuca de Bar têm lógica em 320×200. As bolas da Sinuca são PNGs próprios do
+  jogo já em 2× nativo (16×16 para 8 px lógicos, senão o número não fica legível) e não passam pelo Scale2x.
   O canvas é ampliado pelo CSS com
   `image-rendering: pixelated` e `ctx.imageSmoothingEnabled = false`. Coordenadas e tamanhos de
   sprites são sempre em pixels lógicos (PNG da biblioteca ÷ 2; demais PNGs em 1×).
@@ -133,6 +141,8 @@ Os PNGs foram desenhados por código (Python + Pillow), pixel a pixel:
 | `motoboys.py` | versão antiga em 1× dos cachorros do Capacete Voador (substituída pela biblioteca) |
 | `cachorro_loko.py` | esteiras, restaurante, chapeiro e fundo do Cachorro Loko (os cachorros, caixas e efeitos antigos em 1× foram substituídos pela biblioteca) |
 | `pinball_paulista.py` | fundo da mesa (240×400), bumpers-semáforo e capa do Pinball Paulista |
+| `xadrez_paulistano.py` | tabuleiro de calçada paulistana com a Catedral da Sé, peças, peças mini e capa do Xadrez Paulistano |
+| `sinuca_de_bar.py` | mesa no boteco (1×), bolas 0–15, sombra e anel de mira (2× nativo) e capa da Sinuca de Bar |
 | `corredor_sp.py` | trânsito, cenário das avenidas e horizontes do Corredor SP (motos e itens antigos em 1× foram substituídos pela biblioteca) |
 
 ```bash
@@ -150,6 +160,8 @@ Ainda não há testes automatizados. Antes de entregar uma mudança:
 
 1. `npm run typecheck` sem erros;
 2. `npm run build` sem erros;
-3. abrir o hub, entrar em cada jogo alterado, jogar uma partida curta, voltar para o hub e conferir
+3. nos jogos com regras ou IA puras (`xadrez-paulistano`, `sinuca-de-bar`), rodar as verificações
+   headless descritas no `CLAUDE.md` do jogo (esbuild + node);
+4. abrir o hub, entrar em cada jogo alterado, jogar uma partida curta, voltar para o hub e conferir
    que o visual do hub e dos outros jogos não mudou;
-4. testar em largura de celular (≈390 px).
+5. testar em largura de celular (≈390 px).

@@ -1,0 +1,265 @@
+/* Estilos escopados em .sinuca-de-bar: não vazam para o hub nem para outros jogos. */
+.sinuca-de-bar {
+  --bg: #16121f;
+  --panel: #221b30;
+  --panel-2: #2e2540;
+  --line: #3a3150;
+  --text: #f4efe2;
+  --muted: #c9c0d8;
+  --accent: #ffd36b;
+  --accent-2: #ff8ad8;
+  --felt: #2e8a4a;
+  --green: #5fd17a;
+  --red: #ff4d5e;
+  --ink: #1b1220;
+  --pixel: 'Press Start 2P', ui-monospace, monospace;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+.sinuca-de-bar, .sinuca-de-bar * { box-sizing: border-box; }
+
+.sinuca-de-bar {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+}
+
+.sinuca-de-bar img { image-rendering: pixelated; }
+
+.sinuca-de-bar button, .sinuca-de-bar input, .sinuca-de-bar select { font: inherit; color: inherit; }
+
+.sinuca-de-bar button {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 2px solid var(--line);
+  background: var(--panel-2);
+  border-radius: 4px;
+}
+.sinuca-de-bar button:hover:not(:disabled) { border-color: var(--accent); }
+.sinuca-de-bar button:disabled { opacity: 0.45; cursor: default; }
+.sinuca-de-bar button:focus-visible, .sinuca-de-bar input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sinuca-de-bar button.primary { background: var(--accent); border-color: var(--accent); color: var(--ink); }
+.sinuca-de-bar button.danger { border-color: var(--red); color: var(--red); }
+
+.sinuca-de-bar .loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  font-family: var(--pixel);
+  font-size: 14px;
+}
+
+/* ------------------------------------------------------------ menu */
+
+.sinuca-de-bar .menu {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.sinuca-de-bar .menu-header { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.sinuca-de-bar .menu-header h1 { margin: 0; font-family: var(--pixel); font-size: clamp(20px, 5.5vw, 40px); color: var(--accent); }
+.sinuca-de-bar .menu-header p { margin: 0; color: var(--muted); }
+.sinuca-de-bar .logo-row { display: flex; align-items: flex-end; gap: 12px; }
+.sinuca-de-bar .logo-row img { width: 80px; height: 80px; }
+
+.sinuca-de-bar .menu-form { display: flex; flex-direction: column; gap: 24px; }
+
+.sinuca-de-bar fieldset {
+  margin: 0;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.sinuca-de-bar legend { font-family: var(--pixel); font-size: 11px; padding: 0 8px; color: var(--accent); }
+
+.sinuca-de-bar .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.sinuca-de-bar .cards-3 { grid-template-columns: repeat(3, 1fr); }
+.sinuca-de-bar .card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 2px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  cursor: pointer;
+}
+.sinuca-de-bar .card input { position: absolute; opacity: 0; pointer-events: none; }
+.sinuca-de-bar .card:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sinuca-de-bar .card.selected { border-color: var(--accent); background: var(--panel-2); }
+.sinuca-de-bar .card-title { font-weight: 600; }
+.sinuca-de-bar .card-desc { font-size: 13px; color: var(--muted); }
+
+/* barra de força */
+
+.sinuca-de-bar input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.sinuca-de-bar input[type='range']::-webkit-slider-runnable-track {
+  height: 14px;
+  border: 2px solid var(--line);
+  background: linear-gradient(to right, transparent var(--fill), var(--panel) var(--fill)), linear-gradient(to right, var(--green), var(--accent), var(--red));
+}
+.sinuca-de-bar input[type='range']::-moz-range-track {
+  height: 10px;
+  border: 2px solid var(--line);
+  background: linear-gradient(to right, transparent var(--fill), var(--panel) var(--fill)), linear-gradient(to right, var(--green), var(--accent), var(--red));
+}
+.sinuca-de-bar input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 30px;
+  margin-top: -10px;
+  border: 3px solid var(--ink);
+  background: var(--text);
+  box-shadow: inset -3px -3px 0 #c9b994;
+}
+.sinuca-de-bar input[type='range']::-moz-range-thumb {
+  width: 16px;
+  height: 24px;
+  border: 3px solid var(--ink);
+  border-radius: 0;
+  background: var(--text);
+  box-shadow: inset -3px -3px 0 #c9b994;
+}
+
+.sinuca-de-bar .row { display: flex; flex-wrap: wrap; gap: 16px; }
+.sinuca-de-bar .field { display: flex; flex-direction: column; gap: 6px; flex: 1 1 180px; }
+.sinuca-de-bar .field span { font-size: 13px; color: var(--muted); }
+.sinuca-de-bar .field input {
+  min-height: 44px;
+  padding: 0 12px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 4px;
+}
+
+
+.sinuca-de-bar .start {
+  align-self: center;
+  min-width: 220px;
+  min-height: 56px;
+  font-family: var(--pixel);
+  font-size: 16px;
+  background: var(--accent);
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.sinuca-de-bar .start:hover { background: #ffe08f; }
+
+/* ------------------------------------------------------------ jogo */
+
+.sinuca-de-bar .game {
+  max-width: 992px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sinuca-de-bar .game-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sinuca-de-bar .bar-actions { display: flex; gap: 8px; }
+.sinuca-de-bar .mode-label { color: var(--muted); font-size: 14px; text-align: center; flex: 1; }
+
+.sinuca-de-bar .stage { position: relative; border: 4px solid var(--panel-2); }
+.sinuca-de-bar .stage canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 640 / 400;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.sinuca-de-bar .overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  background: rgba(22, 18, 31, 0.6);
+}
+.sinuca-de-bar .overlay-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px;
+  max-width: 100%;
+  background: var(--panel);
+  border: 4px solid var(--accent);
+  border-radius: 4px;
+  text-align: center;
+}
+.sinuca-de-bar .overlay-box h2 { margin: 0; font-family: var(--pixel); font-size: clamp(12px, 2.4vw, 18px); color: var(--accent); }
+.sinuca-de-bar .overlay-box p { margin: 0; max-width: 420px; color: var(--muted); }
+.sinuca-de-bar .overlay-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+
+.sinuca-de-bar .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+
+.sinuca-de-bar .hint { margin: 0; color: var(--muted); font-size: 13px; text-align: center; }
+
+/* ------------------------------------------------------------ sinuca */
+
+.sinuca-de-bar .card-balls { display: flex; gap: 4px; }
+.sinuca-de-bar .card-balls img { width: 32px; height: 32px; }
+
+.sinuca-de-bar .choice-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sinuca-de-bar .choice-label { font-size: 13px; color: var(--muted); }
+.sinuca-de-bar .chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 2px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  cursor: pointer;
+}
+.sinuca-de-bar .chip input { position: absolute; opacity: 0; pointer-events: none; }
+.sinuca-de-bar .chip:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sinuca-de-bar .chip.selected { border-color: var(--accent); background: var(--panel-2); }
+
+.sinuca-de-bar .status { margin: 0; min-height: 1.4em; text-align: center; color: var(--accent); font-size: 14px; }
+.sinuca-de-bar .score { font-family: var(--pixel); font-size: 11px; color: var(--green); }
+
+.sinuca-de-bar .controls { align-items: center; }
+.sinuca-de-bar .aim-buttons { display: flex; gap: 4px; }
+.sinuca-de-bar .aim-buttons button { min-width: 44px; padding: 0; font-size: 16px; }
+.sinuca-de-bar .power { display: flex; align-items: center; gap: 10px; flex: 1 1 220px; max-width: 360px; }
+.sinuca-de-bar .power span { font-size: 13px; color: var(--muted); min-width: 8.5ch; }
+.sinuca-de-bar .shoot { min-width: 120px; font-family: var(--pixel); font-size: 12px; }
+
+@media (max-width: 720px) {
+  .sinuca-de-bar .game { padding: 8px; }
+  .sinuca-de-bar .stage { border-width: 2px; }
+  .sinuca-de-bar .mode-label { order: 3; flex-basis: 100%; }
+  .sinuca-de-bar .power { flex-basis: 100%; max-width: none; }
+  .sinuca-de-bar .cards-3 { grid-template-columns: 1fr; }
+}
