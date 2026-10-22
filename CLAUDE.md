@@ -52,7 +52,7 @@ Sempre rode `npm run typecheck` depois de mudar código. Não há suíte de test
 6. **Tempo de quadro:** o primeiro `dt` do `requestAnimationFrame` pode ser negativo. Limite com
    `Math.max(0, Math.min(dt, máximo))` (já houve um bug real de índice de animação negativo).
 7. **Resolução e sprites:** os jogos desenham num canvas de 640×400 com sprites em alta (Scale2x de
-   `game/hires.ts`). O Cachorro Loko tem lógica em 320×200 e o Capacete Voador em 640×400 (o Pinball Paulista é vertical: 240×400 lógico, canvas 480×800); todos
+   `game/hires.ts`). O Cachorro Loko, o Xadrez Paulistano e a Sinuca de Bar têm lógica em 320×200 e o Capacete Voador em 640×400 (o Pinball Paulista é vertical: 240×400 lógico, canvas 480×800); todos
    usam `setTransform(SCALE, …)` + `blit()` no `render()`; leia a seção "Visual em alta" do `CLAUDE.md` do jogo antes
    de desenhar algo novo. O `_modelo` já nasce nesse padrão (seção "Resolução" do `CLAUDE.md` dele).
 8. **Pixel art:** desenhe em coordenadas inteiras (`Math.round`) e mantenha
@@ -73,6 +73,9 @@ efeitos compartilhados ficam em `src/shared/sprites/` (pixel art 16 bits em alta
 `tools/pixelart/biblioteca/` a partir do desenho 1× de `fonte16/`). Antes de desenhar um sprite novo que possa servir a mais de um jogo,
 veja o `README.md` de lá e acrescente na biblioteca em vez de criar uma cópia no jogo. Cenário,
 trânsito, prédios e fundos específicos de um jogo continuam em `src/games/<id>/assets/`.
+Sprite próprio de um jogo que precisa de detalhe em pixel de tela (ex.: as bolas numeradas da
+Sinuca de Bar) pode ser gerado já em 2× nativo; marque-o em `isNativeHd` do `game/assets.ts` para o
+`upscaleAll` copiar em vez de aplicar Scale2x.
 
 Os demais PNGs foram gerados pelos scripts de `tools/pixelart/` (Python + Pillow). Para mudar um
 sprite, prefira editar o script e gerar de novo (assim as variações ficam consistentes) a editar o
@@ -89,6 +92,13 @@ tamanho ou posição, confira as áreas de colisão/acerto nas constantes do jog
    ampliado por CSS.
 4. Preencha o `README.md` e o `CLAUDE.md` do jogo (o modelo traz as seções).
 5. `npm run typecheck`, `npm run build`, teste no navegador e no celular.
+
+## IA e workers
+
+Jogos com IA pesada (Xadrez Paulistano, Sinuca de Bar) rodam a busca num Web Worker criado com
+`new Worker(new URL('./ai.worker.ts', import.meta.url), { type: 'module' })` (nunca caminho em
+string), descartam respostas com `id` antigo e caem para a thread principal se o worker falhar.
+Regras, física e IA ficam em TypeScript puro para poderem ser testadas com esbuild + node.
 
 ## Checklist antes de entregar
 
