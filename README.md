@@ -10,6 +10,7 @@ descobre os jogos sozinho; para adicionar um, basta criar a pasta.
 | **Cachorro Loko** | `src/games/cachorro-loko` | Arcade de esteiras: o vira-lata motoboy pega os pedidos do LOKO DOG antes que caiam na rua. Poderes, bombas e recorde. |
 | **Corredor SP** | `src/games/corredor-sp` | Enduro pseudo-3D na 23 de Maio, Radial Leste e Nações Unidas: costure o trânsito pelo corredor, dê grau, arremesse capacetes e pegue pacotes. |
 | **Pinball Paulista** | `src/games/pinball-paulista` | Mesa de pinball vertical na Avenida Paulista: bumpers-semáforo, Minhocão que prende a bola, letras MOTOBOY, multiball, tilt e recorde. |
+| **Sinuca de Bar** | `src/games/sinuca-de-bar` | Sinuca de boteco com a regra da casa: lisas × listradas (mata a 8) ou ímpares × pares (mata a 15). 2 jogadores ou contra o computador (3 níveis). |
 
 Cada jogo tem um `README.md` (como jogar, regras, parâmetros) e um `CLAUDE.md` (guia técnico para
 quem for mexer no código, pessoa ou IA).
@@ -63,6 +64,7 @@ src/
     capacete-voador/       um jogo (veja o README.md dele)
     cachorro-loko/         outro jogo
     corredor-sp/           o enduro (pseudo-3D)
+    sinuca-de-bar/         sinuca de boteco (física própria e IA em Web Worker)
     _modelo/               modelo usado por `npm run novo-jogo` (fica fora do hub)
 scripts/novo-jogo.mjs      cria um jogo a partir do _modelo
 tools/pixelart/            scripts Python que desenharam os sprites (veja abaixo)
