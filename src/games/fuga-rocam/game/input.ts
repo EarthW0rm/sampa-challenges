@@ -1,6 +1,6 @@
 import type { Dir } from './types';
 
-/** Controles: direção desejada (estilo Pac-Man: fica valendo até a próxima esquina), turbo e óleo. */
+/** Controles: direção desejada (fica valendo até a próxima esquina), turbo e óleo. */
 export class Input {
   /** Última direção pedida (null = nenhuma). */
   want: Dir | null = null;

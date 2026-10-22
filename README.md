@@ -10,7 +10,7 @@ descobre os jogos sozinho; para adicionar um, basta criar a pasta.
 | **Cachorro Loko** | `src/games/cachorro-loko` | Arcade de esteiras: o vira-lata motoboy pega os pedidos do LOKO DOG antes que caiam na rua. Poderes, bombas e recorde. |
 | **Corredor SP** | `src/games/corredor-sp` | Enduro pseudo-3D na 23 de Maio, Radial Leste e Nações Unidas: costure o trânsito pelo corredor, dê grau, arremesse capacetes e pegue pacotes. |
 | **Pinball Paulista** | `src/games/pinball-paulista` | Mesa de pinball vertical na Avenida Paulista: bumpers-semáforo, Minhocão que prende a bola, letras MOTOBOY, multiball, tilt e recorde. |
-| **Fuga da Rocam** | `src/games/fuga-rocam` | Visão de cima, estilo Pac-Man: pegue e entregue pedidos em 3 mapas de São Paulo fugindo de viaturas de carro, moto e helicóptero (procurado de 1 a 5 estrelas, garagens, itens, óleo). |
+| **Fuga da Rocam** | `src/games/fuga-rocam` | Labirinto visto de cima: pegue e entregue pedidos em 3 mapas de São Paulo fugindo de viaturas de carro, moto e helicóptero (procurado de 1 a 5 estrelas, garagens, itens, óleo). |
 
 Cada jogo tem um `README.md` (como jogar, regras, parâmetros) e um `CLAUDE.md` (guia técnico para
 quem for mexer no código, pessoa ou IA).
