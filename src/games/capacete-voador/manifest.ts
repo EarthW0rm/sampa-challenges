@@ -5,7 +5,7 @@ const manifest: GameManifest = {
   id: 'capacete-voador',
   title: 'Capacete Voador',
   description:
-    'O clássico do QBasic com motoboys: arremesse capacetes por cima do Copan, do Itália e do MASP. Três acertos destroem a moto; na cabeça, vitória na hora.',
+    'Duelo de artilharia com motoboys: arremesse capacetes por cima do Copan, do Itália e do MASP. Três acertos destroem a moto; na cabeça, vitória na hora.',
   cover,
   tags: ['1–2 jogadores', 'Contra o computador', 'Estratégia'],
   accent: '#f5b860',

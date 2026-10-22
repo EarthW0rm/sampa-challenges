@@ -6,7 +6,7 @@ descobre os jogos sozinho; para adicionar um, basta criar a pasta.
 
 | Jogo | Pasta | Resumo |
 |---|---|---|
-| **Capacete Voador** | `src/games/capacete-voador` | O Gorillas do QBasic com dois cachorros motoboys arremessando capacetes por cima de prédios de SP. 2 jogadores, contra o computador (3 dificuldades) ou treino. |
+| **Capacete Voador** | `src/games/capacete-voador` | Duelo de artilharia com dois cachorros motoboys arremessando capacetes por cima de prédios de SP. 2 jogadores, contra o computador (3 dificuldades) ou treino. |
 | **Cachorro Loko** | `src/games/cachorro-loko` | Arcade de esteiras: o vira-lata motoboy pega os pedidos do LOKO DOG antes que caiam na rua. Poderes, bombas e recorde. |
 | **Corredor SP** | `src/games/corredor-sp` | Enduro pseudo-3D na 23 de Maio, Radial Leste e Nações Unidas: costure o trânsito pelo corredor, dê grau, arremesse capacetes e pegue pacotes. |
 | **Pinball Paulista** | `src/games/pinball-paulista` | Mesa de pinball vertical na Avenida Paulista: bumpers-semáforo, Minhocão que prende a bola, letras MOTOBOY, multiball, tilt e recorde. |

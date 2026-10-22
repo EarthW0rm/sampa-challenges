@@ -49,7 +49,7 @@ As regras do jogo e a tabela de parâmetros estão no `README.md` desta pasta.
 
 ## Visual em alta (campo 640×400, canvas 1280×800)
 
-A lógica roda em 640×400 (posições, colisões, constantes; 1 unidade QBasic = 1 px) e o canvas tem
+A lógica roda em 640×400 (posições, colisões, constantes; 1 unidade de física = 1 px) e o canvas tem
 1280×800: cada pixel lógico vira 2×2 na tela e os PNGs (1×) passam pelo Scale2x:
 
 - `game/hires.ts` faz o Scale2x dos PNGs do jogo (prédios, céu, sol) e só copia os da biblioteca

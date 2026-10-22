@@ -1,6 +1,6 @@
 # Capacete Voador
 
-O **Gorillas** do QBasic com motoboys. Dois cachorros, cada um na sua moto em cima de um prédio de
+Duelo de artilharia com motoboys. Dois cachorros, cada um na sua moto em cima de um prédio de
 São Paulo, trocam capacetes por cima do Copan, do Edifício Itália, do MASP e companhia. Quem
 acertar primeiro vence a rodada; a partida vai até o número de pontos escolhido no menu.
 
@@ -60,7 +60,7 @@ uma cratera; nesse caso a garantia do difícil vale a partir daí.
 
 ## Física
 
-Igual ao QBasic: as "unidades" da tela original de 640 px são pixels lógicos do campo 640×400
+As "unidades" da física são pixels lógicos do campo 640×400
 (`POS_SCALE = 1`):
 
 ```
@@ -81,7 +81,7 @@ Valores em `game/constants.ts`, salvo indicação.
 |---|---|---|
 | `W`, `H` | 640 × 400 | resolução lógica (física, colisão, posições) |
 | `SCALE` (`game/hires.ts`) | 2 | o canvas tem 1280×800 e os sprites ganham o dobro de detalhe (Scale2x) |
-| `POS_SCALE` | 1 | unidades QBasic → pixels |
+| `POS_SCALE` | 1 | unidades da física → pixels |
 | `DT` / `SUBSTEPS_PER_SECOND` | 0,05 / 120 | passo da física / velocidade do voo na tela |
 | `MAX_FLIGHT_T` | 80 | tempo máximo de voo |
 | `DEFAULT_GRAVITY` | 9,8 | gravidade inicial |

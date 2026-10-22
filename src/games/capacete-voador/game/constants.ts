@@ -1,12 +1,12 @@
 import type { Rect } from './types';
 
-/** Campo lógico 640×400 (a tela do QBasic original); o canvas é desenhado em W·SCALE × H·SCALE. */
+/** Campo lógico 640×400; o canvas é desenhado em W·SCALE × H·SCALE. */
 export const W = 640;
 export const H = 400;
 
-/** Física em "unidades QBasic" (tela de 640 px): 1 unidade = 1 pixel lógico. */
+/** Escala da física: 1 unidade = 1 pixel lógico. */
 export const POS_SCALE = 1;
-/** Passo fixo de simulação (unidades de tempo do QBasic). */
+/** Passo fixo de simulação (unidades de tempo da física). */
 export const DT = 0.05;
 /** Substeps por segundo real: 120 × 0,05 = 6 unidades de tempo por segundo. */
 export const SUBSTEPS_PER_SECOND = 120;
