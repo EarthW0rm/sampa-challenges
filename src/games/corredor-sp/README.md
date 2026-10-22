@@ -71,8 +71,10 @@ rentes, subida de nível e fanfarra de recorde (ou trombone triste) no fim do tu
   carro, táxi, SUV, moto, motoboy na contramão ou cone. Ônibus, caminhões e ambulâncias são grandes
   demais (o capacete quica). Com 3 guardados o item continua aparecendo e pode ser pego, mas não
   muda nada.
-- **Nível:** sobe a cada 45 s: mais veículos, trânsito mais rápido, mais fechadas sem seta, mais
+- **Nível:** sobe a cada 45 s: trânsito mais rápido, trânsito mais rápido, mais fechadas sem seta, mais
   buracos, cones, contramãos e ambulâncias.
+- **Densidade:** o turno começa com pouco trânsito (6 veículos à frente) e vai enchendo aos poucos
+  até o máximo (42) em 6 min.
 - **Dia e noite:** ciclo de 4 min (tarde → pôr do sol → noite → madrugada → manhã). À noite aparecem
   lanternas, postes acesos e o farol da moto.
 - **Garoa:** de vez em quando; a direção responde mais devagar e o freio rende 25% menos.
@@ -145,7 +147,7 @@ Em `game/constants.ts` (e no topo de `game/engine.ts` / `game/traffic.ts` quando
 | `LEVEL_TIME` | 45 s | duração de um nível |
 | `DAY_CYCLE` | 240 s | ciclo dia/noite |
 | `SPAWN_AHEAD_MIN/MAX` | 22000–36000 | onde o trânsito novo aparece (itens, buracos e cones aparecem no mínimo) |
-| veículos à frente (`engine.ts`) | (6 + 3 × nível) × 1,3 (máx. 42) | densidade |
+| `TRAFFIC_START` / `TRAFFIC_MAX` / `TRAFFIC_RAMP` | 6 / 42 / 360 s | veículos à frente: começa em 6 e sobe em linha reta até 42 em 6 min |
 | velocidade do trânsito (`engine.ts`) | × (1 + 0,06 × (nível − 1)), máx. 1,6 | aceleração do trânsito por nível |
 | chance de fechada sem seta (`engine.ts`) | 8% + 5% por nível (máx. 50%) | perigo |
 | intervalo de buracos / cones (`engine.ts`) | máx(3, 9 − nível) / máx(5, 14 − nível) s | perigo |

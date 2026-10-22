@@ -64,7 +64,7 @@ export const OFFROAD_LIMIT = 1.25;
 /** Fora do asfalto a velocidade máxima cai para esta fração. */
 export const OFFROAD_SPEED = 0.35;
 export const START_LIVES = 3;
-export const MAX_LIVES = 5;
+export const MAX_LIVES = 10;
 export const MAX_HELMETS = 3;
 export const CRASH_TIME = 2;
 export const INVULNERABLE_TIME = 3;
@@ -89,3 +89,7 @@ export const DAY_CYCLE = 240;
 export const SPAWN_AHEAD_MIN = 22000;
 export const SPAWN_AHEAD_MAX = 36000;
 export const DESPAWN_BEHIND = 3000;
+/** Veículos à frente no início do turno; sobe em linha reta até `TRAFFIC_MAX` em `TRAFFIC_RAMP` s. */
+export const TRAFFIC_START = 6;
+export const TRAFFIC_MAX = 42;
+export const TRAFFIC_RAMP = 360;
