@@ -36,14 +36,19 @@ hash (`#/jogos/<id>`), então funciona em qualquer hospedagem estática (GitHub 
 Vercel, S3, uma pasta qualquer) sem configurar redirecionamentos.
 
 O repositório segue o GitHub Flow: a `main` é protegida e só recebe pull request com o check
-`build` (workflow `CI`: `npm ci` + `npm run build`) passando. A publicação no GitHub Pages
-(<https://earthw0rm.github.io/sampa-challenges/>) é feita pelo workflow
-`Publicar no GitHub Pages`, disparado por uma tag `vX.Y.Z` num commit da `main`:
+`build` (workflow `CI`: `npm ci` + `npm run build`) passando, e o título do PR precisa ser um
+Conventional Commit (`feat: …`, `fix: …`; workflow `pr-title`), porque no squash merge ele vira
+o commit da `main`.
 
-```bash
-git switch main && git pull
-git tag v1.0.0 && git push origin v1.0.0
-```
+A versão e a publicação no GitHub Pages (<https://earthw0rm.github.io/sampa-challenges/>) são
+automáticas, pelo workflow `release-please`:
+
+1. Cada merge na `main` abre ou atualiza o Release PR (`chore(main): release X.Y.Z`), com a
+   versão do `package.json` e o `CHANGELOG.md` calculados pelos commits (`feat` = minor,
+   `fix` = patch, `!`/`BREAKING CHANGE` = major).
+2. O merge do Release PR cria a tag `vX.Y.Z` e o GitHub Release, e publica no Pages.
+
+Para republicar a `main` sem versão nova: Actions → `release-please` → Run workflow.
 
 ## Como está organizado
 
