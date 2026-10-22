@@ -85,7 +85,7 @@ Baseado no "Javascript Racer" (Jake Gordon), adaptado para pixel art:
 
 ## Receitas
 
-- **Equilíbrio:** densidade e perigos por nível em `updateSpawns` (`engine.ts`); velocidade do
+- **Equilíbrio:** densidade (rampa `TRAFFIC_*` em `constants.ts`) e perigos por nível em `updateSpawns` (`engine.ts`); velocidade do
   trânsito em `VEHICLE_SPEED` (`data.ts`) e `trafficFactor`; fechadas em `updateTraffic`. Atualize o
   README.
 - **Nova pista:** acrescente o id em `TrackId` e `TRACKS` (`data.ts`), o traçado em `layout()` e o

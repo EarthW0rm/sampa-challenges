@@ -50,7 +50,7 @@ export function HubHome() {
       )}
 
       <footer className="hub-footer">
-        {games.length} {games.length === 1 ? 'jogo' : 'jogos'} · para criar um novo: <code>npm run novo-jogo -- meu-jogo "Meu Jogo"</code>
+        {games.length} {games.length === 1 ? 'jogo' : 'jogos'}
       </footer>
     </main>
   );

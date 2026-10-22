@@ -46,6 +46,9 @@ import {
   SEG_LEN,
   SPAWN_AHEAD_MAX,
   SPAWN_AHEAD_MIN,
+  TRAFFIC_MAX,
+  TRAFFIC_RAMP,
+  TRAFFIC_START,
   SPEED_ITEM_FACTOR,
   SPEED_ITEM_TIME,
   SPRITE_UNITS,
@@ -219,7 +222,7 @@ export class CorredorEngine {
       ...['reto', 'esq', 'dir', 'grau', 'queda'].map((f) => `${moto}_${f}|${cfg.color}`),
     ]);
     // trânsito inicial espalhado à frente
-    for (let i = 0; i < 20; i++) this.spawnVehicle(this.pickKind(), PLAYER_Z + 3000 + this.rand() * 30000);
+    for (let i = 0; i < TRAFFIC_START; i++) this.spawnVehicle(this.pickKind(), PLAYER_Z + 3000 + this.rand() * 30000);
     this.emit();
   }
 
@@ -505,8 +508,8 @@ export class CorredorEngine {
 
   private updateSpawns(dt: number) {
     const pz = this.playerZ;
-    // a janela de spawn é 30% mais longa que na versão 320×200: a densidade sobe junto
-    const target = Math.min(Math.round((6 + this.level * 3) * 1.3), 42);
+    // densidade sobe aos poucos desde o início do turno até o teto
+    const target = Math.round(TRAFFIC_START + (TRAFFIC_MAX - TRAFFIC_START) * Math.min(1, this.time / TRAFFIC_RAMP));
     const around = this.vehicles.filter((v) => v.z - pz > -1500 && v.z - pz < SPAWN_AHEAD_MAX && v.kind !== 'ambulancia' && v.kind !== 'contramao').length;
     for (let i = 0; i < 2 && around + i < target; i++) {
       const kind = this.pickKind();
