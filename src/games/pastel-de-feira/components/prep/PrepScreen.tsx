@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { canOpen, minReputation, profitGoal } from '../../game/campaign/campaign';
+import { respondClaim } from '../../game/campaign/events';
+import { seasonOf } from '../../game/campaign/season';
+import { FORECAST_NAME, SEASON_EFFECTS, SEASON_NAME } from '../../game/data/events';
 import type { Campaign } from '../../game/campaign/types';
 import { money, rep1, stars } from '../format';
 import { InventoryTab } from './InventoryTab';
@@ -52,6 +55,34 @@ export function PrepScreen({ campaign: c, onChange, onOpen, onExit }: Props) {
           {c.freeMode ? 'Sem meta' : `Meta: lucro ${money(profitGoal(c.day))} · reputação ${rep1(minReputation(c.day))}+`}
         </div>
       </header>
+      <section className="item forecast" aria-label="Previsão do dia">
+        <strong>
+          {SEASON_NAME[seasonOf(c.day)]}
+          {c.forecast ? ` · previsão: ${FORECAST_NAME[c.forecast]}` : c.eventsOn && c.day >= 4 ? ' · sem evento previsto' : ''}
+        </strong>
+        <span className="muted">
+          {SEASON_EFFECTS[seasonOf(c.day)].drink > 1 ? 'Mais caldo e mais cansaço. ' : SEASON_EFFECTS[seasonOf(c.day)].drink < 1 ? 'Menos caldo, mais pedidos de 2 pastéis. ' : ''}
+          {c.forecast === 'chuva' && 'Menos gente no balcão, mais comandas do app, mesas com metade da procura.'}
+          {c.forecast === 'calor' && 'Caldo +50% e a equipe cansa mais.'}
+          {c.forecast === 'subprefeitura' && 'Mesas proibidas na calçada hoje.'}
+        </span>
+        {c.claim === 'pendente' && (
+          <div className="claim" role="dialog" aria-label="Reivindicação da equipe">
+            <p className="warn">A equipe chegou ao limite e quer uma resposta antes de abrir:</p>
+            <div className="row">
+              <button type="button" disabled={!respondClaim(c, 'pausa').ok} onClick={() => { const r = respondClaim(c, 'pausa'); if (r.ok) onChange(r.campaign); }}>
+                Pausa (exige área de descanso)
+              </button>
+              <button type="button" onClick={() => { const r = respondClaim(c, 'aumento'); if (r.ok) onChange(r.campaign); }}>
+                Aumento de 10% por 3 dias
+              </button>
+              <button type="button" onClick={() => { const r = respondClaim(c, 'recusada'); if (r.ok) onChange(r.campaign); }}>
+                Recusar (−15% de velocidade hoje)
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
       <nav className="tabs" role="tablist">
         {tabs.map((t) => (
           <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>

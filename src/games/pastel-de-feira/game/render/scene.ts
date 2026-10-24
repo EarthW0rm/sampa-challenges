@@ -300,6 +300,32 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   const mo = layout.byId.get('moenda');
   if (mo) bar(ctx, mo.x + 8, mo.y + 40, mo.w - 16, 8, st.mill.progress / millSeconds(st), PAL.green);
 
+  // efeitos de evento: sem cobrir as zonas com cor opaca (RN-75)
+  if (st.config.forecast === 'chuva') {
+    ctx.fillStyle = 'rgba(120, 170, 255, 0.35)';
+    for (let i = 0; i < 40; i++) {
+      const x = (i * 53 + Math.floor(ui.clock * 90)) % W;
+      const y = (i * 29 + Math.floor(ui.clock * 160)) % 280;
+      ctx.fillRect(x, y + 24, 1, 6);
+    }
+  }
+  if (st.world.powerLeft > 0) {
+    ctx.fillStyle = 'rgba(10, 8, 20, 0.35)';
+    ctx.fillRect(0, 24, W, 276);
+  }
+  st.tachos.forEach((t, i) => {
+    const z = layout.byId.get(`tacho${i + 1}` as 'tacho1');
+    if (z && t.fireLeft > 0) {
+      ctx.fillStyle = Math.floor(ui.clock * 8) % 2 === 0 ? 'rgba(255, 110, 20, 0.7)' : 'rgba(255, 200, 40, 0.7)';
+      ctx.fillRect(z.x + 8, z.y + 24, z.w - 16, 52);
+      textCenter(ctx, 'FOGO', z.x + z.w / 2, z.y + 44, PAL.text, 2);
+    }
+  });
+  if (layout.byId.get('mesas') && st.config.forecast === 'subprefeitura') {
+    const m = layout.byId.get('mesas')!;
+    textCenter(ctx, 'PROIBIDO', m.x + m.w / 2, m.y + 4, PAL.red, 2);
+  }
+
   // placa da xepa às 13h (RN-124)
   if (xepaActive(st)) {
     box(ctx, { x: 470, y: 120, w: 120, h: 24 }, PAL.red, PAL.text);

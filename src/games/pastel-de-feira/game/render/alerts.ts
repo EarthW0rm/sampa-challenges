@@ -22,6 +22,13 @@ export function activeAlerts(st: DayState): string[] {
 
 /** Faixa de avisos no topo, sempre acima do painel. Alterna os avisos a cada 1,5 s. */
 export function drawAlerts(ctx: CanvasRenderingContext2D, st: DayState, ui: UiState): void {
+  const notice = st.notices[0];
+  if (notice) {
+    // aviso de evento: prioridade máxima, acima do painel (RN-75, JA-09)
+    box(ctx, ALERT_BAND, '#7a4a00');
+    textCenter(ctx, notice.text, ALERT_BAND.w / 2, 5, PAL.text, 2);
+    return;
+  }
   const offer = st.offers[0];
   if (offer) {
     // cartão de oferta do app: tocável, sempre acima do painel (RN-75, RN-91)

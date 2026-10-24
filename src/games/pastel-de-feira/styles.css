@@ -142,3 +142,6 @@
 .pastel-de-feira .courses { display: flex; flex-wrap: wrap; gap: 6px; flex-basis: 100%; }
 .pastel-de-feira .courses button { font-size: 12px; min-height: 40px; padding: 0 10px; }
 .pastel-de-feira .item.staff { align-items: flex-start; }
+
+.pastel-de-feira .forecast { flex-direction: column; align-items: stretch; gap: 4px; }
+.pastel-de-feira .claim { margin-top: 6px; }
