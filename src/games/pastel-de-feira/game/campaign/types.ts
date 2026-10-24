@@ -1,5 +1,6 @@
 import type { ConsumableId, IngredientId } from '../data/catalog';
 import type { EquipId } from '../data/equipment';
+import type { OfficeRole } from '../data/office';
 import type { CourseId, PositionId, StaffKind, TraitId } from '../data/staff';
 import type { ItemId } from '../data/recipes';
 import type { TachoConfig } from '../types';
@@ -116,6 +117,8 @@ export interface Campaign {
   owned: Owned;
   menu: MenuChoice;
   prices: Record<ItemId, number>;
+  /** Cargos de gestão contratados, no máximo 3 (RN-100, RN-103). */
+  roles: OfficeRole[];
   /** Promoções do dia (RN-120, RN-123, RN-124). */
   promo: Promo;
   /** Delivery ligado hoje e aceite automático (RN-90, RN-95). */

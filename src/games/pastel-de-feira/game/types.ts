@@ -1,4 +1,5 @@
 import type { ConsumableId, IngredientId } from './data/catalog';
+import type { OfficeRole } from './data/office';
 import type { CourseId, PositionId, StaffKind, TraitId } from './data/staff';
 import type { ItemId } from './data/recipes';
 
@@ -118,6 +119,8 @@ export interface DayConfig {
   positions: PositionId[];
   /** Sujeira a partir da qual Exigentes não entram e a paciência cai (60; o tema Popular sobe para 75, RN-17). */
   dirtLimit?: number;
+  /** Cargos de gestão contratados (RN-103). */
+  roles: OfficeRole[];
   /** Delivery do app: ligado hoje, aceite automático e Conta Parceira (RN-90, RN-95). */
   delivery: { on: boolean; auto: boolean; partner: boolean };
   /** Promoções do dia (RN-120, RN-123, RN-124). */

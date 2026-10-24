@@ -1,4 +1,5 @@
 import { COOLER, DELIVERY, EQUIPMENT, MENU_BOARDS, SPACE, TABLE, TACHO, type EquipId } from '../../data/equipment';
+import { OFFICE, ROLES, type OfficeRole } from '../../data/office';
 import { REST_AREA } from '../../data/staff';
 import { BASE_RECIPES, ITEMS, UPGRADES, itemId, type ItemId } from '../../data/recipes';
 import { cloneCampaign, freeM2, round2, totalM2 } from '../campaign';
@@ -193,5 +194,33 @@ export function buyDeliveryArea(c: Campaign): ActionResult {
   const next = cloneCampaign(c);
   charge(next, DELIVERY.price, true);
   next.owned.delivery = true;
+  return { ok: true, campaign: next };
+}
+
+/** Escritório (RN-100): R$ 1.500, 4 m², a partir do dia 10, com 3 vagas de cargo. */
+export function buyOffice(c: Campaign): ActionResult {
+  if (c.owned.office) return no('limite');
+  if (c.day < OFFICE.minDay) return no('bloqueadoAteDia');
+  if (freeM2(c) < OFFICE.space) return no('semEspaco');
+  if (!canPay(c, OFFICE.price)) return no('semCaixa');
+  const next = cloneCampaign(c);
+  charge(next, OFFICE.price, true);
+  next.owned.office = true;
+  return { ok: true, campaign: next };
+}
+
+/** Contratar cargo de gestão: só com escritório, 3 vagas, um de cada (RN-100, RN-103). Sem custo extra. */
+export function hireRole(c: Campaign, role: OfficeRole): ActionResult {
+  if (!ROLES[role] || !c.owned.office) return no('requer');
+  if (c.roles.includes(role) || c.roles.length >= OFFICE.roleSlots) return no('limite');
+  const next = cloneCampaign(c);
+  next.roles.push(role);
+  return { ok: true, campaign: next };
+}
+
+export function fireRole(c: Campaign, role: OfficeRole): ActionResult {
+  if (!c.roles.includes(role)) return no('requer');
+  const next = cloneCampaign(c);
+  next.roles = next.roles.filter((r) => r !== role);
   return { ok: true, campaign: next };
 }

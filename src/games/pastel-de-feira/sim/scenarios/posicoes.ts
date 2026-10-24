@@ -1,5 +1,5 @@
 import { STEP } from '../../game/constants';
-import { flavorFor, homeStation, speedFactor } from '../../game/sim/staff';
+import { crewSpeed, flavorFor, homeStation, speedFactor } from '../../game/sim/staff';
 import { addCustomer } from '../../game/sim/customers';
 import type { DaySim } from '../../game/sim/day';
 import type { Customer, DayState } from '../../game/sim/state';
@@ -171,14 +171,14 @@ export const posicoes: Scenario[] = [
       const s = sim.state;
       ordered(s, ['carne']);
       advance(sim, 2);
-      checkNear(s.workers[0].task!.total, (0.5 + 1.5) * 0.85, 'montagem de 1 etapa com Rápido: 1,7 s', 1e-6);
+      checkNear(s.workers[0].task!.total, ((0.5 + 1.5) * 0.85) / crewSpeed(s), 'montagem de 1 etapa com Rápido: 1,7 s (÷ bônus do escritório)', 1e-6);
       checkNear(speedFactor(s.workers[0]), 0.85, 'fator');
       const att = member('geral', { mode: 'fixo', position: 'balcao' }, [], ['atendimento']);
       const sim2 = crewSim(seed, [att]);
       const c = addCustomer(sim2.state, 'padrao', ['carne']);
       const antes = c.patienceMax;
       advance(sim2, 2);
-      checkNear(sim2.state.workers[0].task!.total, 1.5 * 0.8, 'anotar com Atendimento: 1,2 s');
+      checkNear(sim2.state.workers[0].task!.total, (1.5 * 0.8) / crewSpeed(sim2.state), 'anotar com Atendimento: 1,2 s (÷ bônus do escritório)');
       advance(sim2, secs(1.5));
       checkEq(c.state, 'anotado', 'anotou');
       checkNear(c.patienceMax, antes * 1.05, 'cliente atendido com +5% de paciência');

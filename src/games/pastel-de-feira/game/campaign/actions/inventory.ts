@@ -1,10 +1,11 @@
+import { BUYER_DISCOUNT } from '../../data/office';
 import { CONSUMABLES, INGREDIENTS, type ConsumableId, type IngredientId } from '../../data/catalog';
 import { capacityFree, cloneCampaign, expiryFor, round2 } from '../campaign';
 import type { ActionResult, Campaign } from '../types';
 
 /** Desconto de compra do pasteleiro (Negociante, Comprador): gancho das US-117 e US-120. */
-export function purchaseFactor(_c: Campaign): number {
-  return 1;
+export function purchaseFactor(c: Campaign): number {
+  return (c.roles.includes('comprador') ? BUYER_DISCOUNT : 1);
 }
 
 /** Custo unitário de um insumo para esta campanha. */

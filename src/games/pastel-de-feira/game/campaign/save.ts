@@ -1,5 +1,6 @@
 import { CONSUMABLE_IDS, INGREDIENTS } from '../data/catalog';
 import { EQUIP_IDS } from '../data/equipment';
+import { OFFICE, ROLE_IDS } from '../data/office';
 import { COURSE_IDS, POSITION_LABEL, TRAIT_IDS } from '../data/staff';
 import { ITEMS } from '../data/recipes';
 import { HISTORY_MAX } from './closing';
@@ -115,6 +116,8 @@ export function isCampaign(v: unknown): v is Campaign {
   for (const [k, p] of Object.entries(v.prices)) {
     if (!owned.has(k) || !isNum(p) || clampPrice(k, p) !== p) return false;
   }
+  if (!Array.isArray(v.roles) || v.roles.length > OFFICE.roleSlots || new Set(v.roles).size !== v.roles.length || !v.roles.every((r) => isStr(r) && (ROLE_IDS as readonly string[]).includes(r))) return false;
+  if (v.roles.length > 0 && !(o as Rec).office) return false;
   const pr = v.promo;
   if (!isRec(pr) || !(pr.brindeN === 0 || isInt(pr.brindeN, 2, 6)) || !isInt(pr.chorinho, 0, 3) || !isBool(pr.xepa)) return false;
   if (!isNum(pr.xepaDiscount) || ![0.1, 0.2, 0.3, 0.4, 0.5].some((d) => Math.abs(d - (pr.xepaDiscount as number)) < 1e-9)) return false;

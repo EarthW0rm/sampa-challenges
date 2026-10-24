@@ -79,4 +79,4 @@ export function suggestPurchase(c: Campaign): Suggestion {
 }
 
 /** A compra sugerida aparece nos dias 1 a 3 ou com Comprador contratado (RN-36). */
-export const showSuggestion = (c: Campaign): boolean => c.day <= 3;
+export const showSuggestion = (c: Campaign): boolean => c.day <= 3 || c.roles.includes('comprador');

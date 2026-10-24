@@ -1,4 +1,5 @@
 import { HELPER_CLEAN_POINTS, HELPER_CLEAN_SECONDS, HYGIENE_CLEAN_FACTOR, STEP } from '../constants';
+import { MANAGEMENT_SPEED, MANAGER_SPEED } from '../data/office';
 import { AUTO_PRIORITY, ATTENDANCE_FACTOR, CARE_BONUS, ENERGY, FRYER_ONLY, FRY_COURSE_BONUS, OIL_COURSE_FACTOR, RAPID_FACTOR, RESISTANT_FATIGUE, WORK, WRONG_FLAVOR_CHANCE, type PositionId } from '../data/staff';
 import { ITEMS, type ItemId } from '../data/recipes';
 import type { ItemRef, StationId } from '../types';
@@ -116,7 +117,12 @@ function updateEnergy(s: DayState, w: Worker, dt: number): void {
 export const fatigueRate = (_s: DayState): number => 1;
 
 /** Velocidade geral da equipe: o escritório e o Gerente entram na US-117. */
-export const crewSpeed = (_s: DayState): number => 1;
+export function crewSpeed(s: DayState): number {
+  let f = 1;
+  if (s.pasteleiro.to === null && s.pasteleiro.at === 'escritorio' && s.config.stations.includes('escritorio')) f *= MANAGEMENT_SPEED; // RN-101
+  if (s.config.roles.includes('gerente')) f *= MANAGER_SPEED;
+  return f;
+}
 
 // ------------------------------------------------------------ atribuição de posições
 
