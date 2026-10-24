@@ -240,7 +240,8 @@ export function drawPanel(ctx: CanvasRenderingContext2D, st: DayState, ui: UiSta
   box(ctx, PANEL, PAL.panel, PAL.panelLine);
   drawPixelText(ctx, stationLabel(ui.panel), 10, PANEL.y + 7, PAL.gold, 2);
   bar(ctx, PANEL.w - 74, PANEL.y + 8, 64, 8, 1 - ui.idle / PANEL_IDLE_SECONDS, PAL.muted);
-  for (const c of panelControls(st, ui)) {
+  const controls = panelControls(st, ui);
+  controls.forEach((c, i) => {
     box(ctx, c.rect, c.selected ? PAL.tileHi : PAL.tile, c.selected ? PAL.gold : PAL.panelLine);
     ctx.fillStyle = c.fill;
     ctx.fillRect(c.rect.x + 4, c.rect.y + 4, c.rect.w - 8, 5);
@@ -248,5 +249,10 @@ export function drawPanel(ctx: CanvasRenderingContext2D, st: DayState, ui: UiSta
     textCenter(ctx, c.label, cx, c.rect.y + 15, PAL.text, 2);
     if (c.sub) textCenter(ctx, c.sub, cx, c.rect.y + 33, PAL.muted, 2);
     if (c.bar) bar(ctx, c.rect.x + 6, c.rect.y + c.rect.h - 14, c.rect.w - 12, 8, c.bar.frac, c.bar.color);
-  }
+    if (ui.focus === i && ui.keyboard) {
+      ctx.strokeStyle = PAL.text; // foco do teclado
+      ctx.lineWidth = 1;
+      ctx.strokeRect(c.rect.x + 1.5, c.rect.y + 1.5, c.rect.w - 3, c.rect.h - 3);
+    }
+  });
 }

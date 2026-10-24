@@ -204,3 +204,18 @@ export const THEME_DIRT_LIMIT_POPULAR = 75;
 export const THEME_REPUTATION_BONUS = 1.1;
 export const THEME_TABLE_PREMIUM_BONUS = 0.1;
 export const THEME_QUALITY_BONUS = 10;
+
+/**
+ * Passos fixos a rodar num quadro de `dt` segundos reais na velocidade `speed` (1× ou 2×, RN-173).
+ * Acelerar só roda mais passos por quadro: o `STEP` e as regras não mudam.
+ */
+export function stepsFor(acc: number, dt: number, speed: 1 | 2): { steps: number; acc: number } {
+  let a = acc + dt * speed;
+  let steps = 0;
+  while (a >= STEP && steps < MAX_STEPS_PER_FRAME) {
+    a -= STEP;
+    steps++;
+  }
+  if (a > STEP * MAX_STEPS_PER_FRAME) a = 0; // queda de FPS: fica mais lento, sem pular regras
+  return { steps, acc: a };
+}

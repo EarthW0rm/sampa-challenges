@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { H, MAX_FRAME_DT, MAX_STEPS_PER_FRAME, STEP, W, hourAt } from '../game/constants';
-import { pointerDown, pointerUp, syncUi, toLogical, type InputEnv } from '../game/input';
+import { H, MAX_FRAME_DT, STEP, W, hourAt, stepsFor } from '../game/constants';
+import { keyDown, keyUp, pointerDown, pointerUp, syncUi, toLogical, type InputEnv } from '../game/input';
 import { buildLayout } from '../game/layout';
 import { SCALE } from '../game/hires';
 import { sound } from '../game/sound';
@@ -28,6 +28,8 @@ interface Hud {
   queue: number;
   paused: boolean;
   tip: string;
+  speed: 1 | 2;
+  guided: boolean;
 }
 
 const money = (n: number) => `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -43,8 +45,9 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const envRef = useRef<InputEnv | null>(null);
   const simRef = useRef<DaySim | null>(null);
-  const [hud, setHud] = useState<Hud>({ clock: '07:00', cash: money(0), queue: 0, paused: false, tip: '' });
+  const [hud, setHud] = useState<Hud>({ clock: '07:00', cash: money(0), queue: 0, paused: false, tip: '', speed: 1, guided: !!config.tutorial });
   const [muted, setMuted] = useState({ som: sound.isMuted('som'), musica: sound.isMuted('musica') });
+  const toggleSpeedRef = useRef<(() => void) | null>(null);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
 
@@ -65,6 +68,7 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
     let finished = false;
     const tutorial = config.tutorial ? new Tutorial() : null;
     let tip = '';
+    let guided = !!tutorial;
     let highlight: TutorialStation = null;
 
     const pause = () => sim.dispatch({ type: 'pause' });
@@ -76,17 +80,13 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
         sim.setHold(v.hold);
         if (sim.state.speed !== 1) sim.dispatch({ type: 'setSpeed', speed: 1 }); // RN-173: sem 2× nos passos guiados
         tip = v.text;
+        guided = !v.done;
         highlight = v.station;
       }
       if (!sim.state.paused && !sim.isOver()) {
-        acc += dt * sim.state.speed;
-        let steps = 0;
-        while (acc >= STEP && steps < MAX_STEPS_PER_FRAME) {
-          sim.step();
-          acc -= STEP;
-          steps++;
-        }
-        if (acc > STEP * MAX_STEPS_PER_FRAME) acc = 0; // queda de FPS: fica mais lento, sem pular regras
+        const r = stepsFor(acc, dt, sim.state.speed);
+        acc = r.acc;
+        for (let i = 0; i < r.steps; i++) sim.step();
       }
       syncUi(env, dt);
       renderScene(ctx, sim.state, layout, env.ui, statics);
@@ -99,8 +99,8 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
         hudAt = nowMs;
         const t = sim.state.tick * STEP;
         setHud((h) => {
-          const next = { clock: clockText(t), cash: money(sim.state.stats.revenue), queue: sim.state.customers.length, paused: sim.state.paused, tip };
-          return h.clock === next.clock && h.cash === next.cash && h.queue === next.queue && h.paused === next.paused && h.tip === next.tip ? h : next;
+          const next = { clock: clockText(t), cash: money(sim.state.stats.revenue), queue: sim.state.customers.length, paused: sim.state.paused, tip, speed: sim.state.speed, guided };
+          return h.clock === next.clock && h.cash === next.cash && h.queue === next.queue && h.paused === next.paused && h.tip === next.tip && h.speed === next.speed && h.guided === next.guided ? h : next;
         });
       }
       if (sim.isOver() && !finished) {
@@ -122,20 +122,44 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
       if (document.hidden) onBlur();
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === 'KeyP') {
-        sim.dispatch({ type: sim.state.paused ? 'resume' : 'pause' });
-        e.preventDefault();
-      }
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      sound.unlock();
+      const r = keyDown(env, e.code, e.repeat);
+      if (!r) return;
+      e.preventDefault();
+      if (r.session === 'pause') sim.dispatch({ type: sim.state.paused ? 'resume' : 'pause' });
+      else if (r.session === 'mute') toggleMuteBoth();
+      else if (r.session === 'speed') toggleSpeed();
+      for (const c of r.cmds) sim.dispatch(c);
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      for (const c of keyUp(env, e.code)) sim.dispatch(c);
+    };
+    const toggleSpeed = () => {
+      if (guided) return; // RN-173: sem 2× nos passos guiados
+      sim.dispatch({ type: 'setSpeed', speed: sim.state.speed === 1 ? 2 : 1 });
+    };
+    toggleSpeedRef.current = toggleSpeed;
+    const toggleMuteBoth = () => {
+      const m = !(sound.isMuted('som') && sound.isMuted('musica'));
+      sound.setMuted('som', m);
+      sound.setMuted('musica', m);
+      setMuted({ som: m, musica: m });
     };
     window.addEventListener('blur', onBlur);
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('keydown', onKey);
+    window.addEventListener('keyup', onKeyUp);
     return () => {
       cancelAnimationFrame(raf);
       sound.stop();
       window.removeEventListener('blur', onBlur);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keyup', onKeyUp);
+      toggleSpeedRef.current = null;
       simRef.current = null;
       envRef.current = null;
     };
@@ -176,6 +200,9 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
         </button>
         <button type="button" onClick={() => toggleMute('musica')} aria-pressed={muted.musica} aria-label="Música">
           {muted.musica ? 'Música: não' : 'Música: sim'}
+        </button>
+        <button type="button" onClick={() => toggleSpeedRef.current?.()} disabled={hud.guided} aria-pressed={hud.speed === 2} aria-label="Acelerar">
+          {hud.speed === 2 ? '2×' : '1×'}
         </button>
         <button type="button" onClick={togglePause} aria-label="Pausar">
           Pausa

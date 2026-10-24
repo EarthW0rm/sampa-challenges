@@ -31,6 +31,7 @@ import { save } from './save';
 import { sujeira } from './sujeira';
 import { tacho } from './tacho';
 import { tutorial } from './tutorial';
+import { velocidade } from './velocidade';
 
 /** Grupos de cenários. Cada TF de regra acrescenta o seu aqui. */
 export const GROUPS: Readonly<Record<string, Scenario[]>> = {
@@ -66,4 +67,5 @@ export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   layout,
   tacho,
   tutorial,
+  velocidade,
 };
