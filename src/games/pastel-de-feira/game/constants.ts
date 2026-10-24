@@ -47,9 +47,9 @@ export const ORDER_DESSERT_CHANCE_LATE = 0.35;
 export const ORDER_DESSERT_LATE_HOUR = 11;
 // RN-06: paciência base (s) do fim da fila até receber o pedido completo
 export const PATIENCE: Readonly<Record<'economico' | 'padrao' | 'exigente', number>> = {
-  economico: 45,
-  padrao: 40,
-  exigente: 35,
+  economico: 70,
+  padrao: 60,
+  exigente: 50,
 };
 
 // RN-10: faixa de preço (fração da referência) e passo (R$)

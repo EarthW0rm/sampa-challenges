@@ -1,4 +1,4 @@
-import { STEP } from '../../game/constants';
+import { PATIENCE, STEP } from '../../game/constants';
 import { unitCost } from '../../game/campaign/actions/inventory';
 import { payroll } from '../../game/campaign/actions/staff';
 import { newCampaign, toDayConfig } from '../../game/campaign/campaign';
@@ -74,9 +74,9 @@ export const perfis: Scenario[] = [
     run() {
       const normal = makeSim(1, devConfig({ profile: 'tradicional' }));
       const boa = makeSim(1, devConfig({ profile: 'boa-praca' }));
-      checkNear(addCustomer(normal.state, 'padrao', ['carne']).patience, 40, 'base');
-      checkNear(addCustomer(boa.state, 'padrao', ['carne']).patience, 46, 'Boa-praça: +15%');
-      checkNear(addCustomer(boa.state, 'exigente', ['carne']).patience, 35 * 1.15, 'também no Exigente');
+      checkNear(addCustomer(normal.state, 'padrao', ['carne']).patience, PATIENCE.padrao, 'base');
+      checkNear(addCustomer(boa.state, 'padrao', ['carne']).patience, PATIENCE.padrao * 1.15, 'Boa-praça: +15%');
+      checkNear(addCustomer(boa.state, 'exigente', ['carne']).patience, PATIENCE.exigente * 1.15, 'também no Exigente');
     },
   },
 ];

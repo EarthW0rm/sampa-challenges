@@ -1,4 +1,4 @@
-import { STEP } from '../../game/constants';
+import { PATIENCE, STEP } from '../../game/constants';
 import { addCustomer, spawnCustomer } from '../../game/sim/customers';
 import { deliverItem } from '../../game/sim/stations/counter';
 import { advance, check, checkEq, checkNear, type Scenario } from '../harness';
@@ -47,8 +47,8 @@ export const sujeira: Scenario[] = [
       const b = addCustomer(suja.state, 'padrao', ['carne']);
       advance(limpa, secs(10));
       advance(suja, secs(10));
-      checkNear(a.patience, 30, 'barraca limpa: 10 s gastam 10 s', 0.05);
-      checkNear(b.patience, 40 - 10 / 0.8, 'barraca suja: a paciência gasta 25% mais rápido (−20% de duração)', 0.05);
+      checkNear(a.patience, PATIENCE.padrao - 10, 'barraca limpa: 10 s gastam 10 s', 0.05);
+      checkNear(b.patience, PATIENCE.padrao - 10 / 0.8, 'barraca suja: a paciência gasta 25% mais rápido (−20% de duração)', 0.05);
       // Exigentes não entram a partir de 60
       const s = suja.state;
       s.customers.length = 0;

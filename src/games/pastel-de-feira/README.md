@@ -28,7 +28,7 @@ O toque/clique é o controle completo. No desktop também há teclado.
 
 - O dia dura 240 s. Às 14h há corte seco: o que está em aberto se perde sem falha.
 - Pastel cru vale nota 40, no ponto 80 e passado 55. Queimado vira desperdício. O preço pago usa a nota e a reputação.
-- Cada cliente (Econômico, Padrão, Exigente) tem teto de preço e exigência de qualidade. Fila de 6, paciência de 35 a 45 s.
+- Cada cliente (Econômico, Padrão, Exigente) tem teto de preço e exigência de qualidade. Fila de 6, paciência de 50 a 70 s.
 - Meta do dia N: lucro líquido ≥ R$ 70 × 1,10^(N−1) e reputação mínima (2,0 até o dia 5; 3,0 até o 12; 3,5 depois). Meta não cumprida repete o dia.
 - Falência: caixa negativo no fechamento. Dá para "passar o ponto" (recomeçar com bônus) depois de zerar.
 - Sistemas que entram aos poucos: equipe (dia 2), Associação (dia 3), delivery e tema (dia 5), Especial da Casa (dia 6), escritório (dia 10).
@@ -51,7 +51,7 @@ Mudou um número? Atualize esta tabela.
 | `PEAK_FACTOR` (P) | 1,5 | chegada ×1,5 das 10h às 12h |
 | `QUEUE_MAX` | 6 | fila cheia perde cliente (falha de peso 0,5) |
 | `ORDER_DRINK_CHANCE` (P) | 0,4 | chance de o pedido levar caldo |
-| `PATIENCE` (P) | 45 / 40 / 35 s | paciência (Econômico, Padrão, Exigente) |
+| `PATIENCE` (P) | 70 / 60 / 50 s | paciência (Econômico, Padrão, Exigente) |
 | `PROFILE_CEILING` (P) | 0,9 / 1,2 / 1,6 | teto de preço × referência por perfil |
 | `PROFILE_MIN_QUALITY` (P) | 30 / 50 / 70 | nota mínima aceita por perfil |
 | `QUALITY_RAW` / `QUALITY_PONTO` / `QUALITY_OVERDONE` | 40 / 80 / 55 | nota de cru, no ponto e passado |
