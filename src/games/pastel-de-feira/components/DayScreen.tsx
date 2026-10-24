@@ -3,6 +3,7 @@ import { H, MAX_FRAME_DT, MAX_STEPS_PER_FRAME, STEP, W, hourAt } from '../game/c
 import { pointerDown, pointerUp, syncUi, toLogical, type InputEnv } from '../game/input';
 import { buildLayout } from '../game/layout';
 import { SCALE } from '../game/hires';
+import { sound } from '../game/sound';
 import { Tutorial } from '../game/tutorial';
 import { drawAlerts, drawHighlight } from '../game/render/alerts';
 import { drawPanel } from '../game/render/panel';
@@ -43,6 +44,7 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
   const envRef = useRef<InputEnv | null>(null);
   const simRef = useRef<DaySim | null>(null);
   const [hud, setHud] = useState<Hud>({ clock: '07:00', cash: money(0), queue: 0, paused: false, tip: '' });
+  const [muted, setMuted] = useState({ som: sound.isMuted('som'), musica: sound.isMuted('musica') });
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
 
@@ -91,7 +93,7 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
       drawPanel(ctx, sim.state, env.ui);
       drawAlerts(ctx, sim.state, env.ui);
       drawHighlight(ctx, layout, highlight, env.ui);
-      sim.drainEvents();
+      sound.play(sim.drainEvents());
 
       if (nowMs - hudAt > 100) {
         hudAt = nowMs;
@@ -110,6 +112,7 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
     };
     ctx.imageSmoothingEnabled = false;
     raf = requestAnimationFrame(loop);
+    sound.setMusic(true);
 
     const onBlur = () => {
       pause();
@@ -129,6 +132,7 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
     window.addEventListener('keydown', onKey);
     return () => {
       cancelAnimationFrame(raf);
+      sound.stop();
       window.removeEventListener('blur', onBlur);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('keydown', onKey);
@@ -144,6 +148,7 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
   const onDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const env = envRef.current;
     if (!env || env.state.paused) return;
+    sound.unlock(); // o AudioContext só nasce num gesto
     e.currentTarget.setPointerCapture(e.pointerId);
     const { x, y } = toLogical(e.currentTarget, e.clientX, e.clientY);
     send(pointerDown(env, x, y));
@@ -151,6 +156,11 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
   const onUp = () => {
     const env = envRef.current;
     if (env) send(pointerUp(env));
+  };
+  const toggleMute = (channel: 'som' | 'musica') => {
+    sound.unlock();
+    sound.setMuted(channel, !sound.isMuted(channel));
+    setMuted({ som: sound.isMuted('som'), musica: sound.isMuted('musica') });
   };
   const togglePause = () => send([{ type: simRef.current?.state.paused ? 'resume' : 'pause' }]);
 
@@ -161,6 +171,12 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
         <span>Caixa {hud.cash}</span>
         <span>Fila {hud.queue}</span>
         <span>★ {config.reputation.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}</span>
+        <button type="button" onClick={() => toggleMute('som')} aria-pressed={muted.som} aria-label="Efeitos sonoros">
+          {muted.som ? 'Som: não' : 'Som: sim'}
+        </button>
+        <button type="button" onClick={() => toggleMute('musica')} aria-pressed={muted.musica} aria-label="Música">
+          {muted.musica ? 'Música: não' : 'Música: sim'}
+        </button>
         <button type="button" onClick={togglePause} aria-label="Pausar">
           Pausa
         </button>
@@ -184,6 +200,12 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
         <div className="overlay" role="dialog" aria-label="Jogo pausado">
           <div className="menu">
             <h2>Pausado</h2>
+            <button type="button" onClick={() => toggleMute('som')}>
+              Efeitos: {muted.som ? 'desligados' : 'ligados'}
+            </button>
+            <button type="button" onClick={() => toggleMute('musica')}>
+              Música: {muted.musica ? 'desligada' : 'ligada'}
+            </button>
             <button type="button" onClick={togglePause}>
               Continuar
             </button>
