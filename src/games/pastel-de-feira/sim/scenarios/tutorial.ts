@@ -101,6 +101,24 @@ export const tutorial: Scenario[] = [
     },
   },
   {
+    id: 'rn170-moer-cana-funciona-com-o-relogio-parado',
+    rules: 'RN-170, RN-42',
+    run(seed) {
+      const sim = makeSim(seed, { ...devConfig(), tutorial: true });
+      sim.state.arrivalLeft = 1e9;
+      const s = sim.state;
+      addCustomer(s, 'padrao', ['queijo', 'caldo-puro']);
+      sim.setHold(true);
+      sim.dispatch({ type: 'tapStation', station: 'moenda' });
+      advance(sim, secs(2));
+      const t0 = s.tick;
+      sim.dispatch({ type: 'holdStart', station: 'moenda', action: 'moenda' });
+      advance(sim, secs(6.5));
+      checkEq(s.cups.length, 1, 'o caldo sai mesmo com o relógio do tutorial parado');
+      checkEq(s.tick, t0, 'e o relógio continua parado');
+    },
+  },
+  {
     id: 'rn171-balao-delivery-uma-vez',
     rules: 'RN-171',
     run() {

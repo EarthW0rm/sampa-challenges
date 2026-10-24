@@ -122,7 +122,10 @@ export class DaySim {
     this.steps++;
     this.applyCommands();
     if (s.hold) {
+      // relógio parado, mas o que o jogador está fazendo segue: deslocamento e ações seguradas (moenda, vassoura)
       updatePasteleiro(s, STEP);
+      updateMill(s, STEP);
+      updateCleaning(s, STEP);
       return;
     }
     s.tick++;
