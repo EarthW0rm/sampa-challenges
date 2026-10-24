@@ -25,7 +25,7 @@ export const CHECKS: readonly Check[] = [
   },
   {
     bot: 'brinde-max',
-    criterio: 'Brinde 2 + chorinho 3 com equipe: nos 4 primeiros dias a reputação sobe mais que a do equilibrado (ou ambas no teto) e o lucro fica abaixo da meta em ≥ 3',
+    criterio: 'Brinde 2 + chorinho 3 com equipe: nos 4 primeiros dias a reputação sobe pelo menos como a do equilibrado (ou ambas no teto) e o lucro fica abaixo do dele em ≥ 3',
     passou: (r) => {
       const rows = r.rows.filter((x) => x.promo).slice(0, 4);
       if (rows.length < 4) return false;
@@ -35,8 +35,8 @@ export const CHECKS: readonly Check[] = [
       const ref = rows.map((x) => first.get(x.day)).filter((x): x is Run['rows'][number] => !!x);
       const gain = rows[rows.length - 1].repAfter - rows[0].repBefore;
       const refGain = ref.length === rows.length ? ref[ref.length - 1].repAfter - ref[0].repBefore : 0;
-      const below = rows.filter((x) => x.goal !== null && x.profit < x.goal).length >= 3;
-      return gain >= refGain - 0.05 && below;
+      const lower = rows.filter((x, i) => ref[i] !== undefined && x.profit < ref[i].profit).length >= 3;
+      return gain >= refGain - 0.05 && lower;
     },
   },
   {
@@ -79,7 +79,7 @@ export function runBot(bot: BotName, seeds: number, days: number): BotReport {
       a.met += r.met ? 1 : 0;
       a.rep += r.repAfter;
       a.served += r.served;
-      a.lost += r.lostPatience + r.lostPrice + r.noStock;
+      a.lost += r.lostPatience + r.lostPrice + r.noStock + r.queueFull;
       a.burned += r.burned;
       a.n++;
       acc.set(r.day, a);

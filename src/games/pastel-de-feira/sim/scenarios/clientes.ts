@@ -1,7 +1,7 @@
-import { DAY_TICKS, PATIENCE, STEP, hourAt } from '../../game/constants';
+import { DAY_TICKS, PATIENCE, QUEUE_CALM_MIN, STEP, hourAt } from '../../game/constants';
 import { devConfig } from '../testConfig';
 import {
-  addCustomer, arrivalInterval, ceilingFor, priceIndex, profileShares, swapDemand,
+  addCustomer, arrivalInterval, ceilingFor, priceIndex, profileShares, queueCalm, swapDemand,
 } from '../../game/sim/customers';
 import { consumeIngredient } from '../../game/sim/stock';
 import { Rng } from '../../game/rng';
@@ -86,23 +86,39 @@ export const clientes: Scenario[] = [
     id: 'rn06-paciencia',
     rules: 'RN-06',
     run(seed) {
+      // o primeiro da fila gasta a paciência em tempo real: cada perfil sai ao esgotar a sua
+      for (const profile of PROFILES) {
+        const sim = makeSim(seed);
+        sim.state.arrivalLeft = 1e9;
+        const c = addCustomer(sim.state, profile, ['carne']);
+        checkEq(c.patience, PATIENCE[profile], `${profile}: paciência base`);
+        advance(sim, Math.round((PATIENCE[profile] - 1) / STEP));
+        check(sim.state.customers.includes(c), `${profile} ainda espera 1 s antes do fim`);
+        advance(sim, Math.round(2 / STEP));
+        check(!sim.state.customers.includes(c), `${profile} vai embora ao esgotar a paciência`);
+        checkEq(sim.state.stats.lostPatience, 1, `${profile}: um cliente perdido`);
+        checkNear(sim.state.rep.failures, 1, 'falha de peso 1,0');
+      }
+    },
+  },
+  {
+    id: 'rn06b-quem-esta-atras-fica-mais-calmo',
+    rules: 'RN-06b',
+    run(seed) {
       const sim = makeSim(seed);
-      const c = addCustomer(sim.state, 'padrao', ['carne']);
-      checkEq(c.patience, PATIENCE.padrao, 'Padrão');
-      checkEq(addCustomer(sim.state, 'economico', ['carne']).patience, PATIENCE.economico, 'Econômico');
-      checkEq(addCustomer(sim.state, 'exigente', ['carne']).patience, PATIENCE.exigente, 'Exigente');
-      const exi = sim.state.customers[2];
-      const eco = sim.state.customers[1];
       sim.state.arrivalLeft = 1e9;
-      advance(sim, Math.round((PATIENCE.exigente + 1) / STEP));
-      check(sim.state.customers.includes(c), 'Padrão ainda espera quando o Exigente sai');
-      check(!sim.state.customers.includes(exi), 'Exigente vai embora ao esgotar a paciência');
-      advance(sim, Math.round((PATIENCE.padrao - PATIENCE.exigente) / STEP));
-      check(!sim.state.customers.includes(c), 'Padrão vai embora ao esgotar a paciência');
-      check(sim.state.customers.includes(eco), 'Econômico ainda espera');
-      advance(sim, Math.round((PATIENCE.economico - PATIENCE.padrao + 1) / STEP));
-      checkEq(sim.state.stats.lostPatience, 3, 'três clientes perdidos por paciência');
-      checkNear(sim.state.rep.failures, 3, 'falha de peso 1,0 cada');
+      const first = addCustomer(sim.state, 'padrao', ['carne']);
+      const second = addCustomer(sim.state, 'padrao', ['carne']);
+      const third = addCustomer(sim.state, 'padrao', ['carne']);
+      advance(sim, Math.round(10 / STEP));
+      checkNear(first.patience, PATIENCE.padrao - 10, 'primeiro: ritmo normal', 0.05);
+      checkNear(second.patience, PATIENCE.padrao - 10 * queueCalm(1), 'segundo: mais calmo', 0.05);
+      checkNear(third.patience, PATIENCE.padrao - 10 * queueCalm(2), 'terceiro: ainda mais calmo', 0.05);
+      check(queueCalm(1) < 1 && queueCalm(2) < queueCalm(1), 'quanto mais longe, menos gasta');
+      checkEq(queueCalm(50), QUEUE_CALM_MIN, 'tem piso');
+      // quando o primeiro sai, o de trás passa a gastar no ritmo da nova posição
+      advance(sim, Math.round(PATIENCE.padrao / STEP));
+      check(!sim.state.customers.includes(first), 'o primeiro desiste primeiro');
     },
   },
   {

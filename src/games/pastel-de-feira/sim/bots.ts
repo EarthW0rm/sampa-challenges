@@ -31,6 +31,8 @@ export interface DayRow {
   served: number;
   lostPatience: number;
   lostPrice: number;
+  /** Clientes que nem entraram na fila (fila cheia). */
+  queueFull: number;
   noStock: number;
   burned: number;
   rejected: number;
@@ -128,7 +130,7 @@ export function invest(c: Campaign, last?: DayRow, first: readonly string[] = []
     }
   }
   // funcionário só quando a fila já perde clientes por paciência (a equipe custa R$ 55–75 por dia)
-  if (last && !last.met && last.lostPatience + last.noStock >= 4 && c.cash > 300 && c.staff.length < 1 + Math.floor(c.day / 4)) {
+  if (last && !last.met && last.lostPatience + last.noStock + last.queueFull >= 4 && c.cash > 300 && c.staff.length < 1 + Math.floor(c.day / 4)) {
     const kind = c.staff.some((w) => w.kind === 'fritador') ? 'geral' : 'fritador';
     const cand = rollCandidates(c).find((k) => k.kind === kind) ?? rollCandidates(c)[0];
     if (cand) c = take(c, hire(c, cand.id));
@@ -172,7 +174,7 @@ export function playOne(bot: BotName, c: Campaign, last?: DayRow): { campaign: C
     row: {
       day: before.day, profit: b.profit, goal: b.goal, met: b.met, repBefore: b.reputationBefore, repAfter: b.reputationAfter,
       minRep: b.minReputation, cash: out.campaign.cash, served: result.orders.served, lostPatience: result.orders.lostPatience,
-      lostPrice: result.orders.lostPrice, noStock: result.orders.noStock, burned: result.waste.burned, rejected: sim.state.rejected,
+      lostPrice: result.orders.lostPrice, queueFull: result.orders.queueFull, noStock: result.orders.noStock, burned: result.waste.burned, rejected: sim.state.rejected,
       staff: before.staff, delivery: before.delivery, promo,
     },
   };

@@ -32,10 +32,10 @@ export const fechamento: Scenario[] = [
     id: 'rn50-meta-do-dia',
     rules: 'RN-50',
     run() {
-      // valores (P) calibrados pelos robôs (TF-123-02): R$ 70 × 1,10^(N−1)
+      // valores (P) calibrados pelos robôs (TF-123-02): R$ 70 × 1,12^(N−1)
       checkNear(profitGoal(1), 70, 'dia 1', 0.01);
-      checkNear(profitGoal(10), 165.06, 'dia 10', 0.01);
-      checkNear(profitGoal(20), 428.11, 'dia 20', 0.05);
+      checkNear(profitGoal(10), 194.11, 'dia 10', 0.01);
+      checkNear(profitGoal(20), 602.89, 'dia 20', 0.05);
       checkEq(minReputation(1), 2, 'dias 1–5');
       checkEq(minReputation(6), 3, 'dias 6–12');
       checkEq(minReputation(13), 3.5, 'dias 13–20');

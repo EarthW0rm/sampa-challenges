@@ -1,4 +1,4 @@
-import { STEP } from '../../game/constants';
+import { DECAY_DELAY, DECAY_PER_SECOND, STEP } from '../../game/constants';
 import { addCustomer, spawnCustomer } from '../../game/sim/customers';
 import { currentQuality } from '../../game/sim/quality';
 import type { DaySim } from '../../game/sim/day';
@@ -151,7 +151,7 @@ export const equipamentos: Scenario[] = [
       const fora = s.ready[6];
       check(currentQuality(fora, t0 + 70) < 80 - 100 || fora.warmed !== true, 'fora da estufa vale o decaimento normal');
       const normal = { id: 9, item: 'carne', quality: 80, readyAt: t0 };
-      checkEq(currentQuality(normal, t0 + 20), 60, 'sem estufa: 2 pontos/s depois de 10 s');
+      checkEq(currentQuality(normal, t0 + DECAY_DELAY + 20), 80 - 20 * DECAY_PER_SECOND, 'sem estufa: perde a nota depois do atraso (RN-25)');
       // estufa grande: 12 vagas
       const big = makeSim(seed, withEquip({ warmer: 12 }, { stations: ['balcao', 'bancada', 'tacho1', 'estufa', 'moenda'] }));
       big.state.arrivalLeft = 1e9;
@@ -173,10 +173,10 @@ export const equipamentos: Scenario[] = [
       sim.state.arrivalLeft = 1e9;
       sim.state.ready.push({ id: 1, item: 'carne', quality: 80, readyAt: 0 });
       sim.dispatch({ type: 'tapStation', station: 'estufa' });
-      advance(sim, secs(20)); // 20 s esperando fora da estufa: perdeu 20 pontos (10 s de espera × 2)
+      advance(sim, secs(DECAY_DELAY + 20)); // esperando fora da estufa: 20 s depois do atraso = 20 pontos perdidos
       sim.dispatch({ type: 'tapSlot', station: 'estufa', slot: { k: 'pronto', id: 1 } });
       sim.step();
-      checkEq(sim.state.ready[0].quality, 60, 'entra na estufa com a nota que já decaiu');
+      checkEq(sim.state.ready[0].quality, 80 - 20 * DECAY_PER_SECOND, 'entra na estufa com a nota que já decaiu');
     },
   },
   {

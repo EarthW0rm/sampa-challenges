@@ -28,8 +28,8 @@ O toque/clique é o controle completo. No desktop também há teclado.
 
 - O dia dura 240 s. Às 14h há corte seco: o que está em aberto se perde sem falha.
 - Pastel cru vale nota 40, no ponto 80 e passado 55. Queimado vira desperdício. O preço pago usa a nota e a reputação.
-- Cada cliente (Econômico, Padrão, Exigente) tem teto de preço e exigência de qualidade. Fila de 6, paciência de 50 a 70 s.
-- Meta do dia N: lucro líquido ≥ R$ 70 × 1,10^(N−1) e reputação mínima (2,0 até o dia 5; 3,0 até o 12; 3,5 depois). Meta não cumprida repete o dia.
+- Cada cliente (Econômico, Padrão, Exigente) tem teto de preço e exigência de qualidade. Fila de 6, paciência de 70 a 90 s (quem está atrás na fila gasta menos).
+- Meta do dia N: lucro líquido ≥ R$ 70 × 1,12^(N−1) e reputação mínima (2,0 até o dia 5; 3,0 até o 12; 3,5 depois). Meta não cumprida repete o dia.
 - Falência: caixa negativo no fechamento. Dá para "passar o ponto" (recomeçar com bônus) depois de zerar.
 - Sistemas que entram aos poucos: equipe (dia 2), Associação (dia 3), delivery e tema (dia 5), Especial da Casa (dia 6), escritório (dia 10).
 
@@ -51,7 +51,9 @@ Mudou um número? Atualize esta tabela.
 | `PEAK_FACTOR` (P) | 1,5 | chegada ×1,5 das 10h às 12h |
 | `QUEUE_MAX` | 6 | fila cheia perde cliente (falha de peso 0,5) |
 | `ORDER_DRINK_CHANCE` (P) | 0,4 | chance de o pedido levar caldo |
-| `PATIENCE` (P) | 70 / 60 / 50 s | paciência (Econômico, Padrão, Exigente) |
+| `PATIENCE` (P) | 90 / 80 / 70 s | paciência do primeiro da fila (Econômico, Padrão, Exigente) |
+| `QUEUE_CALM_STEP` / `QUEUE_CALM_MIN` (P) | 0,2 / 0,3 | quem está atrás gasta a paciência mais devagar: ×1,0; 0,8; 0,6; 0,4; 0,3 |
+| `DECAY_DELAY` / `DECAY_PER_SECOND` (P) | 20 s / 1 ponto/s | pastel pronto fora da estufa perde nota depois de 20 s |
 | `PROFILE_CEILING` (P) | 0,9 / 1,2 / 1,6 | teto de preço × referência por perfil |
 | `PROFILE_MIN_QUALITY` (P) | 30 / 50 / 70 | nota mínima aceita por perfil |
 | `QUALITY_RAW` / `QUALITY_PONTO` / `QUALITY_OVERDONE` | 40 / 80 / 55 | nota de cru, no ponto e passado |
@@ -68,7 +70,7 @@ Mudou um número? Atualize esta tabela.
 | `APP_FEE` (P) | 20% | taxa do app |
 | `APP_CAP_BASE/MID/HIGH` (P) | 3 / 6 / 10 | teto diário de comandas por reputação |
 | `GOAL_BASE` (P) | R$ 70 | meta de lucro do dia 1 (spec: 80; calibrado, ver `calibracao.md`) |
-| `GOAL_GROWTH` (P) | 1,10 | crescimento diário da meta (spec: 1,18; calibrado) |
+| `GOAL_GROWTH` (P) | 1,12 | crescimento diário da meta (spec: 1,18; calibrado) |
 | `BRINDE_MIN_N`–`BRINDE_MAX_N` | 2–6 | faixa do brinde (RN-120) |
 | `CHARM_GIFT` (P) | 1,5 | encanto por brinde entregue (spec: 0,5; calibrado) |
 | `XEPA_START_HOUR` | 13 | a xepa só vale a partir das 13h |

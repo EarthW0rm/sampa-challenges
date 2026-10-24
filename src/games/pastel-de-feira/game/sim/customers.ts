@@ -1,5 +1,5 @@
 import {
-  ARRIVAL_BASE_INTERVAL, ARRIVAL_DAILY_DECAY, ARRIVAL_MIN_INTERVAL, EXIGENTE_RAMP_END_HOUR,
+  ARRIVAL_BASE_INTERVAL, ARRIVAL_DAILY_DECAY, QUEUE_CALM_MIN, QUEUE_CALM_STEP, ARRIVAL_MIN_INTERVAL, EXIGENTE_RAMP_END_HOUR,
   EXIGENTE_RAMP_FIRST_DAY, EXIGENTE_RAMP_LAST_DAY, EXIGENTE_RAMP_MAX_BONUS, EXIGENTE_RAMP_START_HOUR,
   DIRT_PATIENCE_FACTOR, DIRT_PATIENCE_LIMIT, FAIL_WEIGHT, LOW_REPUTATION_ARRIVAL, LOW_REPUTATION_LIMIT, ORDER_DESSERT_CHANCE, ORDER_DESSERT_CHANCE_LATE, ORDER_DESSERT_LATE_HOUR, ORDER_DRINK_CHANCE, ORDER_PASTRIES_MAX,
   ORDER_PASTRIES_MIN, PATIENCE, PEAK_END_HOUR, PEAK_FACTOR, PEAK_START_HOUR, PROFILE_CEILING,
@@ -349,6 +349,9 @@ export function swapDemand(s: DayState): void {
   }
 }
 
+/** Quanto da paciência gasta por segundo: 1 para o primeiro da fila, menos para quem está atrás (RN-06b). */
+export const queueCalm = (rank: number): number => Math.max(QUEUE_CALM_MIN, 1 - QUEUE_CALM_STEP * rank);
+
 /** Chegadas e paciência. A paciência corre até o pedido completo ser recebido (RN-06). */
 export function updateCustomers(s: DayState, dt: number): void {
   s.arrivalLeft -= dt;
@@ -358,9 +361,11 @@ export function updateCustomers(s: DayState, dt: number): void {
   }
   // barraca suja: todos ficam 20% menos pacientes (RN-133)
   const drain = s.dirt >= dirtLimit(s) ? dt / DIRT_PATIENCE_FACTOR : dt;
+  const queue = queueOf(s);
   for (let i = s.customers.length - 1; i >= 0; i--) {
     const c = s.customers[i];
-    c.patience -= drain;
+    const rank = c.place === 'fila' ? queue.indexOf(c) : 0;
+    c.patience -= drain * queueCalm(rank);
     if (c.patience <= 0) {
       s.stats.lostPatience++;
       failOrder(s, c, FAIL_WEIGHT.counter);

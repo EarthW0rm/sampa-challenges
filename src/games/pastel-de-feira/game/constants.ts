@@ -47,10 +47,14 @@ export const ORDER_DESSERT_CHANCE_LATE = 0.35;
 export const ORDER_DESSERT_LATE_HOUR = 11;
 // RN-06: paciência base (s) do fim da fila até receber o pedido completo
 export const PATIENCE: Readonly<Record<'economico' | 'padrao' | 'exigente', number>> = {
-  economico: 70,
-  padrao: 60,
-  exigente: 50,
+  economico: 90,
+  padrao: 80,
+  exigente: 70,
 };
+
+// RN-06b: quem está mais longe do balcão fica mais calmo: a paciência gasta menos a cada posição atrás do primeiro
+export const QUEUE_CALM_STEP = 0.2;
+export const QUEUE_CALM_MIN = 0.3;
 
 // RN-10: faixa de preço (fração da referência) e passo (R$)
 export const PRICE_MIN_FACTOR = 0.5;
@@ -91,8 +95,8 @@ export const QUALITY_OVERDONE = 55;
 export const OIL_DIRTY_QUALITY_PENALTY = 15;
 /** Sujeira do óleo a partir da qual ele conta como sujo (fração de 0 a 1). */
 export const OIL_DIRTY_THRESHOLD = 0.7;
-export const DECAY_DELAY = 10;
-export const DECAY_PER_SECOND = 2;
+export const DECAY_DELAY = 20;
+export const DECAY_PER_SECOND = 1;
 export const NO_BAG_PENALTY = 10;
 
 // RN-41..42: pasteleiro (s)
@@ -222,4 +226,4 @@ export function stepsFor(acc: number, dt: number, speed: 1 | 2): { steps: number
 
 // RN-50: meta de lucro do dia N = GOAL_BASE × GOAL_GROWTH^(N−1) (calibrada pelos robôs, TF-123-02)
 export const GOAL_BASE = 70;
-export const GOAL_GROWTH = 1.1;
+export const GOAL_GROWTH = 1.12;

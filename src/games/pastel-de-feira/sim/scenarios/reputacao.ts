@@ -1,3 +1,4 @@
+import { DECAY_DELAY, DECAY_PER_SECOND } from '../../game/constants';
 import { devConfig } from '../testConfig';
 import { currentQuality, drinkValue, pastryValue, qualityFactor, reputationPremium } from '../../game/sim/quality';
 import { buildResult, reputationChange } from '../../game/sim/result';
@@ -36,9 +37,9 @@ export const reputacao: Scenario[] = [
     rules: 'RN-25',
     run() {
       const r = { id: 1, item: 'carne', quality: 80, readyAt: 100 };
-      checkEq(currentQuality(r, 105), 80, 'sem perda nos primeiros 10 s');
-      checkEq(currentQuality(r, 110), 80, 'aos 10 s ainda 80');
-      checkEq(currentQuality(r, 120), 60, '2 pontos por segundo depois');
+      checkEq(currentQuality(r, 100 + DECAY_DELAY / 2), 80, 'sem perda no começo da espera');
+      checkEq(currentQuality(r, 100 + DECAY_DELAY), 80, 'no fim do atraso ainda 80');
+      checkEq(currentQuality(r, 100 + DECAY_DELAY + 20), 80 - 20 * DECAY_PER_SECOND, 'depois perde DECAY_PER_SECOND por segundo');
       checkEq(currentQuality(r, 500), 0, 'nunca abaixo de 0');
     },
   },
