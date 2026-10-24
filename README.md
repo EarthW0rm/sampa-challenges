@@ -6,12 +6,13 @@ descobre os jogos sozinho; para adicionar um, basta criar a pasta.
 
 | Jogo | Pasta | Resumo |
 |---|---|---|
-| **Capacete Voador** | `src/games/capacete-voador` | O Gorillas do QBasic com dois cachorros motoboys arremessando capacetes por cima de prédios de SP. 2 jogadores, contra o computador (3 dificuldades) ou treino. |
+| **Capacete Voador** | `src/games/capacete-voador` | Duelo de artilharia com dois cachorros motoboys arremessando capacetes por cima de prédios de SP. 2 jogadores, contra o computador (3 dificuldades) ou treino. |
 | **Cachorro Loko** | `src/games/cachorro-loko` | Arcade de esteiras: o vira-lata motoboy pega os pedidos do LOKO DOG antes que caiam na rua. Poderes, bombas e recorde. |
 | **Corredor SP** | `src/games/corredor-sp` | Enduro pseudo-3D na 23 de Maio, Radial Leste e Nações Unidas: costure o trânsito pelo corredor, dê grau, arremesse capacetes e pegue pacotes. |
 | **Pinball Paulista** | `src/games/pinball-paulista` | Mesa de pinball vertical na Avenida Paulista: bumpers-semáforo, Minhocão que prende a bola, letras MOTOBOY, multiball, tilt e recorde. |
 | **Xadrez Paulistano** | `src/games/xadrez-paulistano` | Xadrez num tabuleiro de calçada paulistana em frente à Catedral da Sé. 2 jogadores ou contra o computador do nível 1 ao 100 (IA em Web Worker). |
 | **Sinuca de Bar** | `src/games/sinuca-de-bar` | Sinuca de boteco com a regra da casa: lisas × listradas (mata a 8) ou ímpares × pares (mata a 15). 2 jogadores ou contra o computador (3 níveis). |
+| **Fuga da Rocam** | `src/games/fuga-rocam` | Labirinto visto de cima: pegue e entregue pedidos em 3 mapas de São Paulo fugindo de viaturas de carro, moto e helicóptero (procurado de 1 a 5 estrelas, garagens, itens, óleo). |
 
 Cada jogo tem um `README.md` (como jogar, regras, parâmetros) e um `CLAUDE.md` (guia técnico para
 quem for mexer no código, pessoa ou IA).
@@ -143,6 +144,7 @@ Os PNGs foram desenhados por código (Python + Pillow), pixel a pixel:
 | `pinball_paulista.py` | fundo da mesa (240×400), bumpers-semáforo e capa do Pinball Paulista |
 | `xadrez_paulistano.py` | tabuleiro de calçada paulistana com a Catedral da Sé, peças, peças mini e capa do Xadrez Paulistano |
 | `sinuca_de_bar.py` | mesa no boteco (1×), bolas 0–15, sombra e anel de mira (2× nativo) e capa da Sinuca de Bar |
+| `fuga_rocam.py` | sprites vistos de cima (moto, viaturas, helicóptero, itens, pinos) e capa da Fuga da Rocam |
 | `corredor_sp.py` | trânsito, cenário das avenidas e horizontes do Corredor SP (motos e itens antigos em 1× foram substituídos pela biblioteca) |
 
 ```bash

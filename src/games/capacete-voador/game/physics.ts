@@ -83,7 +83,7 @@ export function launch(owner: PlayerIndex, from: Point, shot: Shot): Flight {
 }
 
 function posAt(f: Flight, t: number, w: World): [number, number] {
-  const windAcc = w.wind / 5; // igual ao QBasic: vento/5
+  const windAcc = w.wind / 5; // vento/5
   return [
     f.x0 + POS_SCALE * (f.vx * t + 0.5 * windAcc * t * t),
     f.y0 - POS_SCALE * (f.vy * t - 0.5 * w.gravity * t * t),
