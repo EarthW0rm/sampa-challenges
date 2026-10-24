@@ -3,7 +3,8 @@ import { ITEMS } from '../data/recipes';
 import { center, type Layout, type Zone } from '../layout';
 import { drawPixelText } from '../pixelFont';
 import { currentQuality } from '../sim/quality';
-import { isChanging, isDirty, isLocked } from '../sim/stations/fryer';
+import { fryWindow, isChanging, isDirty, isLocked } from '../sim/stations/fryer';
+import { millSeconds } from '../sim/stations/cane';
 import { now, type Customer, type DayState } from '../sim/state';
 import type { UiState } from '../ui';
 import { SCALE } from '../hires';
@@ -67,7 +68,7 @@ function drawBalloon(ctx: CanvasRenderingContext2D, c: Customer, x: number, y: n
   bar(ctx, bx, y - 26, w, 4, c.patience / c.patienceMax, c.patience / c.patienceMax > 0.4 ? PAL.green : PAL.red);
 }
 
-function drawTacho(ctx: CanvasRenderingContext2D, st: DayState, z: Zone, index: number): void {
+function drawTacho(ctx: CanvasRenderingContext2D, st: DayState, ui: UiState, z: Zone, index: number): void {
   const t = st.tachos[index];
   if (!t) return;
   const n = t.baskets.length;
@@ -75,19 +76,33 @@ function drawTacho(ctx: CanvasRenderingContext2D, st: DayState, z: Zone, index: 
   t.baskets.forEach((b, i) => {
     const x = z.x + 8 + i * (bw + 4);
     const y = z.y + 28;
-    box(ctx, { x, y, w: bw, h: 44 }, PAL.oil, PAL.woodDark);
-    const f = b.frying;
-    if (f) {
-      const it = ITEMS[f.item];
-      const sec = f.ticks * STEP;
+    const f = b.frying ?? (b.shadow !== null ? t.baskets[b.shadow].frying : null);
+    const win = f ? fryWindow(ITEMS[f.item], t) : null;
+    const sec = f ? f.ticks * STEP : 0;
+    const inPonto = !!f && !!win && !f.burned && sec >= win.ponto[0] && sec <= win.ponto[1];
+    const alarmOn = t.alarm && !!f && !!win && !f.burned && (inPonto || sec >= win.burnAt - 1) && Math.floor(ui.clock * 6) % 2 === 0;
+    box(ctx, { x, y, w: bw, h: 44 }, alarmOn ? PAL.red : PAL.oil, alarmOn ? PAL.text : PAL.woodDark);
+    if (f && win) {
       ctx.fillStyle = f.burned ? '#241a14' : itemColor(f.item);
-      ctx.fillRect(x + 3, y + 6, bw - 6, 14);
-      const color = f.burned ? PAL.red : sec < it.ponto[0] ? PAL.blue : sec <= it.ponto[1] ? PAL.green : PAL.orange;
-      bar(ctx, x, y + 48, bw, 6, sec / it.burnAt, color);
+      ctx.fillRect(x + 3, y + 6, bw - 6, b.shadow !== null ? 8 : 14);
+      const color = f.burned ? PAL.red : sec < win.ponto[0] ? PAL.blue : sec <= win.ponto[1] ? PAL.green : PAL.orange;
+      bar(ctx, x, y + 48, bw, 6, sec / win.burnAt, color);
     }
   });
   bar(ctx, z.x + 8, z.y + z.h - 22, z.w - 16, 6, isChanging(t) ? 0 : t.dirt, isDirty(t) ? PAL.red : PAL.oil);
   if (isLocked(t)) textCenter(ctx, 'TRAVADO', z.x + z.w / 2, z.y + z.h - 14, PAL.red, 1);
+}
+
+function drawWarmer(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): void {
+  const cap = st.config.equipment.warmer;
+  box(ctx, { x: z.x + 6, y: z.y + 26, w: z.w - 12, h: z.h - 40 }, '#2f4a52', PAL.woodDark);
+  const warmed = st.ready.filter((r) => r.warmed);
+  for (let i = 0; i < cap; i++) {
+    const x = z.x + 10 + (i % 4) * 22;
+    const y = z.y + 32 + Math.floor(i / 4) * 18;
+    ctx.fillStyle = warmed[i] ? itemColor(warmed[i].item) : '#1b2c31';
+    ctx.fillRect(x, y, 18, 12);
+  }
 }
 
 export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout: Layout, ui: UiState, statics: HTMLCanvasElement): void {
@@ -144,12 +159,20 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   // tachos
   st.tachos.forEach((_t, i) => {
     const z = layout.byId.get(`tacho${i + 1}` as 'tacho1');
-    if (z) drawTacho(ctx, st, z, i);
+    if (z) drawTacho(ctx, st, ui, z, i);
   });
 
-  // moenda
+  // estufa, caixas térmicas e moenda
+  const es = layout.byId.get('estufa');
+  if (es) drawWarmer(ctx, st, es);
+  const cx = layout.byId.get('caixa');
+  if (cx) {
+    for (let i = 0; i < st.config.coolers; i++) {
+      box(ctx, { x: cx.x + 8, y: cx.y + 26 + i * 44, w: cx.w - 16, h: 38 }, '#3b6ea5', PAL.woodDark);
+    }
+  }
   const mo = layout.byId.get('moenda');
-  if (mo) bar(ctx, mo.x + 8, mo.y + 40, mo.w - 16, 8, st.mill.progress / 6, PAL.green);
+  if (mo) bar(ctx, mo.x + 8, mo.y + 40, mo.w - 16, 8, st.mill.progress / millSeconds(st), PAL.green);
 
   // pasteleiro
   const p = st.pasteleiro;

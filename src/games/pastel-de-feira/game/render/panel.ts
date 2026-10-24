@@ -1,10 +1,12 @@
-import { HOLD_MILL_MANUAL, HOLD_OIL_MANUAL, STEP } from '../constants';
+import { HOLD_OIL_MANUAL, STEP } from '../constants';
 import { ITEMS } from '../data/recipes';
 import { INGREDIENTS } from '../data/catalog';
 import { inside, MIN_TARGET, PANEL, stationLabel, type Rect } from '../layout';
 import { drawPixelText } from '../pixelFont';
 import { currentQuality } from '../sim/quality';
-import { isChanging, isDirty, isLocked } from '../sim/stations/fryer';
+import { fryWindow, isChanging, isDirty, isLocked } from '../sim/stations/fryer';
+import { millSeconds } from '../sim/stations/cane';
+import { warmedCount, warmerCapacity } from '../sim/stations/warmer';
 import { now, type DayState } from '../sim/state';
 import { stockQty } from '../sim/stock';
 import type { Command } from '../types';
@@ -22,6 +24,8 @@ export interface Control {
   run: () => Command[];
   release?: () => Command[];
 }
+
+const DRINK_LABEL: Record<string, string> = { 'caldo-puro': 'PURO', 'caldo-limao': 'LIMAO', 'caldo-abacaxi': 'ABACAXI' };
 
 const STEP_X = MIN_TARGET + 6;
 const ORIGIN_X = 8;
@@ -62,7 +66,7 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
       const q = Math.round(currentQuality(r, now(st)));
       const sel = ui.selected?.kind === 'pastel' && ui.selected.id === r.id;
       out.push({
-        rect: next(), label: shortName(r.item), sub: String(q), fill: itemColor(r.item), selected: sel,
+        rect: next(), label: shortName(r.item), sub: `${r.warmed ? 'E ' : ''}${q}`, fill: itemColor(r.item), selected: sel,
         run: () => {
           ui.selected = sel ? null : { kind: 'pastel', id: r.id };
           return [];
@@ -82,38 +86,52 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
   } else if (station === 'bancada') {
     const seen = new Set<string>();
     for (const m of st.config.menu) {
-      for (const ing of ITEMS[m.item].filling) {
-        if (seen.has(ing) || INGREDIENTS[ing].kind === 'cana' || INGREDIENTS[ing].kind === 'complemento') continue;
-        seen.add(ing);
-        if (seen.size > 8) break;
-        const inTray = st.tray.filter((x) => x === ing).length;
-        out.push({
-          rect: next(), label: INGREDIENTS[ing].name.split(' ')[0].slice(0, 8), sub: String(stockQty(st, ing)),
-          fill: inTray > 0 ? PAL.tileHi : PAL.tile, selected: inTray > 0, run: () => tap('bancada', { k: 'ingrediente', id: ing }),
-        });
-      }
+      for (const ing of ITEMS[m.item].filling) if (!INGREDIENTS[ing].kind.match(/cana|complemento/)) seen.add(ing);
+    }
+    const all = [...seen];
+    const pages = Math.max(1, Math.ceil(all.length / 8));
+    const page = ui.page % pages;
+    for (const ing of all.slice(page * 8, page * 8 + 8)) {
+      const inTray = st.tray.filter((x) => x === ing).length;
+      out.push({
+        rect: next(), label: INGREDIENTS[ing].name.split(' ')[0].slice(0, 8), sub: String(stockQty(st, ing)),
+        fill: inTray > 0 ? PAL.tileHi : PAL.tile, selected: inTray > 0, run: () => tap('bancada', { k: 'ingrediente', id: ing }),
+      });
     }
     k = 8;
     out.push({ rect: next(), label: 'FECHAR', sub: String(st.tray.length), fill: PAL.green, run: () => tap('bancada', { k: 'fechar' }) });
     out.push({ rect: next(), label: 'LIMPAR', fill: PAL.red, run: () => tap('bancada', { k: 'limpar' }) });
-    for (const a of st.assembled.slice(0, 6)) {
+    for (const a of st.assembled.slice(0, pages > 1 ? 5 : 6)) {
       const sel = st.selectedAssembled === a.id;
       out.push({
         rect: next(), label: shortName(a.item), sub: 'MONTADO', fill: itemColor(a.item), selected: sel,
         run: () => tap('bancada', { k: 'montado', id: a.id }),
       });
     }
+    if (pages > 1) {
+      k = 15;
+      out.push({
+        rect: next(), label: 'MAIS', sub: `${page + 1}/${pages}`, fill: PAL.gold,
+        run: () => {
+          ui.page = (page + 1) % pages;
+          return [];
+        },
+      });
+    }
   } else if (station.startsWith('tacho')) {
     const tacho = st.tachos[Number(station.slice(5)) - 1];
     if (tacho) {
       tacho.baskets.forEach((b, i) => {
-        const f = b.frying;
+        const f = b.frying ?? (b.shadow !== null ? tacho.baskets[b.shadow].frying : null);
         const it = f ? ITEMS[f.item] : null;
+        const win = it ? fryWindow(it, tacho) : null;
         const seconds = f ? f.ticks * STEP : 0;
-        const color = !f || !it ? PAL.tile : f.burned ? PAL.red : seconds < it.ponto[0] ? PAL.blue : seconds <= it.ponto[1] ? PAL.green : PAL.orange;
+        const color = !f || !win ? PAL.tile : f.burned ? PAL.red : seconds < win.ponto[0] ? PAL.blue : seconds <= win.ponto[1] ? PAL.green : PAL.orange;
+        const blink = tacho.alarm && !!f && !!win && !f.burned && (seconds >= win.ponto[0] && seconds <= win.ponto[1] || seconds >= win.burnAt - 1);
         out.push({
           rect: next(), label: `CESTO ${i + 1}`, sub: f ? (f.burned ? 'QUEIMOU' : shortName(f.item)) : 'LIVRE', fill: PAL.tile,
-          bar: f && it ? { frac: seconds / it.burnAt, color } : undefined, run: () => tap(station, { k: 'cesto', index: i }),
+          selected: blink && Math.floor(ui.clock * 6) % 2 === 0,
+          bar: f && win ? { frac: seconds / win.burnAt, color } : undefined, run: () => tap(station, { k: 'cesto', index: i }),
         });
       });
       k = 8;
@@ -125,13 +143,27 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
         release: () => [{ type: 'holdEnd' }],
       });
     }
+  } else if (station === 'estufa') {
+    out.push({ rect: next(), label: 'ESTUFA', sub: `${warmedCount(st)}/${warmerCapacity(st)}`, fill: PAL.blue, run: () => [] });
+    for (const r of st.ready.filter((x) => !x.warmed).slice(0, 7)) {
+      out.push({
+        rect: next(), label: shortName(r.item), sub: String(Math.round(currentQuality(r, now(st)))), fill: itemColor(r.item),
+        run: () => tap('estufa', { k: 'pronto', id: r.id }),
+      });
+    }
   } else if (station === 'moenda') {
-    out.push({
-      rect: next(3), label: 'SEGURAR', sub: `CANA ${stockQty(st, 'cana')}`, fill: PAL.green,
-      bar: { frac: st.mill.progress / HOLD_MILL_MANUAL, color: PAL.gold },
-      run: () => [{ type: 'holdStart', station: 'moenda', action: 'moenda' }],
-      release: () => [{ type: 'holdEnd' }],
+    const drinks = st.config.menu.filter((m) => ITEMS[m.item].kind === 'bebida').slice(0, 3);
+    drinks.forEach((m) => {
+      const mine = st.mill.item === m.item;
+      out.push({
+        rect: next(2), label: DRINK_LABEL[m.item] ?? 'CALDO',
+        sub: `CANA ${stockQty(st, 'cana')}`, fill: PAL.green,
+        bar: { frac: mine ? st.mill.progress / millSeconds(st) : 0, color: PAL.gold },
+        run: () => [{ type: 'holdStart', station: 'moenda', action: 'moenda', item: m.item }],
+        release: () => [{ type: 'holdEnd' }],
+      });
     });
+    k = 8;
     out.push({ rect: next(2), label: 'COPOS', sub: String(st.consumables.copo), fill: PAL.tile, run: () => [] });
   }
   return out;

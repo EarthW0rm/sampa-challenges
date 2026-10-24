@@ -12,6 +12,8 @@ export interface UiState {
   selected: ItemRef | null;
   /** Soltar o controle segurado envia estes comandos. */
   release: (() => Command[]) | null;
+  /** Página dos ingredientes na bancada (8 por página). */
+  page: number;
   /** Contador de ids de gesto. */
   gesture: number;
   /** Relógio de animação em segundos (não pausa a UI). */
@@ -24,6 +26,7 @@ export const createUi = (): UiState => ({
   idle: 0,
   selected: null,
   release: null,
+  page: 0,
   gesture: 0,
   clock: 0,
 });

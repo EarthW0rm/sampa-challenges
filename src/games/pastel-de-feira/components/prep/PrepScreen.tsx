@@ -4,6 +4,7 @@ import type { Campaign } from '../../game/campaign/types';
 import { money, rep1, stars } from '../format';
 import { InventoryTab } from './InventoryTab';
 import { MenuTab } from './MenuTab';
+import { UpgradesTab } from './UpgradesTab';
 
 interface Props {
   campaign: Campaign;
@@ -12,13 +13,14 @@ interface Props {
   onExit: () => void;
 }
 
-type TabId = 'insumos' | 'cardapio';
+type TabId = 'insumos' | 'cardapio' | 'melhorias';
 
 /** Abas só aparecem quando desbloqueadas (RN-171). Melhorias, Equipe, Escritório e Associação entram nas US seguintes. */
 function visibleTabs(_c: Campaign): { id: TabId; label: string }[] {
   return [
     { id: 'insumos', label: 'Insumos' },
     { id: 'cardapio', label: 'Cardápio' },
+    { id: 'melhorias', label: 'Melhorias' },
   ];
 }
 
@@ -49,6 +51,7 @@ export function PrepScreen({ campaign: c, onChange, onOpen, onExit }: Props) {
       </nav>
       {tab === 'insumos' && <InventoryTab campaign={c} onChange={onChange} />}
       {tab === 'cardapio' && <MenuTab campaign={c} onChange={onChange} />}
+      {tab === 'melhorias' && <UpgradesTab campaign={c} onChange={onChange} />}
       <footer className="prep-foot">
         <button type="button" onClick={onExit}>
           Sair
