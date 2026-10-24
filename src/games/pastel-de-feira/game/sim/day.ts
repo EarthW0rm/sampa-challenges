@@ -3,6 +3,8 @@ import type { Command, DayConfig, DayResult, SimEvent } from '../types';
 import { applyCommand } from './commands';
 import { updateCustomers } from './customers';
 import { updatePasteleiro } from './pasteleiro';
+import { buildResult } from './result';
+import { updateMill } from './stations/cane';
 import { updateFryers } from './stations/fryer';
 import { createState, emit, type DayState } from './state';
 
@@ -87,6 +89,7 @@ export class DaySim {
     s.tick++;
     updatePasteleiro(s, STEP);
     updateFryers(s, STEP);
+    updateMill(s, STEP);
     updateCustomers(s, STEP);
     if (s.tick >= DAY_TICKS) this.close();
   }
@@ -139,23 +142,6 @@ export class DaySim {
     s.over = true;
     s.customers.length = 0; // quem estava na fila vai embora sem pagar e sem falha
     emit(s, 'corte_seco');
-    this.cached = {
-      day: s.config.day,
-      ticks: s.tick,
-      revenue: { counter: 0, total: 0 },
-      costs: { oil: 0 },
-      orders: {
-        served: s.stats.served,
-        lostPatience: s.stats.lostPatience,
-        wrong: s.stats.wrong,
-        queueFull: s.stats.queueFull,
-        lostPrice: s.stats.lostPrice,
-        noStock: s.stats.noStock,
-      },
-      waste: { burned: 0, leftover: 0 },
-      reputation: { successes: 0, charm: 0, weightedFailures: 0, rate: 0, change: 0 },
-      stockLeft: s.stock.map((l) => ({ ...l })),
-      consumables: { ...s.consumables },
-    };
+    this.cached = buildResult(s);
   }
 }
