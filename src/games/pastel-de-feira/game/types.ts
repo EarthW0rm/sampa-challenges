@@ -31,6 +31,7 @@ export type Slot =
   | { k: 'limpar' }
   | { k: 'montado'; id: number }
   | { k: 'pagar' }
+  | { k: 'encomenda'; id: number }
   | { k: 'cesto'; index: number }
   | { k: 'pronto'; id: number };
 
@@ -91,6 +92,17 @@ export interface StaffConfig {
   position: PositionId | null;
 }
 
+/** Encomenda aceita no Preparo: quantidade, horário de retirada, pagamento e multa (RN-102). */
+export interface OrderConfig {
+  id: number;
+  item: ItemId;
+  qty: number;
+  /** Instante da retirada em segundos do dia. */
+  pickupAt: number;
+  pay: number;
+  fine: number;
+}
+
 /** Equipamentos globais que o dia usa. */
 export interface EquipmentFlags {
   /** Escorredor profissional: nota +10 (RN-24). */
@@ -119,6 +131,8 @@ export interface DayConfig {
   positions: PositionId[];
   /** Sujeira a partir da qual Exigentes não entram e a paciência cai (60; o tema Popular sobe para 75, RN-17). */
   dirtLimit?: number;
+  /** Encomendas aceitas para hoje (RN-102). */
+  orders: OrderConfig[];
   /** Cargos de gestão contratados (RN-103). */
   roles: OfficeRole[];
   /** Delivery do app: ligado hoje, aceite automático e Conta Parceira (RN-90, RN-95). */
@@ -156,6 +170,9 @@ export type SimEventType =
   | 'estufa'
   | 'funcionario_descansa'
   | 'funcionario_volta'
+  | 'encomenda_chegou'
+  | 'encomenda_entregue'
+  | 'encomenda_falhou'
   | 'oferta_app'
   | 'oferta_aceita'
   | 'moto_chegou'
@@ -186,8 +203,8 @@ export interface SimEvent {
 export interface DayResult {
   day: number;
   ticks: number;
-  revenue: { counter: number; table: number; app: number; total: number };
-  costs: { oil: number };
+  revenue: { counter: number; table: number; app: number; order: number; total: number };
+  costs: { oil: number; fines: number };
   orders: {
     served: number;
     lostPatience: number;
@@ -199,6 +216,8 @@ export interface DayResult {
     payFail: number;
     appPicked: number;
     appCancelled: number;
+    encDone: number;
+    encFailed: number;
   };
   waste: { burned: number; leftover: number };
   reputation: { successes: number; charm: number; weightedFailures: number; rate: number; change: number };

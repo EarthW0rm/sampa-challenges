@@ -25,7 +25,7 @@ export const drinkValue = (price: number, rep: number): number => price * reputa
  * fica congelada por 60 s e depois cai 1 ponto/s (RN-27).
  */
 export function currentQuality(r: Ready, t: number): number {
-  if (r.warmed) {
+  if (r.warmed || r.boxed) {
     const waited = Math.max(0, t - r.readyAt - WARMER.holdSeconds);
     return clampQuality(r.quality - waited * WARMER.decayPerSecond);
   }

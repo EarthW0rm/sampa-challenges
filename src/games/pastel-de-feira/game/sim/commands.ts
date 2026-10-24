@@ -1,5 +1,6 @@
 import type { Command } from '../types';
 import { acceptOffer, packPastry } from './delivery';
+import { boxPastry } from './orders';
 import { cancelCleaning, startCleaning } from './dirt';
 import { isAt, tapStation } from './pasteleiro';
 import { sendToRest } from './staff';
@@ -21,10 +22,12 @@ export function applyCommand(s: DayState, cmd: Command): boolean {
         if (slot.k === 'anotar') return takeOrder(s);
         if (slot.k === 'moedas') return collectCoins(s);
         if (slot.k === 'pagar') return chargeNextGroup(s);
+        if (slot.k === 'encomenda') return isAt(s, 'balcao') && boxPastry(s, slot.id);
         return false;
       }
       if (cmd.station === 'expedicao') {
         if (slot.k === 'pronto') return isAt(s, 'expedicao') && packPastry(s, slot.id);
+        if (slot.k === 'encomenda') return isAt(s, 'expedicao') && boxPastry(s, slot.id);
         return false;
       }
       if (cmd.station === 'mesas') {

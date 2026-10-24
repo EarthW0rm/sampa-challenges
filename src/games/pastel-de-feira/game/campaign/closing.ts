@@ -86,11 +86,13 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   const wages = payroll(campaign);
   if (wages > 0) lines.push({ id: 'salarios', label: 'Salários', amount: -wages });
   if (bonus > 0) lines.push({ id: 'bonus', label: 'Bônus de aproveitamento', amount: bonus });
+  const fines = clampMoney(result.costs.fines);
+  if (fines > 0) lines.push({ id: 'multas', label: 'Multas de encomenda', amount: -round2(fines) });
 
   const profit = round2(lines.reduce((n, l) => n + l.amount, 0));
 
   // 5. Caixa: compras já saíram no Preparo. Entram vendas e bônus; saem óleo e custos fixos.
-  const cashIn = revenue + bonus + leftoverSale - clampMoney(result.costs.oil) - rent - wages;
+  const cashIn = revenue + bonus + leftoverSale - clampMoney(result.costs.oil) - rent - wages - fines;
   c.cash = round2(c.cash + cashIn);
 
   // 6. Reputação (RN-62)
@@ -119,6 +121,7 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   c.boughtToday = 0;
   c.resumes = 0;
   c.hiredToday = [];
+  c.orders = []; // as encomendas valem só para o dia
   for (const w of c.staff) w.trainedToday = false;
   c.history = [
     ...c.history,
@@ -151,6 +154,7 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
     giftCost: result.giftCost,
     wastePercent,
     bonus,
+    fines,
     bankrupt: c.cash < 0,
     newDay: c.day,
     freeModeStarted,

@@ -80,6 +80,18 @@ export interface Promo {
   xepaDiscount: number;
 }
 
+/** Encomenda aceita no Preparo para o dia seguinte (RN-102). `dayId` identifica a encomenda dentro do dia. */
+export interface BigOrderOffer {
+  id: string;
+  dayId: number;
+  item: ItemId;
+  qty: number;
+  /** Hora do relógio do jogo da retirada, de 9 a 13,5. */
+  hour: number;
+  pay: number;
+  fine: number;
+}
+
 export interface MenuChoice {
   salgados: ItemId[];
   doces: ItemId[];
@@ -117,6 +129,8 @@ export interface Campaign {
   owned: Owned;
   menu: MenuChoice;
   prices: Record<ItemId, number>;
+  /** Encomendas aceitas para o próximo Dia de Feira (RN-102). */
+  orders: BigOrderOffer[];
   /** Cargos de gestão contratados, no máximo 3 (RN-100, RN-103). */
   roles: OfficeRole[];
   /** Promoções do dia (RN-120, RN-123, RN-124). */
@@ -184,6 +198,7 @@ export interface Balance {
   giftCost: number;
   wastePercent: number;
   bonus: number;
+  fines: number;
   bankrupt: boolean;
   newDay: number;
   freeModeStarted: boolean;

@@ -3,6 +3,7 @@ import type { Command, DayConfig, DayResult, SimEvent } from '../types';
 import { applyCommand } from './commands';
 import { updateCleaning } from './dirt';
 import { updateDelivery } from './delivery';
+import { updateOrders } from './orders';
 import { updateCustomers } from './customers';
 import { updatePasteleiro } from './pasteleiro';
 import { buildResult } from './result';
@@ -103,6 +104,7 @@ export class DaySim {
     updateCustomers(s, STEP);
     updateTables(s, STEP);
     updateDelivery(s, STEP);
+    updateOrders(s, STEP);
     if (s.tick >= DAY_TICKS) this.close();
   }
 
@@ -155,6 +157,7 @@ export class DaySim {
     s.customers.length = 0; // quem estava na fila vai embora sem pagar e sem falha
     s.eating.length = 0; // grupos nas mesas e na fila de pagamento também (RN-07)
     s.payQueue.length = 0;
+    s.bigOrders.length = 0; // encomenda pendente às 14h se perde sem multa nem falha (RN-07)
     s.offers.length = 0; // comandas e motoboys pendentes se perdem sem falha (RN-07)
     s.comandas.length = 0;
     s.motoboys.length = 0;

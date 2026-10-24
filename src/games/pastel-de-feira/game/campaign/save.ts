@@ -67,6 +67,13 @@ function isHistory(v: unknown): v is DayHistory {
   );
 }
 
+function isOrder(v: unknown, owned: Rec): boolean {
+  return (
+    isRec(v) && isStr(v.id) && isInt(v.dayId, 1) && isStr(v.item) && ITEMS[v.item] !== undefined && Array.isArray(owned.items) && (owned.items as string[]).includes(v.item) &&
+    isInt(v.qty, 10, 40) && isNum(v.hour) && v.hour >= 9 && v.hour <= 13.5 && isNum(v.pay) && v.pay > 0 && isNum(v.fine) && v.fine > 0 && !!owned.office
+  );
+}
+
 function isStaff(v: unknown): boolean {
   if (!isRec(v) || !isInt(v.id, 1) || !isStr(v.name) || v.name.length > 40) return false;
   if (v.kind !== 'fritador' && v.kind !== 'geral') return false;
@@ -118,6 +125,7 @@ export function isCampaign(v: unknown): v is Campaign {
   }
   if (!Array.isArray(v.roles) || v.roles.length > OFFICE.roleSlots || new Set(v.roles).size !== v.roles.length || !v.roles.every((r) => isStr(r) && (ROLE_IDS as readonly string[]).includes(r))) return false;
   if (v.roles.length > 0 && !(o as Rec).office) return false;
+  if (!Array.isArray(v.orders) || v.orders.length > 3 || !v.orders.every((x) => isOrder(x, v.owned as Rec))) return false;
   const pr = v.promo;
   if (!isRec(pr) || !(pr.brindeN === 0 || isInt(pr.brindeN, 2, 6)) || !isInt(pr.chorinho, 0, 3) || !isBool(pr.xepa)) return false;
   if (!isNum(pr.xepaDiscount) || ![0.1, 0.2, 0.3, 0.4, 0.5].some((d) => Math.abs(d - (pr.xepaDiscount as number)) < 1e-9)) return false;

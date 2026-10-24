@@ -111,8 +111,10 @@ export interface Ready {
   /** Nota na saída do óleo, já com modificadores. */
   quality: number;
   readyAt: number;
-  /** Reservado para uma comanda do app (RN-96). */
+  /** Reservado para uma comanda do app ou encomenda (RN-96, RN-104). */
   reservedFor?: number;
+  /** Na caixa de encomenda: nota congelada por 60 s, sem ocupar a estufa (RN-104). */
+  boxed?: boolean;
   /** Está na estufa: a nota fica congelada por 60 s (RN-27). */
   warmed?: boolean;
 }
@@ -192,6 +194,20 @@ export interface Motoboy {
   waitLeft: number;
 }
 
+/** Encomenda em andamento no dia (RN-102, RN-104). */
+export interface BigOrder {
+  id: number;
+  item: ItemId;
+  qty: number;
+  pickupAt: number;
+  pay: number;
+  fine: number;
+  /** Pastéis prontos já na caixa da encomenda. */
+  boxed: number[];
+  state: 'pendente' | 'espera';
+  waitLeft: number;
+}
+
 export interface Reputation {
   successes: number;
   charm: number;
@@ -212,6 +228,10 @@ export interface Stats {
   oilCost: number;
   tableRevenue: number;
   giftCost: number;
+  orderRevenue: number;
+  fines: number;
+  encDone: number;
+  encFailed: number;
   appRevenue: number;
   appPicked: number;
   appCancelled: number;
@@ -238,6 +258,7 @@ export interface DayState {
   consumables: Record<ConsumableId, number>;
   customers: Customer[];
   /** Grupos que já receberam o pedido e estão comendo. */
+  bigOrders: BigOrder[];
   offers: AppOffer[];
   comandas: Comanda[];
   motoboys: Motoboy[];
@@ -286,6 +307,7 @@ export function createState(config: DayConfig, seed: number): DayState {
     stock: config.stock.map((l) => ({ ...l })),
     consumables: { ...config.consumables },
     customers: [],
+    bigOrders: config.orders.map((o) => ({ ...o, boxed: [], state: 'pendente' as const, waitLeft: 0 })),
     offers: [],
     comandas: [],
     motoboys: [],
@@ -324,7 +346,7 @@ export function createState(config: DayConfig, seed: number): DayState {
     rep: { successes: 0, charm: 0, failures: 0 },
     stats: {
       arrived: 0, served: 0, lostPatience: 0, wrong: 0, queueFull: 0, lostPrice: 0, noStock: 0,
-      burned: 0, revenue: 0, oilCost: 0, tableRevenue: 0, giftCost: 0, appRevenue: 0, appPicked: 0, appCancelled: 0, lostDirt: 0, payFail: 0,
+      burned: 0, revenue: 0, oilCost: 0, tableRevenue: 0, giftCost: 0, orderRevenue: 0, fines: 0, encDone: 0, encFailed: 0, appRevenue: 0, appPicked: 0, appCancelled: 0, lostDirt: 0, payFail: 0,
     },
   };
 }

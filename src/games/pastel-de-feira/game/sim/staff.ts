@@ -6,6 +6,7 @@ import type { ItemRef, StationId } from '../types';
 import { lineMatches, deliverItem, noteOrder, takeCoins } from './stations/counter';
 import { chargeGroup } from './stations/tables';
 import { packPastry } from './delivery';
+import { boxPastry } from './orders';
 import { addDirt, cleanTable, dirtyTable } from './dirt';
 import { assembleItem } from './stations/bench';
 import { makeCup, millSeconds } from './stations/cane';
@@ -194,7 +195,7 @@ function pickBalcao(s: DayState, w: Worker): boolean {
     start(w, s, { kind: 'cobrar' }, WORK.collect, true);
     return true;
   }
-  return false;
+  return pickDispatch(s, w); // sem outra coisa a fazer, o Balcão também guarda pastéis nas encomendas
 }
 
 /** Garçom: anota o grupo na mesa e entrega o pedido pronto (RN-83, RN-86). */
@@ -216,7 +217,7 @@ function pickWaiter(s: DayState, w: Worker): boolean {
 /** Expedição: embala pastéis prontos nas comandas do app (RN-40, RN-96). */
 function pickDispatch(s: DayState, w: Worker): boolean {
   if (s.workers.some((o) => o !== w && o.task?.kind === 'embalar')) return false;
-  const r = s.ready.find((x) => x.reservedFor === undefined && s.comandas.some((c) => c.items.some((it, k) => c.packed[k] === null && ITEMS[it].base === ITEMS[x.item].base)));
+  const r = s.ready.find((x) => x.reservedFor === undefined && (s.comandas.some((c) => c.items.some((it, k) => c.packed[k] === null && ITEMS[it].base === ITEMS[x.item].base)) || s.bigOrders.some((o) => o.boxed.length < o.qty && ITEMS[o.item].base === ITEMS[x.item].base)));
   if (!r) return false;
   start(w, s, { kind: 'embalar', ref: { kind: 'pastel', id: r.id } }, WORK.deliver, true);
   return true;
@@ -344,7 +345,7 @@ function complete(s: DayState, w: Worker, t: WorkerTask): void {
       if (t.tacho !== undefined) cleanTable(s, t.tacho);
       break;
     case 'embalar':
-      if (t.ref) packPastry(s, t.ref.id);
+      if (t.ref && !packPastry(s, t.ref.id)) boxPastry(s, t.ref.id);
       break;
     case 'varrer':
       addDirt(s, -HELPER_CLEAN_POINTS);

@@ -34,6 +34,14 @@ export function unmetItems(s: DayState, drinks: boolean, inProgress: readonly It
   const supply = supplyMap(s, drinks, inProgress);
   const out: ItemId[] = [];
   if (!drinks) {
+    // encomendas: o que falta para completar a caixa (RN-104)
+    for (const o of s.bigOrders) {
+      for (let k = o.boxed.length; k < o.qty; k++) {
+        const alt = [...supply.entries()].find(([id, n]) => n > 0 && ITEMS[id].base === ITEMS[o.item].base);
+        if (alt) supply.set(alt[0], alt[1] - 1);
+        else out.push(o.item);
+      }
+    }
     // comandas do app: cada item ainda sem pastel reservado também precisa ser produzido (RN-96)
     for (const c of s.comandas) {
       c.items.forEach((item, k) => {
