@@ -3,7 +3,7 @@ import { ITEMS } from '../data/recipes';
 import { center, type Layout, type Zone } from '../layout';
 import { drawPixelText } from '../pixelFont';
 import { currentQuality } from '../sim/quality';
-import { queueOf } from '../sim/customers';
+import { queueOf, xepaActive } from '../sim/customers';
 import { fryWindow, isChanging, isDirty, isLocked } from '../sim/stations/fryer';
 import { millSeconds } from '../sim/stations/cane';
 import { homeStation } from '../sim/staff';
@@ -100,6 +100,10 @@ function drawBalloon(ctx: CanvasRenderingContext2D, c: Customer, x: number, y: n
     c.lines.forEach((l, i) => {
       ctx.fillStyle = l.delivered ? PAL.muted : itemColor(l.item);
       ctx.fillRect(bx + 4 + i * 12, y - 18, 9, 9);
+      if (l.gift) {
+        ctx.fillStyle = PAL.gold; // brinde: estrela dourada no canto
+        ctx.fillRect(bx + 10 + i * 12, y - 19, 3, 3);
+      }
     });
   }
   bar(ctx, bx, y - 26, w, 4, c.patience / c.patienceMax, c.patience / c.patienceMax > 0.4 ? PAL.green : PAL.red);
@@ -286,6 +290,12 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   }
   const mo = layout.byId.get('moenda');
   if (mo) bar(ctx, mo.x + 8, mo.y + 40, mo.w - 16, 8, st.mill.progress / millSeconds(st), PAL.green);
+
+  // placa da xepa às 13h (RN-124)
+  if (xepaActive(st)) {
+    box(ctx, { x: 470, y: 120, w: 120, h: 24 }, PAL.red, PAL.text);
+    textCenter(ctx, `XEPA -${Math.round(st.config.promo.xepaDiscount * 100)}%`, 530, 127, PAL.text, 2);
+  }
 
   // equipe
   for (const [id, spot] of workerSpots(layout, st)) {

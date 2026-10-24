@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { setDelivery, setPrice, toggleMenuItem } from '../../game/campaign/actions/menu';
+import { setDelivery, setPrice, setPromo, toggleMenuItem } from '../../game/campaign/actions/menu';
 import { fatigueFactor } from '../../game/campaign/fatigue';
 import { defaultPrice } from '../../game/campaign/pricing';
 import { REFUSAL_TEXT, type Campaign } from '../../game/campaign/types';
 import { ITEMS, type Item } from '../../game/data/recipes';
-import { PRICE_STEP } from '../../game/constants';
+import { BRINDE_MAX_N, BRINDE_MIN_N, CHORINHO_MAX, PRICE_STEP, XEPA_DISCOUNTS } from '../../game/constants';
 import { money } from '../format';
 
 interface Props {
@@ -62,6 +62,49 @@ export function MenuTab({ campaign: c, onChange }: Props) {
           </label>
         </div>
       )}
+      <div className="item">
+        <strong className="item-main">Promoções</strong>
+        <label className="field">
+          Brinde (a cada N pastéis, 1 de graça)
+          <select value={c.promo.brindeN} onChange={(e) => onChange(setPromo(c, { brindeN: Number(e.target.value) }))}>
+            <option value={0}>Desligado</option>
+            {Array.from({ length: BRINDE_MAX_N - BRINDE_MIN_N + 1 }, (_, i) => BRINDE_MIN_N + i).map((n) => (
+              <option key={n} value={n}>
+                A cada {n}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          Chorinho do caldo (+10% de cana por nível)
+          <select value={c.promo.chorinho} onChange={(e) => onChange(setPromo(c, { chorinho: Number(e.target.value) }))}>
+            {Array.from({ length: CHORINHO_MAX + 1 }, (_, i) => i).map((n) => (
+              <option key={n} value={n}>
+                Nível {n}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={c.promo.xepa} onChange={(e) => onChange(setPromo(c, { xepa: e.target.checked }))} />
+          <span className="item-main">
+            <strong>Hora da xepa (13h às 14h)</strong>
+            <span>Desconto em tudo, mais Econômicos e as sobras saem a 30% do custo.</span>
+          </span>
+        </label>
+        {c.promo.xepa && (
+          <label className="field">
+            Desconto da xepa
+            <select value={c.promo.xepaDiscount} onChange={(e) => onChange(setPromo(c, { xepaDiscount: Number(e.target.value) }))}>
+              {XEPA_DISCOUNTS.map((d) => (
+                <option key={d} value={d}>
+                  {Math.round(d * 100)}%
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
       {groups.map((g) =>
         g.items.length === 0 ? null : (
           <div key={g.title}>

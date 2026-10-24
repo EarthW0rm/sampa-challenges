@@ -5,6 +5,7 @@ import { money, rep1, stars } from '../format';
 import { InventoryTab } from './InventoryTab';
 import { MenuTab } from './MenuTab';
 import { StaffTab } from './StaffTab';
+import { ThemeDialog } from './ThemeDialog';
 import { UpgradesTab } from './UpgradesTab';
 
 interface Props {
@@ -29,6 +30,8 @@ function visibleTabs(c: Campaign): { id: TabId; label: string }[] {
 
 export function PrepScreen({ campaign: c, onChange, onOpen, onExit }: Props) {
   const [tab, setTab] = useState<TabId>('insumos');
+  const [themeDismissed, setThemeDismissed] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
   const tabs = visibleTabs(c);
   return (
     <main className="prep">
@@ -52,6 +55,14 @@ export function PrepScreen({ campaign: c, onChange, onOpen, onExit }: Props) {
           </button>
         ))}
       </nav>
+      {((c.theme === null && c.day >= 5 && !themeDismissed) || themeOpen) && (
+        <ThemeDialog campaign={c} onChange={onChange} onClose={() => { setThemeDismissed(true); setThemeOpen(false); }} />
+      )}
+      {c.day >= 5 && c.theme !== null && !themeOpen && (
+        <button type="button" onClick={() => setThemeOpen(true)}>
+          Tema: {c.theme}
+        </button>
+      )}
       {tab === 'insumos' && <InventoryTab campaign={c} onChange={onChange} />}
       {tab === 'cardapio' && <MenuTab campaign={c} onChange={onChange} />}
       {tab === 'melhorias' && <UpgradesTab campaign={c} onChange={onChange} />}
