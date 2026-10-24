@@ -46,7 +46,7 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext('2d')!;
     const sim = new DaySim(config, seed);
-    const layout = buildLayout(config.stations);
+    const layout = buildLayout(config.stations, { coolers: config.coolers });
     const statics = buildStaticLayer(layout);
     const env: InputEnv = { state: sim.state, layout, ui: createUi() };
     simRef.current = sim;

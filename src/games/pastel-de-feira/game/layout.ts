@@ -3,7 +3,8 @@ import type { StationId } from './types';
 
 /** Zonas fixas da barraca em coordenadas lógicas 640×480 (RN-74, RN-75). Só leitura. */
 
-export type ZoneId = StationId | 'fila';
+/** `fila` e `caixa` (caixas térmicas) são zonas sem estação: ninguém se desloca até elas. */
+export type ZoneId = StationId | 'fila' | 'caixa';
 
 export interface Zone {
   id: ZoneId;
@@ -47,12 +48,38 @@ const MID_Y = 158;
 const LOW_Y = PANEL.y + 6;
 const GAP = 6;
 
-/** Monta as zonas a partir das estações que existem. As de uso frequente ficam acima do painel. */
-export function buildLayout(stations: readonly StationId[]): Layout {
+/** Ordem física das estações na barraca: base do deslocamento do pasteleiro (RN-41). */
+export const STATION_ORDER: readonly StationId[] = [
+  'balcao', 'bancada', 'tacho1', 'tacho2', 'tacho3', 'estufa', 'moenda', 'mesas', 'expedicao', 'escritorio', 'descanso',
+];
+
+/** Põe as estações na ordem física. */
+export const orderStations = (list: readonly StationId[]): StationId[] => STATION_ORDER.filter((id) => list.includes(id));
+
+/** Grafo de vizinhança (cada estação encosta nas vizinhas da ordem física). Conexo por construção. */
+export function neighborGraph(stations: readonly StationId[]): ReadonlyMap<StationId, StationId[]> {
+  const g = new Map<StationId, StationId[]>();
+  stations.forEach((id, i) => g.set(id, [stations[i - 1], stations[i + 1]].filter((x): x is StationId => x !== undefined)));
+  return g;
+}
+
+export interface LayoutOptions {
+  /** Caixas térmicas compradas (zona ao lado do balcão). */
+  coolers?: number;
+}
+
+/**
+ * Monta as zonas a partir do que foi comprado (slots fixos por tipo: a barraca cheia sempre cabe em
+ * 640×480). As zonas de uso frequente (fila, balcão, bancada, tachos, estufa, moenda) ficam acima da
+ * faixa coberta pelo painel; mesas, expedição, escritório e descanso ficam abaixo (RN-74, RN-75).
+ */
+export function buildLayout(stations: readonly StationId[], opts: LayoutOptions = {}): Layout {
   const zones: Zone[] = [];
   const add = (id: ZoneId, x: number, y: number, w: number, h: number, label: string) => zones.push({ id, x, y, w, h, label });
-  add('fila', 8, TOP_Y, 320, 118, 'FILA');
-  if (stations.includes('balcao')) add('balcao', 336, TOP_Y, 296, 118, LABELS.balcao);
+  const coolers = opts.coolers ?? 0;
+  add('fila', 8, TOP_Y, 292, 118, 'FILA');
+  if (stations.includes('balcao')) add('balcao', 306, TOP_Y, coolers > 0 ? 262 : 326, 118, LABELS.balcao);
+  if (coolers > 0) add('caixa', 574, TOP_Y, 58, 118, 'CAIXA');
 
   const mid = MID.filter((id) => stations.includes(id));
   const midW = Math.max(80, Math.min(132, Math.floor((W - 16 - GAP * (mid.length - 1)) / Math.max(1, mid.length))));

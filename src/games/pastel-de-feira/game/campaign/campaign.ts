@@ -2,6 +2,7 @@ import { STOCK_CAPACITY } from '../constants';
 import { INGREDIENTS, DOUGH_SHELF_DAYS, CONSUMABLE_IDS } from '../data/catalog';
 import { ITEMS, type ItemId } from '../data/recipes';
 import { SPACE } from '../data/equipment';
+import { orderStations } from '../layout';
 import type { DayConfig, EquipmentFlags, MenuEntry, StationId } from '../types';
 import type { Campaign, NewCampaignOptions } from './types';
 import { fatigueFactor } from './fatigue';
@@ -98,7 +99,7 @@ export function stationsOf(c: Campaign): StationId[] {
   c.owned.tachos.forEach((_t, i) => list.push(`tacho${i + 1}` as StationId));
   if (c.owned.equip.includes('estufa')) list.push('estufa');
   list.push('moenda');
-  return list;
+  return orderStations(list);
 }
 
 /** Metros quadrados totais da barraca (RN-70, RN-71). */

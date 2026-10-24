@@ -12,14 +12,14 @@ import { bar, box, dog, furOf, itemColor, PAL, PROFILE_COLOR, textCenter } from 
 /** Posição do cliente `i` da fila (frente à direita, perto do balcão). */
 export function queueSpot(layout: Layout, i: number): { x: number; y: number } {
   const z = layout.byId.get('fila')!;
-  return { x: z.x + z.w - 34 - i * 50, y: z.y + z.h - 14 };
+  return { x: z.x + z.w - 30 - i * 46, y: z.y + z.h - 14 };
 }
 
 /** Cliente sob o ponto (alvo de toque de 46×64). */
 export function customerAt(layout: Layout, st: DayState, x: number, y: number): Customer | null {
   for (let i = 0; i < st.customers.length; i++) {
     const p = queueSpot(layout, i);
-    if (Math.abs(x - p.x) <= 23 && y <= p.y + 4 && y >= p.y - 60) return st.customers[i];
+    if (Math.abs(x - p.x) <= 22 && y <= p.y + 4 && y >= p.y - 60) return st.customers[i];
   }
   return null;
 }

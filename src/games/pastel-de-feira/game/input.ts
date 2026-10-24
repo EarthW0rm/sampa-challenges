@@ -61,6 +61,7 @@ export function pointerDown(env: InputEnv, x: number, y: number): Command[] {
     }
     return stamp(ui, goTo(env, 'balcao'));
   }
+  if (zone.id === 'caixa') return [];
   return stamp(ui, goTo(env, zone.id));
 }
 
