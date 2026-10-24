@@ -4,6 +4,7 @@ import { ITEMS, type ItemId } from '../../data/recipes';
 import { menuEntry, swapDemand } from '../customers';
 import { isAt } from '../pasteleiro';
 import { emit, newId, type DayState } from '../state';
+import { hasPower } from '../world';
 import { canMake, consumeIngredient, needs } from '../stock';
 
 const EPS = 1e-9;
@@ -11,7 +12,7 @@ const DEFAULT_DRINK: ItemId = 'caldo-puro';
 
 /** Segundos para extrair um caldo: 6 s na moenda manual, 2,5 s na motorizada (RN-42). */
 export const millSeconds = (s: DayState): number =>
-  (s.config.equipment.mill === 'motorizada' ? MILL_MOTOR_SECONDS : HOLD_MILL_MANUAL) + CHORINHO_SECONDS * s.config.promo.chorinho;
+  (s.config.equipment.mill === 'motorizada' && hasPower(s) ? MILL_MOTOR_SECONDS : HOLD_MILL_MANUAL) + CHORINHO_SECONDS * s.config.promo.chorinho;
 
 /** Começa a extrair o caldo segurando a moenda (RN-42). Trocar de bebida zera o progresso. */
 export function startMill(s: DayState, item: ItemId = DEFAULT_DRINK): boolean {

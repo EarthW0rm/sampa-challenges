@@ -7,6 +7,7 @@ import { QUALITY_BONUS, THERMOSTAT } from '../../data/equipment';
 import { ITEMS, type Item } from '../../data/recipes';
 import { swapDemand } from '../customers';
 import { addDirt } from '../dirt';
+import { fireOnPlace } from '../world';
 import { isAt } from '../pasteleiro';
 import { emit, now, type DayState, type Tacho } from '../state';
 
@@ -71,7 +72,7 @@ function partnerBasket(t: Tacho, index: number): number {
 
 /** Colocar o pastel montado num cesto livre (RN-42). O Especial da Casa ocupa 2 cestos (RN-30d). */
 export function placeBasket(s: DayState, tacho: Tacho, index: number): boolean {
-  if (!tacho.baskets[index] || !isFree(tacho, index) || isLocked(tacho) || isChanging(tacho)) return false;
+  if (!tacho.baskets[index] || !isFree(tacho, index) || isLocked(tacho) || isChanging(tacho) || tacho.fireLeft > 0) return false;
   const pick = s.assembled.find((a) => a.id === s.selectedAssembled) ?? s.assembled[0];
   if (!pick) return false;
   const big = ITEMS[pick.item].doughs > 1;
@@ -81,9 +82,11 @@ export function placeBasket(s: DayState, tacho: Tacho, index: number): boolean {
   s.selectedAssembled = null;
   tacho.baskets[index].frying = { id: pick.id, item: pick.item, ticks: 0, burned: false, pontoAlerted: false, burnAlerted: false, bonus: pick.bonus };
   if (big) tacho.baskets[partner].shadow = index;
+  const dirtBefore = tacho.dirt;
   const perPastry = tacho.oil === 'algodao' ? OIL_DIRT_PER_PASTRY_COTTON : OIL_DIRT_PER_PASTRY;
   tacho.dirt = Math.min(1, Math.round((tacho.dirt + perPastry) * 1e6) / 1e6);
   emit(s, 'colocou', pick.id);
+  fireOnPlace(s, tacho, dirtBefore); // óleo acima de 90%: risco de fogo (RN-152)
   return true;
 }
 
@@ -127,7 +130,7 @@ export function tapBasket(s: DayState, station: string, index: number): boolean 
 /** Começa a trocar o óleo, segurando o tacho (RN-42). */
 export function startOilChange(s: DayState, station: string): boolean {
   const tacho = s.tachos[tachoIndex(station)];
-  if (!tacho || !isAt(s, station as 'tacho1')) return false;
+  if (!tacho || !isAt(s, station as 'tacho1') || tacho.fireLeft > 0) return false;
   s.pasteleiro.hold = { action: 'oleo', station: station as 'tacho1' };
   tacho.changeProgress = EPS;
   tacho.changeTotal = HOLD_OIL_MANUAL;
@@ -144,7 +147,7 @@ export function startWorkerOilChange(tacho: Tacho, workerId: number, seconds: nu
 
 /** Livre para receber o próximo pastel montado? Devolve o cesto escolhido ou -1 (RN-30d). */
 export function nextFreeBasket(s: DayState, tacho: Tacho): number {
-  if (isLocked(tacho) || isChanging(tacho)) return -1;
+  if (isLocked(tacho) || isChanging(tacho) || tacho.fireLeft > 0) return -1;
   const pick = s.assembled[0];
   if (!pick) return -1;
   const big = ITEMS[pick.item].doughs > 1;

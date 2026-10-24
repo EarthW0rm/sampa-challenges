@@ -1,5 +1,5 @@
 import { HELPER_CLEAN_POINTS, HELPER_CLEAN_SECONDS, HYGIENE_CLEAN_FACTOR, STEP } from '../constants';
-import { FORECAST } from '../data/events';
+import { FORECAST, SURPRISE } from '../data/events';
 import { MANAGEMENT_SPEED, MANAGER_SPEED } from '../data/office';
 import { AUTO_PRIORITY, ATTENDANCE_FACTOR, CARE_BONUS, ENERGY, FRYER_ONLY, FRY_COURSE_BONUS, OIL_COURSE_FACTOR, RAPID_FACTOR, RESISTANT_FATIGUE, WORK, WRONG_FLAVOR_CHANCE, type PositionId } from '../data/staff';
 import { ITEMS, type ItemId } from '../data/recipes';
@@ -14,7 +14,7 @@ import { makeCup, millSeconds } from './stations/cane';
 import { fryWindow, isChanging, nextFreeBasket, placeBasket, startWorkerOilChange, takeBasket } from './stations/fryer';
 import { warmerCapacity, warmedCount, warmReady } from './stations/warmer';
 import { currentQuality } from './quality';
-import { fatigueFactor } from './world';
+import { fatigueFactor, ignite, maybeBurnWorker, canSurprise } from './world';
 import { emit, now, type Customer, type DayState, type Worker, type WorkerTask } from './state';
 import { canMake } from './stock';
 import { BENCH_CAPACITY, OIL_DIRTY_THRESHOLD } from '../constants';
@@ -39,6 +39,7 @@ const holderOf = (s: DayState, pos: PositionId): Worker | undefined => s.workers
 
 function vacant(s: DayState, pos: PositionId): boolean {
   if (!s.config.positions.includes(pos) || holderOf(s, pos)) return false;
+  if (pos.startsWith('fritador') && (s.tachos[tachoNumber(pos)]?.fireLeft ?? 0) > 0) return false; // tacho em chamas
   const home = homeStation(pos);
   return home === null || home !== pasteleiroStation(s);
 }
@@ -94,6 +95,10 @@ export function sendToRest(s: DayState, staffId: number): boolean {
 }
 
 function updateEnergy(s: DayState, w: Worker, dt: number): void {
+  if (w.away > 0) {
+    w.away = Math.max(0, w.away - dt); // fora da barraca depois de um acidente (RN-152)
+    return;
+  }
   if (w.resting) {
     w.restSeconds += dt;
     w.energy = Math.min(100, w.energy + (w.resting === 'area' ? ENERGY.restAreaRate : ENERGY.restPlaceRate) * dt);
@@ -134,15 +139,16 @@ function assign(s: DayState): void {
   const pst = pasteleiroStation(s);
   for (const w of s.workers) {
     if (w.position && homeStation(w.position) === pst && pst !== null) release(w, s); // o pasteleiro entra na posição (JA-01)
+    if (w.position?.startsWith('fritador') && (s.tachos[tachoNumber(w.position)]?.fireLeft ?? 0) > 0) release(w, s); // fogo: sai da posição
   }
   const reserved = new Set<PositionId>();
   for (const w of s.workers) if (w.mode === 'fixo' && w.fixedPosition) reserved.add(w.fixedPosition);
   for (const w of s.workers) {
-    if (w.position || w.resting) continue;
+    if (w.position || w.resting || w.away > 0) continue;
     if (w.mode === 'fixo' && w.fixedPosition && vacant(s, w.fixedPosition) && eligible(w, w.fixedPosition)) w.position = w.fixedPosition;
   }
   for (const w of s.workers) {
-    if (w.position || w.resting || w.mode !== 'auto') continue;
+    if (w.position || w.resting || w.away > 0 || w.mode !== 'auto') continue;
     const pos = AUTO_PRIORITY.find((p) => eligible(w, p) && vacant(s, p) && !reserved.has(p));
     if (pos) w.position = pos;
   }
@@ -276,6 +282,10 @@ function pickOil(s: DayState, w: Worker): boolean {
     if (best < 0 || t.dirt > s.tachos[best].dirt) best = i;
   });
   if (best < 0) return false;
+  if (canSurprise(s) && !w.courses.includes('fritura') && (s.config.forceEvent === 'fogo' || s.rng.events.chance(SURPRISE.fireChancePerOilChange))) {
+    ignite(s, s.tachos[best]); // troca de óleo sem curso de Fritura pode dar fogo (RN-152)
+    return true;
+  }
   const base = WORK.oilChange * (w.courses.includes('fritura') ? OIL_COURSE_FACTOR : 1);
   const seconds = (base * speedFactor(w)) / crewSpeed(s);
   startWorkerOilChange(s.tachos[best], w.id, seconds);
@@ -295,6 +305,7 @@ function fryerTakes(s: DayState, w: Worker, tachoIndex: number): boolean {
     if (!f.burned && f.ticks * STEP < mid - EPS) continue;
     const before = s.ready.length;
     if (!takeBasket(s, tacho, i, fryBonus(w))) continue;
+    maybeBurnWorker(s, w);
     if (s.ready.length > before && warmerCapacity(s) > warmedCount(s)) warmReady(s, s.ready[s.ready.length - 1].id);
     return true;
   }
@@ -395,7 +406,7 @@ export function updateStaff(s: DayState, dt: number): void {
   for (const w of s.workers) updateEnergy(s, w, dt);
   assign(s);
   for (const w of s.workers) {
-    if (!w.position || w.resting) continue;
+    if (!w.position || w.resting || w.away > 0) continue;
     if (!w.task) pickTask(s, w);
     runTask(s, w, dt);
   }

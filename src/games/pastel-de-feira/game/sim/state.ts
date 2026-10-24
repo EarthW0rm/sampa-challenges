@@ -1,6 +1,7 @@
 import type { ConsumableId, IngredientId } from '../data/catalog';
 import type { ItemId } from '../data/recipes';
 import { Rng } from '../rng';
+import type { SurpriseEvent } from '../data/events';
 import type { CourseId, PositionId, StaffKind, TraitId } from '../data/staff';
 import type { Command, DayConfig, HoldAction, ItemRef, Profile, SimEvent, StationId, StockLot } from '../types';
 
@@ -102,6 +103,8 @@ export interface Tacho {
   thermostat: boolean;
   alarm: boolean;
   timer: boolean;
+  /** Segundos que faltam do fogo no tacho: parado, sem pastéis (RN-152). */
+  fireLeft: number;
 }
 
 /** Pastel pronto, esperando entrega. A nota decai com o tempo (RN-25). */
@@ -167,6 +170,8 @@ export interface Worker {
   idleSeconds: number;
   restSeconds: number;
   minEnergy: number;
+  /** Fora da barraca por um acidente (funcionário queimado, RN-152). */
+  away: number;
 }
 
 export interface AppOffer {
@@ -208,6 +213,23 @@ export interface BigOrder {
   waitLeft: number;
 }
 
+/** Estado dos eventos surpresa: no máximo 1 por dia (RN-150). */
+export interface WorldState {
+  /** Evento agendado para o dia (fiscal, energia, excursão), ou null. */
+  kind: SurpriseEvent | null;
+  /** Instante em segundos do dia. */
+  at: number;
+  fired: boolean;
+  /** Já houve uma surpresa hoje (também cobre fogo e funcionário queimado). */
+  used: boolean;
+  powerLeft: number;
+  excursionLeft: number;
+  excursionGap: number;
+  log: SurpriseEvent[];
+  /** Pastéis que estavam na estufa quando a energia caiu. */
+  pending: number[];
+}
+
 export interface Reputation {
   successes: number;
   charm: number;
@@ -226,6 +248,7 @@ export interface Stats {
   burned: number;
   revenue: number;
   oilCost: number;
+  repairs: number;
   tableRevenue: number;
   giftCost: number;
   drinks: number;
@@ -252,7 +275,7 @@ export interface DayState {
   over: boolean;
   paused: boolean;
   speed: 1 | 2;
-  rng: { customers: Rng; quality: Rng; staff: Rng; app: Rng };
+  rng: { customers: Rng; quality: Rng; staff: Rng; app: Rng; events: Rng };
   nextId: number;
   commands: Command[];
   seenGestures: Set<number>;
@@ -268,6 +291,10 @@ export interface DayState {
   motoboys: Motoboy[];
   offerLeft: number;
   acceptedToday: number;
+  /** Eventos surpresa do dia (RN-150, RN-152). */
+  world: WorldState;
+  /** Avisos de evento para a tela, com tempo de exibição. */
+  notices: { text: string; left: number }[];
   eating: Customer[];
   /** Fila de pagamento do balcão, separada da fila de pedidos (RN-87). */
   payQueue: Customer[];
@@ -294,7 +321,7 @@ export interface DayState {
 
 export function createState(config: DayConfig, seed: number): DayState {
   const root = new Rng(seed);
-  const rng = { customers: root.fork('clientes'), quality: root.fork('qualidade'), staff: root.fork('equipe'), app: root.fork('app') };
+  const rng = { customers: root.fork('clientes'), quality: root.fork('qualidade'), staff: root.fork('equipe'), app: root.fork('app'), events: root.fork('eventos') };
   return {
     config,
     seed: root.seed,
@@ -317,6 +344,8 @@ export function createState(config: DayConfig, seed: number): DayState {
     motoboys: [],
     offerLeft: 10 + rng.customers.next() * 10,
     acceptedToday: 0,
+    world: { kind: null, at: 0, fired: false, used: false, powerLeft: 0, excursionLeft: 0, excursionGap: 0, log: [], pending: [] },
+    notices: [],
     eating: [],
     payQueue: [],
     tables: Array.from({ length: config.tables }, () => ({ seats: Array.from({ length: 4 }, () => 'livre' as SeatState) })),
@@ -337,11 +366,12 @@ export function createState(config: DayConfig, seed: number): DayState {
       thermostat: t.thermostat,
       alarm: t.alarm,
       timer: t.timer,
+      fireLeft: 0,
     })),
     workers: config.staff.map((w) => ({
       id: w.id, name: w.name, kind: w.kind, traits: [...w.traits], courses: [...w.courses], mode: w.mode,
       fixedPosition: w.position, position: null, energy: 100, task: null, resting: null, ordered: false,
-      idleSeconds: 0, restSeconds: 0, minEnergy: 100,
+      idleSeconds: 0, restSeconds: 0, minEnergy: 100, away: 0,
     })),
     ready: [],
     cups: [],
@@ -350,7 +380,7 @@ export function createState(config: DayConfig, seed: number): DayState {
     rep: { successes: 0, charm: 0, failures: 0 },
     stats: {
       arrived: 0, served: 0, lostPatience: 0, wrong: 0, queueFull: 0, lostPrice: 0, noStock: 0,
-      burned: 0, revenue: 0, oilCost: 0, tableRevenue: 0, giftCost: 0, drinks: 0, especial: 0, inspection: 'none', annulled: false, orderRevenue: 0, fines: 0, encDone: 0, encFailed: 0, appRevenue: 0, appPicked: 0, appCancelled: 0, lostDirt: 0, payFail: 0,
+      burned: 0, revenue: 0, oilCost: 0, repairs: 0, tableRevenue: 0, giftCost: 0, drinks: 0, especial: 0, inspection: 'none', annulled: false, orderRevenue: 0, fines: 0, encDone: 0, encFailed: 0, appRevenue: 0, appPicked: 0, appCancelled: 0, lostDirt: 0, payFail: 0,
     },
   };
 }

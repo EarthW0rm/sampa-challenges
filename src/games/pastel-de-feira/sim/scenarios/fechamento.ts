@@ -108,11 +108,11 @@ export const fechamento: Scenario[] = [
     run() {
       const c = stocked();
       c.cash = 0.5;
-      const r = baseResult(c, { costs: { oil: 1.5, fines: 0 } });
+      const r = baseResult(c, { costs: { oil: 1.5, fines: 0, repairs: 0 } });
       const { campaign, balance } = closeDay(c, r);
       checkEq(balance.bankrupt, true, 'caixa negativo = falência');
       check(campaign.cash < 0, 'caixa −R$ 1');
-      const ok = closeDay({ ...c, cash: 5 }, baseResult(c, { costs: { oil: 1.5, fines: 0 } }));
+      const ok = closeDay({ ...c, cash: 5 }, baseResult(c, { costs: { oil: 1.5, fines: 0, repairs: 0 } }));
       checkEq(ok.balance.bankrupt, false, 'caixa positivo segue');
     },
   },

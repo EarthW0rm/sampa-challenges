@@ -34,7 +34,7 @@ export function buildResult(s: DayState): DayResult {
     day: s.config.day,
     ticks: s.tick,
     revenue: { counter: round2(s.stats.revenue - s.stats.tableRevenue - s.stats.appRevenue - s.stats.orderRevenue), table: s.stats.tableRevenue, app: s.stats.appRevenue, order: s.stats.orderRevenue, total: s.stats.revenue },
-    costs: { oil: s.stats.oilCost, fines: s.stats.fines },
+    costs: { oil: s.stats.oilCost, fines: s.stats.fines, repairs: s.stats.repairs },
     orders: {
       served: s.stats.served,
       lostPatience: s.stats.lostPatience,
@@ -54,6 +54,7 @@ export function buildResult(s: DayState): DayResult {
     stockLeft: s.stock.map((l) => ({ ...l })),
     consumables: { ...s.consumables },
     counters: { drinks: s.stats.drinks, especial: s.stats.especial, inspection: s.stats.inspection, annulled: s.stats.annulled },
+    events: [...s.world.log],
     giftCost: Math.round(s.stats.giftCost * 100) / 100,
     staff: s.workers.map((w) => ({ id: w.id, idleSeconds: w.idleSeconds, restSeconds: w.restSeconds, endEnergy: w.energy, minEnergy: w.minEnergy })),
   };

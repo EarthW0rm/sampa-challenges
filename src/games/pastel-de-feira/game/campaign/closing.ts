@@ -89,11 +89,13 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   const wages = payroll(campaign);
   if (wages > 0) lines.push({ id: 'salarios', label: 'Salários', amount: -wages });
   if (bonus > 0) lines.push({ id: 'bonus', label: 'Bônus de aproveitamento', amount: bonus });
+  const repairs = clampMoney(result.costs.repairs);
+  if (repairs > 0) lines.push({ id: 'reparos', label: 'Reparo do tacho', amount: -round2(repairs) });
   const fines = clampMoney(result.costs.fines);
   if (fines > 0) lines.push({ id: 'multas', label: 'Multas de encomenda', amount: -round2(fines) });
 
   // 5. Caixa: compras já saíram no Preparo. Entram vendas e bônus; saem óleo e custos fixos.
-  const cashIn = revenue + bonus + leftoverSale - clampMoney(result.costs.oil) - rent - wages - fines;
+  const cashIn = revenue + bonus + leftoverSale - clampMoney(result.costs.oil) - rent - wages - fines - repairs;
   c.cash = round2(c.cash + cashIn);
 
   // 6. Reputação (RN-62)

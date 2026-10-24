@@ -185,6 +185,8 @@ export type SimEventType =
   | 'encomenda_chegou'
   | 'encomenda_entregue'
   | 'encomenda_falhou'
+  | 'evento_inicio'
+  | 'evento_fim'
   | 'oferta_app'
   | 'oferta_aceita'
   | 'moto_chegou'
@@ -216,7 +218,7 @@ export interface DayResult {
   day: number;
   ticks: number;
   revenue: { counter: number; table: number; app: number; order: number; total: number };
-  costs: { oil: number; fines: number };
+  costs: { oil: number; fines: number; repairs: number };
   orders: {
     served: number;
     lostPatience: number;
@@ -237,6 +239,8 @@ export interface DayResult {
   consumables: Record<ConsumableId, number>;
   /** Contadores do dia usados pelos desafios (RN-136). */
   counters: { drinks: number; especial: number; inspection: 'none' | 'passed' | 'failed'; annulled: boolean };
+  /** Eventos surpresa que ocorreram (RN-152). */
+  events: string[];
   /** Custo dos insumos dos brindes entregues (já incluído nos insumos usados). */
   giftCost: number;
   /** Resumo de cada funcionário no dia (energia, ociosidade). */

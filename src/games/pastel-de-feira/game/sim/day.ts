@@ -4,6 +4,7 @@ import { applyCommand } from './commands';
 import { updateCleaning } from './dirt';
 import { updateDelivery } from './delivery';
 import { updateOrders } from './orders';
+import { planWorld, updateWorld } from './world';
 import { updateCustomers } from './customers';
 import { updatePasteleiro } from './pasteleiro';
 import { buildResult } from './result';
@@ -65,6 +66,7 @@ export class DaySim {
 
   constructor(config: DayConfig, seed: number) {
     this.state = createState(config, seed);
+    planWorld(this.state);
     this.view = { t: 0, hour: hourAt(0), over: false, paused: false, speed: 1, rejected: 0 };
   }
 
@@ -105,6 +107,7 @@ export class DaySim {
     updateTables(s, STEP);
     updateDelivery(s, STEP);
     updateOrders(s, STEP);
+    updateWorld(s, STEP);
     if (s.tick >= DAY_TICKS) this.close();
   }
 
