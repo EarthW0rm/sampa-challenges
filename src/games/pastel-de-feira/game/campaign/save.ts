@@ -1,4 +1,5 @@
 import { CONSUMABLE_IDS, INGREDIENTS } from '../data/catalog';
+import { EQUIP_IDS } from '../data/equipment';
 import { ITEMS } from '../data/recipes';
 import { HISTORY_MAX } from './closing';
 import { clampPrice } from './pricing';
@@ -81,10 +82,14 @@ export function isCampaign(v: unknown): v is Campaign {
   const o = v.owned;
   if (!isRec(o) || !knownItems(o.items) || new Set(o.items).size !== o.items.length) return false;
   if (!isInt(o.slotsSalgado, 3, 7) || !isInt(o.slotsDoce, 2, 3) || !isInt(o.coolers, 0, 2) || !isNum(o.spent) || o.spent < 0) return false;
+  if (!isInt(o.extraM2, 0, 18) || !Array.isArray(o.equip) || new Set(o.equip).size !== o.equip.length) return false;
+  if (!o.equip.every((e) => isStr(e) && (EQUIP_IDS as readonly string[]).includes(e))) return false;
   if (!Array.isArray(o.tachos) || o.tachos.length < 1 || o.tachos.length > 3) return false;
   for (const t of o.tachos) {
     if (!isRec(t) || (t.baskets !== 2 && t.baskets !== 4) || (t.oil !== 'comum' && t.oil !== 'algodao')) return false;
+    if (!isBool(t.thermostat) || !isBool(t.alarm) || !isBool(t.timer)) return false;
   }
+  if ((o.tachos.length - 1) * 2 + o.coolers > o.extraM2) return false; // espaço usado nunca passa do comprado
 
   const m = v.menu;
   if (!isRec(m) || !knownItems(m.salgados) || !knownItems(m.doces) || !knownItems(m.bebidas)) return false;

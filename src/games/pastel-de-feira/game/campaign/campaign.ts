@@ -1,7 +1,8 @@
 import { STOCK_CAPACITY } from '../constants';
 import { INGREDIENTS, DOUGH_SHELF_DAYS, CONSUMABLE_IDS } from '../data/catalog';
 import { ITEMS, type ItemId } from '../data/recipes';
-import type { DayConfig, MenuEntry, StationId } from '../types';
+import { SPACE } from '../data/equipment';
+import type { DayConfig, EquipmentFlags, MenuEntry, StationId } from '../types';
 import type { Campaign, NewCampaignOptions } from './types';
 import { fatigueFactor } from './fatigue';
 import { defaultPrice } from './pricing';
@@ -36,8 +37,10 @@ export function newCampaign(opts: NewCampaignOptions): Campaign {
       items,
       slotsSalgado: 3,
       slotsDoce: 2,
-      tachos: [{ baskets: 2, oil: 'comum' }],
+      tachos: [{ baskets: 2, oil: 'comum', thermostat: false, alarm: false, timer: false }],
       coolers: 0,
+      extraM2: 0,
+      equip: [],
       spent: 0,
     },
     menu: { salgados: ['carne', 'queijo'], doces: [], bebidas: ['caldo-puro'] },
@@ -93,8 +96,31 @@ export function menuEntries(c: Campaign): MenuEntry[] {
 export function stationsOf(c: Campaign): StationId[] {
   const list: StationId[] = ['balcao', 'bancada'];
   c.owned.tachos.forEach((_t, i) => list.push(`tacho${i + 1}` as StationId));
+  if (c.owned.equip.includes('estufa')) list.push('estufa');
   list.push('moenda');
   return list;
+}
+
+/** Metros quadrados totais da barraca (RN-70, RN-71). */
+export const totalM2 = (c: Campaign): number => SPACE.base + c.owned.extraM2;
+
+/** Metros quadrados ocupados pelas estruturas opcionais (RN-72). A barraca inicial já usa os 6 m² base. */
+export function usedM2(c: Campaign): number {
+  return (c.owned.tachos.length - 1) * 2 + c.owned.coolers;
+}
+
+export const freeM2 = (c: Campaign): number => c.owned.extraM2 - usedM2(c);
+
+/** Taxa diária de espaço cobrada no fechamento (RN-71). */
+export const dailySpaceFee = (c: Campaign): number => c.owned.extraM2 * SPACE.dailyFee;
+
+export function equipmentFlags(c: Campaign): EquipmentFlags {
+  return {
+    drainer: c.owned.equip.includes('escorredor'),
+    warmer: c.owned.equip.includes('estufa-grande') ? 12 : c.owned.equip.includes('estufa') ? 6 : 0,
+    mill: c.owned.equip.includes('moenda-motorizada') ? 'motorizada' : 'manual',
+    thermalBag: c.owned.equip.includes('embalagem-termica'),
+  };
 }
 
 /** Campanha → simulação (`DayConfig`). Não muda a campanha. */
@@ -111,6 +137,8 @@ export function toDayConfig(c: Campaign): DayConfig {
     consumables,
     stations: stationsOf(c),
     tachos: c.owned.tachos.map((t) => ({ ...t })),
+    equipment: equipmentFlags(c),
+    coolers: c.owned.coolers,
   };
 }
 

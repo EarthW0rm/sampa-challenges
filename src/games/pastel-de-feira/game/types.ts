@@ -64,8 +64,26 @@ export interface StockLot {
 }
 
 export interface TachoConfig {
+  /** Cestos: 2 (pequeno) ou 4 (grande). */
   baskets: number;
   oil: 'comum' | 'algodao';
+  /** Janela do ponto +50% e queima +3 s (RN-73). */
+  thermostat: boolean;
+  /** Aviso quando o pastel entra no ponto e 1 s antes de queimar (RN-73). */
+  alarm: boolean;
+  /** Cesto com timer: tira sozinho no meio da janela (RN-160, US-119). */
+  timer: boolean;
+}
+
+/** Equipamentos globais que o dia usa. */
+export interface EquipmentFlags {
+  /** Escorredor profissional: nota +10 (RN-24). */
+  drainer: boolean;
+  /** Vagas da estufa: 0 (sem), 6 ou 12 (RN-27). */
+  warmer: number;
+  mill: 'manual' | 'motorizada';
+  /** Embalagem térmica do app (RN-25). */
+  thermalBag: boolean;
 }
 
 /** Campanha → simulação. Imutável durante o dia. */
@@ -79,6 +97,9 @@ export interface DayConfig {
   /** Estações existentes, na ordem física usada para o deslocamento (RN-41). */
   stations: StationId[];
   tachos: TachoConfig[];
+  equipment: EquipmentFlags;
+  /** Caixas térmicas compradas (zona no layout). */
+  coolers: number;
 }
 
 /** Fatos da simulação para som, partículas e depuração. Consumidos por `DaySim.drainEvents()`. */
@@ -97,6 +118,9 @@ export type SimEventType =
   | 'descartou'
   | 'oleo_trocado'
   | 'caldo_pronto'
+  | 'alarme_ponto'
+  | 'alarme_queima'
+  | 'estufa'
   | 'entregou'
   | 'item_errado'
   | 'cobrou'

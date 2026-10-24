@@ -1,7 +1,7 @@
 import { CONSUMABLES, CONSUMABLE_IDS, INGREDIENTS } from '../data/catalog';
 import type { DayResult } from '../types';
 import { advanceFatigue } from './fatigue';
-import { CAMPAIGN_DAYS, COOLER_CAPACITY, cloneCampaign, minReputation, profitGoal, round2 } from './campaign';
+import { CAMPAIGN_DAYS, COOLER_CAPACITY, cloneCampaign, dailySpaceFee, minReputation, profitGoal, round2 } from './campaign';
 import type { Balance, BalanceLine, Campaign, InvLot } from './types';
 
 /** Bônus de aproveitamento (RN-37): receita × max(0; 15% − % de desperdício). */
@@ -72,12 +72,14 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   lines.push({ id: 'estragados', label: 'Insumos estragados', amount: -round2(spoiledCost) });
   lines.push({ id: 'consumiveis', label: 'Copos e saquinhos', amount: -round2(consumablesCost) });
   lines.push({ id: 'oleo', label: 'Troca de óleo', amount: -round2(clampMoney(result.costs.oil)) });
+  const rent = dailySpaceFee(campaign);
+  if (rent > 0) lines.push({ id: 'espaco', label: 'Taxa de espaço', amount: -rent });
   if (bonus > 0) lines.push({ id: 'bonus', label: 'Bônus de aproveitamento', amount: bonus });
 
   const profit = round2(lines.reduce((n, l) => n + l.amount, 0));
 
   // 5. Caixa: compras já saíram no Preparo. Entram vendas e bônus; saem óleo e custos fixos.
-  const cashIn = revenue + bonus - clampMoney(result.costs.oil);
+  const cashIn = revenue + bonus - clampMoney(result.costs.oil) - rent;
   c.cash = round2(c.cash + cashIn);
 
   // 6. Reputação (RN-62)

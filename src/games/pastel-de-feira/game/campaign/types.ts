@@ -1,4 +1,5 @@
 import type { ConsumableId, IngredientId } from '../data/catalog';
+import type { EquipId } from '../data/equipment';
 import type { ItemId } from '../data/recipes';
 import type { TachoConfig } from '../types';
 
@@ -30,6 +31,10 @@ export interface Owned {
   tachos: TachoConfig[];
   /** Caixas térmicas compradas (RN-39). */
   coolers: number;
+  /** Metros quadrados comprados além dos 6 iniciais (RN-71). */
+  extraM2: number;
+  /** Equipamentos globais comprados (RN-73). */
+  equip: EquipId[];
   /** Dinheiro gasto em equipamentos, espaço, mesas e estruturas (base do valor do ponto, RN-57). */
   spent: number;
 }

@@ -4,6 +4,7 @@ import { catalogo } from './catalogo';
 import { clientes } from './clientes';
 import { fechamento } from './fechamento';
 import { layout } from './layout';
+import { melhorias } from './melhorias';
 import { moenda } from './moenda';
 import { preparo } from './preparo';
 import { relogio } from './relogio';
@@ -19,6 +20,7 @@ export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   relogio,
   preparo,
   fechamento,
+  melhorias,
   save,
   reputacao,
   moenda,
