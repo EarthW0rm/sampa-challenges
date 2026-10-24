@@ -1,4 +1,4 @@
-import { devConfig } from '../../game/devConfig';
+import { devConfig } from '../testConfig';
 import { currentQuality, drinkValue, pastryValue, qualityFactor, reputationPremium } from '../../game/sim/quality';
 import { buildResult, reputationChange } from '../../game/sim/result';
 import { addCustomer } from '../../game/sim/customers';

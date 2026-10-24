@@ -1,5 +1,5 @@
 import { STEP } from '../../game/constants';
-import { devConfig } from '../../game/devConfig';
+import { devConfig } from '../testConfig';
 import { addCustomer } from '../../game/sim/customers';
 import { stockQty } from '../../game/sim/stock';
 import type { Command, StationId } from '../../game/types';

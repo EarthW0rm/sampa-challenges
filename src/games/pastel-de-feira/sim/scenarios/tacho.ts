@@ -1,5 +1,5 @@
 import { STEP } from '../../game/constants';
-import { devConfig } from '../../game/devConfig';
+import { devConfig } from '../testConfig';
 import type { DaySim } from '../../game/sim/day';
 import { advance, check, checkEq, checkNear, makeSim, type Scenario } from '../harness';
 

@@ -1,4 +1,4 @@
-import type { DayConfig } from './types';
+import type { DayConfig } from '../game/types';
 
 /** DayConfig fixo de desenvolvimento e de teste: Carne, Queijo e Caldo puro, estoque cheio, 1 tacho pequeno e a moenda manual. */
 export function devConfig(overrides: Partial<DayConfig> = {}): DayConfig {

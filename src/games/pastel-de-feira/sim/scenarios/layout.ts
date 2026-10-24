@@ -1,4 +1,4 @@
-import { devConfig } from '../../game/devConfig';
+import { devConfig } from '../testConfig';
 import { ALERT_BAND, buildLayout, coveredByPanel, hitTest, MIN_TARGET, PANEL, type Rect } from '../../game/layout';
 import { panelControls } from '../../game/render/panel';
 import { createState } from '../../game/sim/state';

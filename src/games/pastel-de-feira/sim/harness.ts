@@ -1,5 +1,5 @@
 import { DAY_TICKS } from '../game/constants';
-import { devConfig } from '../game/devConfig';
+import { devConfig } from './testConfig';
 import { DaySim } from '../game/sim/day';
 import type { Command, DayConfig } from '../game/types';
 

@@ -1,5 +1,5 @@
 import { DAY_TICKS, STEP, hourAt } from '../../game/constants';
-import { devConfig } from '../../game/devConfig';
+import { devConfig } from '../testConfig';
 import {
   addCustomer, arrivalInterval, ceilingFor, priceIndex, profileShares, swapDemand,
 } from '../../game/sim/customers';
