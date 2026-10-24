@@ -41,7 +41,7 @@ export type ItemRef = { kind: 'pastel' | 'copo'; id: number };
 export type Command =
   | { type: 'tapStation'; station: StationId; g?: number }
   | { type: 'tapSlot'; station: StationId; slot: Slot; g?: number }
-  | { type: 'holdStart'; station: StationId; action: HoldAction; g?: number }
+  | { type: 'holdStart'; station: StationId; action: HoldAction; item?: ItemId; g?: number }
   | { type: 'holdEnd'; g?: number }
   | { type: 'deliver'; item: ItemRef; customerId: number; g?: number }
   | { type: 'pause' }
@@ -77,4 +77,55 @@ export interface DayConfig {
   /** Estações existentes, na ordem física usada para o deslocamento (RN-41). */
   stations: StationId[];
   tachos: TachoConfig[];
+}
+
+/** Fatos da simulação para som, partículas e depuração. Consumidos por `DaySim.drainEvents()`. */
+export type SimEventType =
+  | 'cliente_chegou'
+  | 'cliente_perdido_preco'
+  | 'cliente_perdido_fila'
+  | 'cliente_perdido_estoque'
+  | 'anotou'
+  | 'montou'
+  | 'colocou'
+  | 'tirou_no_ponto'
+  | 'tirou_cru'
+  | 'tirou_passado'
+  | 'queimou'
+  | 'descartou'
+  | 'oleo_trocado'
+  | 'caldo_pronto'
+  | 'entregou'
+  | 'item_errado'
+  | 'cobrou'
+  | 'paciencia_esgotou'
+  | 'troca_sabor'
+  | 'corte_seco';
+
+export interface SimEvent {
+  type: SimEventType;
+  /** Instante do dia em segundos. */
+  t: number;
+  /** Id da entidade principal (cliente, pastel...), quando houver. */
+  id?: number;
+}
+
+/** Resultado do dia (simulação → campanha). */
+export interface DayResult {
+  day: number;
+  ticks: number;
+  revenue: { counter: number; total: number };
+  costs: { oil: number };
+  orders: {
+    served: number;
+    lostPatience: number;
+    wrong: number;
+    queueFull: number;
+    lostPrice: number;
+    noStock: number;
+  };
+  waste: { burned: number; leftover: number };
+  reputation: { successes: number; charm: number; weightedFailures: number; rate: number; change: number };
+  stockLeft: StockLot[];
+  consumables: Record<ConsumableId, number>;
 }

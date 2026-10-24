@@ -130,3 +130,6 @@ export const REPUTATION_MAX_DAILY_CHANGE = 1;
 
 // RN-38 / RN-34
 export const STOCK_CAPACITY = 120;
+
+/** Passos do dia inteiro (contador inteiro: o relógio não acumula erro de ponto flutuante). */
+export const DAY_TICKS = Math.round(DAY_SECONDS / STEP);
