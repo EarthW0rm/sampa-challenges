@@ -26,10 +26,12 @@ export function tapStation(s: DayState, station: StationId): boolean {
   if (station === p.at) {
     p.to = null;
     p.moveLeft = 0;
+    p.moveTotal = 0;
     return true;
   }
   p.to = station;
-  p.moveLeft = moveTime(hopsBetween(s, p.at, station));
+  p.moveTotal = moveTime(hopsBetween(s, p.at, station));
+  p.moveLeft = p.moveTotal;
   return true;
 }
 
@@ -41,5 +43,6 @@ export function updatePasteleiro(s: DayState, dt: number): void {
     p.at = p.to;
     p.to = null;
     p.moveLeft = 0;
+    p.moveTotal = 0;
   }
 }

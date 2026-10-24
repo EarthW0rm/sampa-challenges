@@ -2,6 +2,7 @@ import type { Scenario } from '../harness';
 import { balcao } from './balcao';
 import { catalogo } from './catalogo';
 import { clientes } from './clientes';
+import { layout } from './layout';
 import { moenda } from './moenda';
 import { relogio } from './relogio';
 import { reputacao } from './reputacao';
@@ -15,5 +16,6 @@ export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   relogio,
   reputacao,
   moenda,
+  layout,
   tacho,
 };

@@ -83,6 +83,8 @@ export interface Pasteleiro {
   /** Destino em deslocamento, ou null. */
   to: StationId | null;
   moveLeft: number;
+  /** Duração do deslocamento em curso (para animar a posição). */
+  moveTotal: number;
   hold: { action: HoldAction; station: StationId; item?: ItemId } | null;
 }
 
@@ -172,7 +174,7 @@ export function createState(config: DayConfig, seed: number): DayState {
     ready: [],
     cups: [],
     mill: { progress: 0, item: null },
-    pasteleiro: { at: config.stations[0], to: null, moveLeft: 0, hold: null },
+    pasteleiro: { at: config.stations[0], to: null, moveLeft: 0, moveTotal: 0, hold: null },
     rep: { successes: 0, charm: 0, failures: 0 },
     stats: {
       arrived: 0, served: 0, lostPatience: 0, wrong: 0, queueFull: 0, lostPrice: 0, noStock: 0,
