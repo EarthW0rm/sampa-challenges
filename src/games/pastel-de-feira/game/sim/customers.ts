@@ -134,8 +134,8 @@ function spawnCustomer(s: DayState): void {
   }
   const items: ItemId[] = [];
   const n = rng.int(ORDER_PASTRIES_MIN, ORDER_PASTRIES_MAX);
-  for (let i = 0; i < n; i++) items.push(rng.weighted(pastries, () => 1)!.item);
-  if (drinks.length > 0 && rng.chance(ORDER_DRINK_CHANCE)) items.push(rng.weighted(drinks, () => 1)!.item);
+  for (let i = 0; i < n; i++) items.push(rng.weighted(pastries, (m) => m.weight ?? 1)!.item);
+  if (drinks.length > 0 && rng.chance(ORDER_DRINK_CHANCE)) items.push(rng.weighted(drinks, (m) => m.weight ?? 1)!.item);
   const c = addCustomer(s, profile, items);
   emit(s, 'cliente_chegou', c.id);
 }

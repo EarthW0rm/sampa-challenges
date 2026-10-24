@@ -52,6 +52,8 @@ export type Command =
 export interface MenuEntry {
   item: ItemId;
   price: number;
+  /** Procura relativa do item (fadiga de cardápio, RN-30c). Padrão 1. */
+  weight?: number;
 }
 
 /** Lote de insumo em estoque. `daysLeft` = dias de validade restantes (massa: até 3, RN-34). */
