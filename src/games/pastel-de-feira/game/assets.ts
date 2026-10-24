@@ -52,7 +52,15 @@ function hexRgb(hex: string): number[] {
 export class Assets {
   private cache = new Map<string, HTMLCanvasElement>();
 
-  constructor(private readonly lib: Record<string, HTMLImageElement>) {}
+  constructor(
+    private readonly lib: Record<string, HTMLImageElement>,
+    private readonly arte: Record<string, HTMLCanvasElement> = {},
+  ) {}
+
+  /** Imagem do jogo em alta (`cenario/fundo`, `itens/copo`…); `null` se não existe. */
+  art(name: string): HTMLCanvasElement | null {
+    return this.arte[name] ?? null;
+  }
 
   /** Imagem recolorida (cacheada por chave e cor). `null` se o PNG não existe. */
   private recolored(key: string, hex: string): HTMLCanvasElement | null {
@@ -108,9 +116,8 @@ let pending: Promise<Assets> | null = null;
 export function loadAll(): Promise<Assets> {
   if (current) return Promise.resolve(current);
   // import dinâmico: a simulação sem tela (esbuild + node) não carrega `import.meta.glob`
-  pending ??= import('../../../shared/sprites')
-    .then((m) => m.loadLibrary(['caes_pe']))
-    .then((lib) => (current = new Assets(lib)))
+  pending ??= Promise.all([import('../../../shared/sprites').then((m) => m.loadLibrary(['caes_pe'])), import('./art').then((m) => m.loadArt())])
+    .then(([lib, arte]) => (current = new Assets(lib, arte)))
     .finally(() => {
       pending = null;
     });

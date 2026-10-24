@@ -11,8 +11,9 @@ import { homeStation } from '../sim/staff';
 import { now, type Customer, type DayState } from '../sim/state';
 import type { UiState } from '../ui';
 import { SCALE } from '../hires';
-import { aparenciaDe, type Pose } from '../assets';
-import { bar, box, drawCliente, drawEquipe, itemColor, PAL, PROFILE_COLOR, textCenter } from './draw';
+import { aparenciaDe, getAssets, type Pose } from '../assets';
+import { drawTachoFx } from './fx';
+import { bar, box, drawArt, drawCliente, drawEquipe, drawPastel, itemColor, PAL, PROFILE_COLOR, textCenter } from './draw';
 
 /** Posição do cliente `i` da fila (frente à direita, perto do balcão). */
 export function queueSpot(layout: Layout, i: number): { x: number; y: number } {
@@ -70,6 +71,22 @@ function anchor(z: Zone): { x: number; y: number } {
   return { x: c.x, y: z.y + z.h - 8 };
 }
 
+/** Piso da zona com o ladrilho da arte (madeira nas estações, roxo na fila, madeira clara nas mesas). */
+function tile(ctx: CanvasRenderingContext2D, z: Zone): void {
+  const name = z.id === 'fila' ? 'cenario/piso_fila' : z.id === 'mesas' ? 'cenario/piso_mesas' : z.id === 'caixa' ? 'cenario/piso_metal' : 'cenario/piso_madeira';
+  const img = getAssets()?.art(name);
+  if (!img) return;
+  const t = img.width / 2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(z.x + 1, z.y + 1, z.w - 2, z.h - 2);
+  ctx.clip();
+  for (let y = z.y + 1; y < z.y + z.h; y += t) for (let x = z.x + 1; x < z.x + z.w; x += t) ctx.drawImage(img, x, y, t, t);
+  ctx.fillStyle = 'rgba(27,18,32,0.35)'; // escurece o piso para o texto e os itens ficarem legíveis
+  ctx.fillRect(z.x, z.y, z.w, z.h);
+  ctx.restore();
+}
+
 /** Camada estática: chão e zonas. Só redesenha quando o layout muda. */
 export function buildStaticLayer(layout: Layout): HTMLCanvasElement {
   const cv = document.createElement('canvas');
@@ -80,13 +97,15 @@ export function buildStaticLayer(layout: Layout): HTMLCanvasElement {
   ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = PAL.ground;
   ctx.fillRect(0, 0, W, H);
-  // toldo listrado
-  for (let x = 0; x < W; x += 32) {
-    ctx.fillStyle = (x / 32) % 2 === 0 ? '#c8402f' : '#f1e6d0';
-    ctx.fillRect(x, 22, 32, 6);
+  if (!drawArt(ctx, 'cenario/fundo', 0, 0, W, H)) {
+    for (let x = 0; x < W; x += 32) {
+      ctx.fillStyle = (x / 32) % 2 === 0 ? '#c8402f' : '#f1e6d0'; // toldo listrado (sem arte)
+      ctx.fillRect(x, 22, 32, 6);
+    }
   }
   for (const z of layout.zones) {
     box(ctx, z, z.id === 'fila' ? '#352c42' : '#4a3a2a', PAL.woodDark);
+    tile(ctx, z);
     drawPixelText(ctx, z.label, z.x + 5, z.y + 5, PAL.muted, 2);
   }
   return cv;
@@ -126,8 +145,11 @@ function drawTacho(ctx: CanvasRenderingContext2D, st: DayState, ui: UiState, z: 
     const alarmOn = t.alarm && !!f && !!win && !f.burned && (inPonto || sec >= win.burnAt - 1) && Math.floor(ui.clock * 6) % 2 === 0;
     box(ctx, { x, y, w: bw, h: 44 }, alarmOn ? PAL.red : PAL.oil, alarmOn ? PAL.text : PAL.woodDark);
     if (f && win) {
-      ctx.fillStyle = f.burned ? '#241a14' : itemColor(f.item);
-      ctx.fillRect(x + 3, y + 6, bw - 6, b.shadow !== null ? 8 : 14);
+      const pst = f.burned ? 'queimado' : sec < win.ponto[0] ? 'cru' : sec <= win.ponto[1] ? 'ponto' : 'passado';
+      if (!drawPastel(ctx, f.item, pst, x + 2, y + 6, bw - 4, b.shadow !== null ? 12 : 18)) {
+        ctx.fillStyle = f.burned ? '#241a14' : itemColor(f.item);
+        ctx.fillRect(x + 3, y + 6, bw - 6, b.shadow !== null ? 8 : 14);
+      }
       const color = f.burned ? PAL.red : sec < win.ponto[0] ? PAL.blue : sec <= win.ponto[1] ? PAL.green : PAL.orange;
       bar(ctx, x, y + 48, bw, 6, sec / win.burnAt, color);
     }
@@ -212,6 +234,7 @@ function drawWarmer(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): void 
   for (let i = 0; i < cap; i++) {
     const x = z.x + 10 + (i % 4) * 22;
     const y = z.y + 32 + Math.floor(i / 4) * 18;
+    if (warmed[i] && drawPastel(ctx, warmed[i].item, 'ponto', x, y, 18, 12)) continue;
     ctx.fillStyle = warmed[i] ? itemColor(warmed[i].item) : '#1b2c31';
     ctx.fillRect(x, y, 18, 12);
   }
@@ -237,8 +260,10 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
       const q = currentQuality(r, now(st));
       const x = bal.x + 8 + (i % 5) * 28;
       const y = bal.y + 30 + Math.floor(i / 5) * 30;
-      ctx.fillStyle = itemColor(r.item);
-      ctx.fillRect(x, y, 22, 14);
+      if (!drawPastel(ctx, r.item, q >= 50 ? 'ponto' : 'passado', x, y, 22, 14)) {
+        ctx.fillStyle = itemColor(r.item);
+        ctx.fillRect(x, y, 22, 14);
+      }
       bar(ctx, x, y + 17, 22, 4, q / 100, q >= 50 ? PAL.green : PAL.orange);
       if (ui.selected?.kind === 'pastel' && ui.selected.id === r.id) {
         ctx.strokeStyle = PAL.gold;
@@ -246,10 +271,12 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
       }
     });
     st.cups.slice(0, 6).forEach((c, i) => {
+      if (drawPastel(ctx, c.item, 'ponto', bal.x + 8 + i * 14, bal.y + 94, 10, 14)) return;
       ctx.fillStyle = itemColor(c.item);
       ctx.fillRect(bal.x + 8 + i * 14, bal.y + 94, 10, 14);
     });
     st.coins.slice(0, 6).forEach((_c, i) => {
+      if (drawArt(ctx, 'itens/moeda', bal.x + bal.w - 22 - i * 12, bal.y + 94)) return;
       ctx.fillStyle = PAL.gold;
       ctx.fillRect(bal.x + bal.w - 22 - i * 12, bal.y + 94, 10, 10);
     });
@@ -263,6 +290,7 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
       ctx.fillRect(ban.x + 8 + i * 14, ban.y + 30, 10, 10);
     });
     st.assembled.slice(0, 6).forEach((a, i) => {
+      if (drawPastel(ctx, a.item, 'cru', ban.x + 8 + (i % 4) * 28, ban.y + 56 + Math.floor(i / 4) * 22, 22, 14)) return;
       ctx.fillStyle = itemColor(a.item);
       ctx.fillRect(ban.x + 8 + (i % 4) * 28, ban.y + 56 + Math.floor(i / 4) * 22, 22, 14);
     });
@@ -271,7 +299,10 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   // tachos
   st.tachos.forEach((_t, i) => {
     const z = layout.byId.get(`tacho${i + 1}` as 'tacho1');
-    if (z) drawTacho(ctx, st, ui, z, i);
+    if (z) {
+      drawTacho(ctx, st, ui, z, i);
+      drawTachoFx(ctx, st, ui, z, i);
+    }
   });
 
   // mesas, fila de pagamento e sujeira

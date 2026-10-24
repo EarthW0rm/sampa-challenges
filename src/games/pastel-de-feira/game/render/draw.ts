@@ -132,3 +132,30 @@ export function drawEquipe(ctx: CanvasRenderingContext2D, kind: Equipe, cor: str
   }
   dog(ctx, x, y, cor, { flip: o.flip, hat: kind === 'func_fritador' ? PAL.red : kind === 'func_geral' ? PAL.blue : '#f4efe2', bob: o.bob });
 }
+
+export type PastelState = 'cru' | 'ponto' | 'passado' | 'queimado';
+
+/** Categoria do sprite: caldo (copo), doce, Especial da Casa ou salgado comum. */
+export function pastelCat(id: ItemId): 'copo' | 'doce' | 'especial' | 'salgado' {
+  const it = ITEMS[id];
+  if (it?.kind === 'bebida') return 'copo';
+  if (it?.kind === 'doce') return 'doce';
+  return it?.base === 'especial' ? 'especial' : 'salgado';
+}
+
+/** Pastel/caldo com a arte final em (x, y) (canto superior esquerdo), esticado em `w`×`h` lógicos. Devolve false sem arte (use o retângulo). */
+export function drawPastel(ctx: CanvasRenderingContext2D, id: ItemId, state: PastelState, x: number, y: number, w: number, h: number): boolean {
+  const cat = pastelCat(id);
+  const img = getAssets()?.art(cat === 'copo' ? 'itens/copo' : `itens/pastel_${cat}_${state}`);
+  if (!img) return false;
+  ctx.drawImage(img, Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+  return true;
+}
+
+/** Imagem do jogo na posição (canto superior esquerdo) com o tamanho original em pixels lógicos. */
+export function drawArt(ctx: CanvasRenderingContext2D, name: string, x: number, y: number, w?: number, h?: number): boolean {
+  const img = getAssets()?.art(name);
+  if (!img) return false;
+  ctx.drawImage(img, Math.round(x), Math.round(y), w ?? img.width / LIB_PX, h ?? img.height / LIB_PX);
+  return true;
+}
