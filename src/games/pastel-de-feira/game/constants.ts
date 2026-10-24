@@ -168,3 +168,19 @@ export const HELPER_CLEAN_SECONDS = 3;
 export const BROOM_POINTS = 25;
 export const HYGIENE_DIRT_FACTOR = 0.7;
 export const HYGIENE_CLEAN_FACTOR = 0.7;
+
+// RN-90..96: delivery do app
+export const APP_OFFER_INTERVAL = 25;
+export const APP_OFFER_SECONDS = 10;
+export const APP_PICKUP_DELAY = 35;
+export const APP_MOTO_WAIT = 25;
+export const APP_MOTO_WAIT_LOW_REP = 0.6;
+export const APP_MOTO_MAX_ORDERS = 2;
+export const APP_FEE = 0.2;
+export const APP_TRANSPORT_LOSS = 20;
+export const APP_ORDER_MIN = 2;
+export const APP_ORDER_MAX = 4;
+export const APP_CAP_BASE = 3;
+export const APP_CAP_MID = 6;
+export const APP_CAP_HIGH = 10;
+export const APP_CAP_PARTNER = 4;

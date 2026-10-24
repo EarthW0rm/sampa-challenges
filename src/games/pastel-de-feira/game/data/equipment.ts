@@ -6,7 +6,8 @@ export type EquipId =
   | 'embalagem-termica'
   | 'estufa'
   | 'estufa-grande'
-  | 'moenda-motorizada';
+  | 'moenda-motorizada'
+  | 'conta-parceira';
 
 export interface EquipDef {
   id: EquipId;
@@ -26,6 +27,7 @@ export const EQUIPMENT: Readonly<Record<EquipId, EquipDef>> = Object.freeze({
   'embalagem-termica': { id: 'embalagem-termica', name: 'Embalagem térmica', desc: 'Pedidos do app não perdem nota no transporte.', price: 250, minDay: 1, requires: [] },
   estufa: { id: 'estufa', name: 'Estufa de vidro', desc: 'Guarda 6 pastéis prontos com a nota congelada por 60 s.', price: 300, minDay: 1, requires: [] },
   'estufa-grande': { id: 'estufa-grande', name: 'Estufa grande', desc: 'A estufa passa a guardar 12 pastéis.', price: 350, minDay: 1, requires: ['estufa'] },
+  'conta-parceira': { id: 'conta-parceira', name: 'Conta Parceira do app', desc: '+4 comandas aceitas por dia (precisa da área de delivery).', price: 400, minDay: 1, requires: [] },
   'moenda-motorizada': { id: 'moenda-motorizada', name: 'Moenda motorizada', desc: 'Caldo em 2,5 s em vez de 6 s.', price: 500, minDay: 1, requires: [] },
 });
 
@@ -66,3 +68,6 @@ export const MILL_MOTOR_SECONDS = 2.5;
 
 /** Mesas (RN-72, RN-80): R$ 150, 4 lugares, 2 m², no máximo 4. */
 export const TABLE = { price: 150, space: 2, max: 4 } as const;
+
+/** Área de delivery (RN-90): R$ 600, 3 m², a partir do dia 5. */
+export const DELIVERY = { price: 600, space: 3, minDay: 5 } as const;

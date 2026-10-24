@@ -20,7 +20,7 @@ function supplyMap(s: DayState, drinks: boolean, inProgress: readonly ItemId[]):
   } else {
     for (const a of s.assembled) add(a.item);
     for (const t of s.tachos) for (const b of t.baskets) if (b.frying && !b.frying.burned) add(b.frying.item);
-    for (const r of s.ready) add(r.item);
+    for (const r of s.ready) if (r.reservedFor === undefined) add(r.item);
   }
   for (const id of inProgress) if ((ITEMS[id].kind === 'bebida') === drinks) add(id);
   return m;
@@ -33,6 +33,17 @@ function supplyMap(s: DayState, drinks: boolean, inProgress: readonly ItemId[]):
 export function unmetItems(s: DayState, drinks: boolean, inProgress: readonly ItemId[] = []): ItemId[] {
   const supply = supplyMap(s, drinks, inProgress);
   const out: ItemId[] = [];
+  if (!drinks) {
+    // comandas do app: cada item ainda sem pastel reservado também precisa ser produzido (RN-96)
+    for (const c of s.comandas) {
+      c.items.forEach((item, k) => {
+        if (c.packed[k] !== null) return;
+        const alt = [...supply.entries()].find(([id, n]) => n > 0 && ITEMS[id].base === ITEMS[item].base);
+        if (alt) supply.set(alt[0], alt[1] - 1);
+        else out.push(item);
+      });
+    }
+  }
   for (const { c, item } of pendingLines(s, drinks)) {
     if ((supply.get(item) ?? 0) > 0) {
       supply.set(item, supply.get(item)! - 1);

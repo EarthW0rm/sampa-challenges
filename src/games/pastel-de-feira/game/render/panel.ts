@@ -71,7 +71,7 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
       run: () => [{ type: 'holdStart', station: 'balcao', action: 'limpar' }],
       release: () => [{ type: 'holdEnd' }],
     });
-    for (const r of st.ready.slice(0, 7)) {
+    for (const r of st.ready.filter((x) => x.reservedFor === undefined).slice(0, 7)) {
       const q = Math.round(currentQuality(r, now(st)));
       const sel = ui.selected?.kind === 'pastel' && ui.selected.id === r.id;
       out.push({
@@ -175,6 +175,15 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
     }
     for (const c of st.cups.slice(0, 4)) {
       out.push({ rect: next(), label: 'CALDO', sub: shortName(c.item), fill: itemColor(c.item), run: () => deliverTo(c.item, { kind: 'copo', id: c.id }) });
+    }
+  } else if (station === 'expedicao') {
+    out.push({ rect: next(), label: 'COMANDAS', sub: String(st.comandas.length), fill: PAL.blue, run: () => [] });
+    out.push({ rect: next(), label: 'EMBALAGEM', sub: String(st.consumables.embalagem), fill: PAL.tile, run: () => [] });
+    for (const r of st.ready.filter((x) => x.reservedFor === undefined).slice(0, 6)) {
+      out.push({
+        rect: next(), label: shortName(r.item), sub: String(Math.round(currentQuality(r, now(st)))), fill: itemColor(r.item),
+        run: () => tap('expedicao', { k: 'pronto', id: r.id }),
+      });
     }
   } else if (station === 'estufa') {
     out.push({ rect: next(), label: 'ESTUFA', sub: `${warmedCount(st)}/${warmerCapacity(st)}`, fill: PAL.blue, run: () => [] });

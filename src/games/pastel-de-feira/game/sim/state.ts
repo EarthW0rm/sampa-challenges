@@ -109,6 +109,8 @@ export interface Ready {
   /** Nota na saída do óleo, já com modificadores. */
   quality: number;
   readyAt: number;
+  /** Reservado para uma comanda do app (RN-96). */
+  reservedFor?: number;
   /** Está na estufa: a nota fica congelada por 60 s (RN-27). */
   warmed?: boolean;
 }
@@ -128,7 +130,7 @@ export interface Pasteleiro {
   hold: { action: HoldAction; station: StationId; item?: ItemId } | null;
 }
 
-export type TaskKind = 'anotar' | 'cobrar' | 'pagar' | 'entregar' | 'montar' | 'colocar' | 'caldo' | 'trocar' | 'limpar' | 'varrer';
+export type TaskKind = 'anotar' | 'cobrar' | 'pagar' | 'entregar' | 'montar' | 'colocar' | 'caldo' | 'trocar' | 'limpar' | 'varrer' | 'embalar';
 
 export interface WorkerTask {
   kind: TaskKind;
@@ -163,6 +165,29 @@ export interface Worker {
   minEnergy: number;
 }
 
+export interface AppOffer {
+  id: number;
+  items: ItemId[];
+  /** Segundos restantes de exibição (RN-91). */
+  left: number;
+}
+
+export interface Comanda {
+  id: number;
+  items: ItemId[];
+  /** Pastel pronto reservado para cada item, ou null. */
+  packed: (number | null)[];
+  /** Instante do dia (s) da retirada (RN-91). */
+  pickupAt: number;
+  motoboy: number | null;
+}
+
+export interface Motoboy {
+  id: number;
+  comandas: number[];
+  waitLeft: number;
+}
+
 export interface Reputation {
   successes: number;
   charm: number;
@@ -182,6 +207,9 @@ export interface Stats {
   revenue: number;
   oilCost: number;
   tableRevenue: number;
+  appRevenue: number;
+  appPicked: number;
+  appCancelled: number;
   lostDirt: number;
   payFail: number;
 }
@@ -195,7 +223,7 @@ export interface DayState {
   over: boolean;
   paused: boolean;
   speed: 1 | 2;
-  rng: { customers: Rng; quality: Rng; staff: Rng };
+  rng: { customers: Rng; quality: Rng; staff: Rng; app: Rng };
   nextId: number;
   commands: Command[];
   seenGestures: Set<number>;
@@ -205,6 +233,11 @@ export interface DayState {
   consumables: Record<ConsumableId, number>;
   customers: Customer[];
   /** Grupos que já receberam o pedido e estão comendo. */
+  offers: AppOffer[];
+  comandas: Comanda[];
+  motoboys: Motoboy[];
+  offerLeft: number;
+  acceptedToday: number;
   eating: Customer[];
   /** Fila de pagamento do balcão, separada da fila de pedidos (RN-87). */
   payQueue: Customer[];
@@ -231,7 +264,7 @@ export interface DayState {
 
 export function createState(config: DayConfig, seed: number): DayState {
   const root = new Rng(seed);
-  const rng = { customers: root.fork('clientes'), quality: root.fork('qualidade'), staff: root.fork('equipe') };
+  const rng = { customers: root.fork('clientes'), quality: root.fork('qualidade'), staff: root.fork('equipe'), app: root.fork('app') };
   return {
     config,
     seed: root.seed,
@@ -248,6 +281,11 @@ export function createState(config: DayConfig, seed: number): DayState {
     stock: config.stock.map((l) => ({ ...l })),
     consumables: { ...config.consumables },
     customers: [],
+    offers: [],
+    comandas: [],
+    motoboys: [],
+    offerLeft: 10 + rng.customers.next() * 10,
+    acceptedToday: 0,
     eating: [],
     payQueue: [],
     tables: Array.from({ length: config.tables }, () => ({ seats: Array.from({ length: 4 }, () => 'livre' as SeatState) })),
@@ -281,7 +319,7 @@ export function createState(config: DayConfig, seed: number): DayState {
     rep: { successes: 0, charm: 0, failures: 0 },
     stats: {
       arrived: 0, served: 0, lostPatience: 0, wrong: 0, queueFull: 0, lostPrice: 0, noStock: 0,
-      burned: 0, revenue: 0, oilCost: 0, tableRevenue: 0, lostDirt: 0, payFail: 0,
+      burned: 0, revenue: 0, oilCost: 0, tableRevenue: 0, appRevenue: 0, appPicked: 0, appCancelled: 0, lostDirt: 0, payFail: 0,
     },
   };
 }

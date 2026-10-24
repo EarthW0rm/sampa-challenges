@@ -106,6 +106,9 @@ export interface Campaign {
   owned: Owned;
   menu: MenuChoice;
   prices: Record<ItemId, number>;
+  /** Delivery ligado hoje e aceite automático (RN-90, RN-95). */
+  deliveryOn: boolean;
+  autoAccept: boolean;
   staff: Staff[];
   nextStaffId: number;
   /** Candidatos já contratados hoje (somem da lista do dia). */

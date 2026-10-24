@@ -1,6 +1,7 @@
 import type { Command } from '../types';
+import { acceptOffer, packPastry } from './delivery';
 import { cancelCleaning, startCleaning } from './dirt';
-import { tapStation } from './pasteleiro';
+import { isAt, tapStation } from './pasteleiro';
 import { sendToRest } from './staff';
 import { addIngredient, clearTray, closeAssembly, selectAssembled } from './stations/bench';
 import { startMill, stopMill } from './stations/cane';
@@ -20,6 +21,10 @@ export function applyCommand(s: DayState, cmd: Command): boolean {
         if (slot.k === 'anotar') return takeOrder(s);
         if (slot.k === 'moedas') return collectCoins(s);
         if (slot.k === 'pagar') return chargeNextGroup(s);
+        return false;
+      }
+      if (cmd.station === 'expedicao') {
+        if (slot.k === 'pronto') return isAt(s, 'expedicao') && packPastry(s, slot.id);
         return false;
       }
       if (cmd.station === 'mesas') {
@@ -48,6 +53,8 @@ export function applyCommand(s: DayState, cmd: Command): boolean {
       cancelCleaning(s);
       s.pasteleiro.hold = null;
       return true;
+    case 'acceptOffer':
+      return acceptOffer(s, cmd.offerId);
     case 'sendRest':
       return sendToRest(s, cmd.staffId);
     case 'deliver':

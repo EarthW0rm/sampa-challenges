@@ -2,6 +2,7 @@ import type { Scenario } from '../harness';
 import { balcao } from './balcao';
 import { catalogo } from './catalogo';
 import { clientes } from './clientes';
+import { delivery } from './delivery';
 import { energia } from './energia';
 import { equipamentos } from './equipamentos';
 import { equipe } from './equipe';
@@ -33,6 +34,7 @@ export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   posicoes,
   energia,
   mesas,
+  delivery,
   pagamento,
   sujeira,
   save,

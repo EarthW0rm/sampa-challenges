@@ -47,6 +47,7 @@ export type Command =
   | { type: 'holdEnd'; g?: number }
   | { type: 'deliver'; item: ItemRef; customerId: number; g?: number }
   | { type: 'sendRest'; staffId: number; g?: number }
+  | { type: 'acceptOffer'; offerId: number; g?: number }
   | { type: 'pause' }
   | { type: 'resume' }
   | { type: 'setSpeed'; speed: 1 | 2 };
@@ -117,6 +118,8 @@ export interface DayConfig {
   positions: PositionId[];
   /** Sujeira a partir da qual Exigentes não entram e a paciência cai (60; o tema Popular sobe para 75, RN-17). */
   dirtLimit?: number;
+  /** Delivery do app: ligado hoje, aceite automático e Conta Parceira (RN-90, RN-95). */
+  delivery: { on: boolean; auto: boolean; partner: boolean };
   /** Mesas compradas, 0 a 4 (RN-80). */
   tables: number;
   /** Vagas da área de descanso, 0 sem área (RN-117). */
@@ -146,6 +149,12 @@ export type SimEventType =
   | 'estufa'
   | 'funcionario_descansa'
   | 'funcionario_volta'
+  | 'oferta_app'
+  | 'oferta_aceita'
+  | 'moto_chegou'
+  | 'comanda_embalada'
+  | 'comanda_entregue'
+  | 'comanda_cancelada'
   | 'grupo_sentou'
   | 'grupo_comendo'
   | 'grupo_pagou'
@@ -170,7 +179,7 @@ export interface SimEvent {
 export interface DayResult {
   day: number;
   ticks: number;
-  revenue: { counter: number; table: number; total: number };
+  revenue: { counter: number; table: number; app: number; total: number };
   costs: { oil: number };
   orders: {
     served: number;
@@ -181,6 +190,8 @@ export interface DayResult {
     noStock: number;
     lostDirt: number;
     payFail: number;
+    appPicked: number;
+    appCancelled: number;
   };
   waste: { burned: number; leftover: number };
   reputation: { successes: number; charm: number; weightedFailures: number; rate: number; change: number };

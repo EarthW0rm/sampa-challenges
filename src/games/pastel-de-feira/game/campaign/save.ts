@@ -115,6 +115,7 @@ export function isCampaign(v: unknown): v is Campaign {
   for (const [k, p] of Object.entries(v.prices)) {
     if (!owned.has(k) || !isNum(p) || clampPrice(k, p) !== p) return false;
   }
+  if (!isBool(v.deliveryOn) || !isBool(v.autoAccept)) return false;
   if (!isInt(v.nextStaffId, 1) || !Array.isArray(v.hiredToday) || !v.hiredToday.every(isStr)) return false;
   if (!Array.isArray(v.staff) || v.staff.length > 11 || !v.staff.every(isStaff)) return false;
   if (new Set(v.staff.map((s) => (s as Rec).id)).size !== v.staff.length) return false;

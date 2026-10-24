@@ -46,7 +46,7 @@ export const fechamento: Scenario[] = [
     run() {
       const c = stocked();
       // 5 unidades descartadas de 50 compradas = 10%: bônus de 5% da receita
-      const r = baseResult(c, { revenue: { counter: 200, table: 0, total: 200 }, waste: { burned: 5, leftover: 0 } });
+      const r = baseResult(c, { revenue: { counter: 200, table: 0, app: 0, total: 200 }, waste: { burned: 5, leftover: 0 } });
       let out = closeDay(c, r);
       // sobras de recheio estragam no fechamento: 10 carne + 10 muçarela
       check(out.balance.spoiledUnits >= 20, 'recheio que sobra estraga');
@@ -57,12 +57,12 @@ export const fechamento: Scenario[] = [
       const tight = cloneCampaign(c);
       tight.inventory = tight.inventory.filter((l) => l.ingredient === 'massa');
       tight.boughtToday = 50;
-      const quiet = { served: 10, lostPatience: 0, wrong: 0, queueFull: 0, lostPrice: 0, noStock: 0, lostDirt: 0, payFail: 0 };
-      const r2 = baseResult(tight, { revenue: { counter: 200, table: 0, total: 200 }, orders: quiet, waste: { burned: 2, leftover: 0 } });
+      const quiet = { served: 10, lostPatience: 0, wrong: 0, queueFull: 0, lostPrice: 0, noStock: 0, lostDirt: 0, payFail: 0, appPicked: 0, appCancelled: 0 };
+      const r2 = baseResult(tight, { revenue: { counter: 200, table: 0, app: 0, total: 200 }, orders: quiet, waste: { burned: 2, leftover: 0 } });
       out = closeDay(tight, r2);
       checkNear(out.balance.bonus, 200 * (0.15 - 0.04), 'bônus = receita × (15% − desperdício)');
       // cliente perdido por falta de insumo: sem bônus
-      const falta = baseResult(tight, { revenue: { counter: 200, table: 0, total: 200 }, orders: { ...r2.orders, noStock: 1 }, waste: { burned: 0, leftover: 0 } });
+      const falta = baseResult(tight, { revenue: { counter: 200, table: 0, app: 0, total: 200 }, orders: { ...r2.orders, noStock: 1 }, waste: { burned: 0, leftover: 0 } });
       checkEq(closeDay(tight, falta).balance.bonus, 0, 'falta de insumo anula o bônus');
       check(closeDay(tight, r2).balance.bonus >= 0, 'bônus nunca negativo');
     },
@@ -72,7 +72,7 @@ export const fechamento: Scenario[] = [
     rules: 'RN-50',
     run() {
       const c = stocked();
-      const r = baseResult(c, { revenue: { counter: 20, table: 0, total: 20 }, reputation: { successes: 1, charm: 0, weightedFailures: 0, rate: 1, change: 0.5 } });
+      const r = baseResult(c, { revenue: { counter: 20, table: 0, app: 0, total: 20 }, reputation: { successes: 1, charm: 0, weightedFailures: 0, rate: 1, change: 0.5 } });
       const { campaign, balance } = closeDay(c, r);
       checkEq(balance.met, false, 'lucro abaixo da meta');
       checkEq(campaign.day, 1, 'o dia não avança');
@@ -88,14 +88,14 @@ export const fechamento: Scenario[] = [
     rules: 'RN-50',
     run() {
       const c = stocked();
-      const r = baseResult(c, { revenue: { counter: 400, table: 0, total: 400 }, reputation: { successes: 5, charm: 0, weightedFailures: 0, rate: 1, change: 0.5 } });
+      const r = baseResult(c, { revenue: { counter: 400, table: 0, app: 0, total: 400 }, reputation: { successes: 5, charm: 0, weightedFailures: 0, rate: 1, change: 0.5 } });
       const { campaign, balance } = closeDay(c, r);
       checkEq(balance.met, true, 'meta cumprida');
       checkEq(campaign.day, 2, 'avança');
       check(balance.profit >= 80, `lucro ${balance.profit}`);
       // reputação mínima também conta
       const baixa = { ...c, reputation: 1.2 };
-      const r2 = baseResult(baixa, { revenue: { counter: 400, table: 0, total: 400 }, reputation: { successes: 0, charm: 0, weightedFailures: 5, rate: 0, change: -1 } });
+      const r2 = baseResult(baixa, { revenue: { counter: 400, table: 0, app: 0, total: 400 }, reputation: { successes: 0, charm: 0, weightedFailures: 5, rate: 0, change: -1 } });
       const out = closeDay(baixa, r2);
       checkEq(out.balance.reputationMet, false, 'reputação abaixo do mínimo');
       checkEq(out.campaign.reputation, 1, 'reputação nunca abaixo de 1');
@@ -122,7 +122,7 @@ export const fechamento: Scenario[] = [
     run() {
       const c = stocked();
       c.day = 20;
-      const win = baseResult(c, { revenue: { counter: 5000, table: 0, total: 5000 }, reputation: { successes: 9, charm: 0, weightedFailures: 0, rate: 1, change: 0.5 } });
+      const win = baseResult(c, { revenue: { counter: 5000, table: 0, app: 0, total: 5000 }, reputation: { successes: 9, charm: 0, weightedFailures: 0, rate: 1, change: 0.5 } });
       c.reputation = 4;
       const a = closeDay(c, win);
       checkEq(a.balance.met, true, 'meta do dia 20 cumprida');

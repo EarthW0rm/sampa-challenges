@@ -1,4 +1,4 @@
-import { COOLER, EQUIPMENT, MENU_BOARDS, SPACE, TABLE, TACHO, type EquipId } from '../../data/equipment';
+import { COOLER, DELIVERY, EQUIPMENT, MENU_BOARDS, SPACE, TABLE, TACHO, type EquipId } from '../../data/equipment';
 import { REST_AREA } from '../../data/staff';
 import { BASE_RECIPES, ITEMS, UPGRADES, itemId, type ItemId } from '../../data/recipes';
 import { cloneCampaign, freeM2, round2, totalM2 } from '../campaign';
@@ -70,6 +70,7 @@ export function buyEquipment(c: Campaign, id: EquipId): ActionResult {
   if (c.owned.equip.includes(id)) return no('limite');
   if (c.day < def.minDay) return no('bloqueadoAteDia');
   if (def.requires.some((r) => !c.owned.equip.includes(r))) return no('requer');
+  if (id === 'conta-parceira' && !c.owned.delivery) return no('requer');
   if (!canPay(c, def.price)) return no('semCaixa');
   const next = cloneCampaign(c);
   charge(next, def.price, true);
@@ -180,5 +181,17 @@ export function buyTable(c: Campaign): ActionResult {
   const next = cloneCampaign(c);
   charge(next, TABLE.price, true);
   next.owned.tables++;
+  return { ok: true, campaign: next };
+}
+
+/** Área de delivery (RN-90): R$ 600, 3 m², a partir do dia 5. */
+export function buyDeliveryArea(c: Campaign): ActionResult {
+  if (c.owned.delivery) return no('limite');
+  if (c.day < DELIVERY.minDay) return no('bloqueadoAteDia');
+  if (freeM2(c) < DELIVERY.space) return no('semEspaco');
+  if (!canPay(c, DELIVERY.price)) return no('semCaixa');
+  const next = cloneCampaign(c);
+  charge(next, DELIVERY.price, true);
+  next.owned.delivery = true;
   return { ok: true, campaign: next };
 }

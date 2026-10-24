@@ -69,7 +69,7 @@ export function itemOfRef(s: DayState, ref: ItemRef): ItemId | undefined {
 export function deliverItem(s: DayState, ref: ItemRef, customerId: number, by?: Worker): boolean {
   const c = s.customers.find((x) => x.id === customerId);
   if (!c || c.state !== 'anotado') return false;
-  const pastry = ref.kind === 'pastel' ? s.ready.find((r) => r.id === ref.id) : undefined;
+  const pastry = ref.kind === 'pastel' ? s.ready.find((r) => r.id === ref.id && r.reservedFor === undefined) : undefined;
   const cup = ref.kind === 'copo' ? s.cups.find((x) => x.id === ref.id) : undefined;
   const itemId = pastry?.item ?? cup?.item;
   if (!itemId) return false;

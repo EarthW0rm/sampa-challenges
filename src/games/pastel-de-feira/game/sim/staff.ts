@@ -4,6 +4,7 @@ import { ITEMS, type ItemId } from '../data/recipes';
 import type { ItemRef, StationId } from '../types';
 import { lineMatches, deliverItem, noteOrder, takeCoins } from './stations/counter';
 import { chargeGroup } from './stations/tables';
+import { packPastry } from './delivery';
 import { addDirt, cleanTable, dirtyTable } from './dirt';
 import { assembleItem } from './stations/bench';
 import { makeCup, millSeconds } from './stations/cane';
@@ -155,7 +156,7 @@ function bestFor(s: DayState, c: Customer): ItemRef | null {
   for (const line of c.lines) {
     if (line.delivered !== null) continue;
     for (const r of s.ready) {
-      if (!lineMatches(c, line, r.item)) continue;
+      if (r.reservedFor !== undefined || !lineMatches(c, line, r.item)) continue;
       const q = currentQuality(r, now(s));
       if (!pastry || q > pastry.q) pastry = { id: r.id, q };
     }
@@ -203,6 +204,15 @@ function pickWaiter(s: DayState, w: Worker): boolean {
   const next = s.customers.find((c) => c.state === 'aguardando' && c.place === 'mesa' && !claimed(s, w, 'anotar', c.id));
   if (!next) return false;
   start(w, s, { kind: 'anotar', customerId: next.id }, WORK.takeOrder, true);
+  return true;
+}
+
+/** Expedição: embala pastéis prontos nas comandas do app (RN-40, RN-96). */
+function pickDispatch(s: DayState, w: Worker): boolean {
+  if (s.workers.some((o) => o !== w && o.task?.kind === 'embalar')) return false;
+  const r = s.ready.find((x) => x.reservedFor === undefined && s.comandas.some((c) => c.items.some((it, k) => c.packed[k] === null && ITEMS[it].base === ITEMS[x.item].base)));
+  if (!r) return false;
+  start(w, s, { kind: 'embalar', ref: { kind: 'pastel', id: r.id } }, WORK.deliver, true);
   return true;
 }
 
@@ -291,6 +301,7 @@ function pickTask(s: DayState, w: Worker): void {
   else if (pos === 'moenda') pickCaldo(s, w);
   else if (pos === 'garcom') pickWaiter(s, w);
   else if (pos === 'ajudante') pickHelper(s, w);
+  else if (pos === 'expedicao') pickDispatch(s, w);
   else if (pos.startsWith('colocador')) {
     if (!pickPlace(s, w, tachoNumber(pos))) pickAssemble(s, w);
   } else if (pos.startsWith('fritador')) {
@@ -325,6 +336,9 @@ function complete(s: DayState, w: Worker, t: WorkerTask): void {
       break;
     case 'limpar':
       if (t.tacho !== undefined) cleanTable(s, t.tacho);
+      break;
+    case 'embalar':
+      if (t.ref) packPastry(s, t.ref.id);
       break;
     case 'varrer':
       addDirt(s, -HELPER_CLEAN_POINTS);
