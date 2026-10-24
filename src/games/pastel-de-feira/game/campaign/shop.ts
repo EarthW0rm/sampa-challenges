@@ -56,6 +56,7 @@ export function offers(c: Campaign): Offer[] {
     const n = i + 1;
     if (t.baskets < 4) out.push({ id: `grande${i}`, section: 'equipamentos', name: `Tacho ${n} grande`, desc: 'De 2 para 4 cestos.', price: TACHO.largePrice, buy: (x) => buyTachoUpgrade(x, 'grande', i) });
     if (!t.thermostat) out.push({ id: `termostato${i}`, section: 'equipamentos', name: `Termostato no tacho ${n}`, desc: 'Janela do ponto +50% e queima +3 s.', price: TACHO.thermostatPrice, buy: (x) => buyTachoUpgrade(x, 'termostato', i) });
+    if (!t.timer) out.push({ id: `timer${i}`, section: 'equipamentos', name: `Cesto com timer no tacho ${n}`, desc: 'Tira sozinho no meio da janela do ponto (nota 80 + equipamento). Substitui o Fritador (R$ 75/dia). Para na queda de energia.', price: TACHO.timerPrice, buy: (x) => buyTachoUpgrade(x, 'timer', i) });
     if (!t.alarm) out.push({ id: `alarme${i}`, section: 'equipamentos', name: `Alarme no tacho ${n}`, desc: 'Avisa quando entra no ponto e 1 s antes de queimar.', price: TACHO.alarmPrice, buy: (x) => buyTachoUpgrade(x, 'alarme', i) });
   });
   if (c.owned.tachos.length < TACHO.max) out.push({ id: 'tacho-extra', section: 'espaco', name: 'Tacho extra', desc: `Ocupa ${TACHO.extraSpace} m². Máximo ${TACHO.max} tachos.`, price: TACHO.extraPrice, buy: buyTachoExtra });

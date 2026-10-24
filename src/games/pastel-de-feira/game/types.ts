@@ -113,6 +113,9 @@ export interface EquipmentFlags {
   mill: 'manual' | 'motorizada';
   /** Embalagem térmica do app (RN-25). */
   thermalBag: boolean;
+  /** Moenda automática e maquininha de cartão (RN-160). */
+  autoMill: boolean;
+  cardMachine: boolean;
 }
 
 /** Campanha → simulação. Imutável durante o dia. */

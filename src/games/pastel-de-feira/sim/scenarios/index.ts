@@ -1,4 +1,5 @@
 import type { Scenario } from '../harness';
+import { automacao } from './automacao';
 import { balcao } from './balcao';
 import { catalogo } from './catalogo';
 import { clientes } from './clientes';
@@ -47,6 +48,7 @@ export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   encomendas,
   desafios,
   estacoes,
+  automacao,
   'eventos-previstos': eventosPrevistos,
   'eventos-surpresa': eventosSurpresa,
   promocoes,

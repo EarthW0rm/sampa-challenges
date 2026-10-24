@@ -145,6 +145,8 @@ export function equipmentFlags(c: Campaign): EquipmentFlags {
     warmer: c.owned.equip.includes('estufa-grande') ? 12 : c.owned.equip.includes('estufa') ? 6 : 0,
     mill: c.owned.equip.includes('moenda-motorizada') ? 'motorizada' : 'manual',
     thermalBag: c.owned.equip.includes('embalagem-termica'),
+    autoMill: c.owned.equip.includes('moenda-automatica'),
+    cardMachine: c.owned.equip.includes('maquininha'),
   };
 }
 

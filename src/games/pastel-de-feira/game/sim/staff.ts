@@ -7,6 +7,7 @@ import type { ItemRef, StationId } from '../types';
 import { lineMatches, deliverItem, noteOrder, takeCoins } from './stations/counter';
 import { chargeGroup } from './stations/tables';
 import { packPastry } from './delivery';
+import { autoMillActive, cardMachineActive, timerActive } from './automation';
 import { boxPastry } from './orders';
 import { addDirt, cleanTable, dirtyTable } from './dirt';
 import { assembleItem } from './stations/bench';
@@ -191,7 +192,7 @@ function pickBalcao(s: DayState, w: Worker): boolean {
       return true;
     }
   }
-  if (s.payQueue.length > 0 && !claimed(s, w, 'pagar')) {
+  if (!cardMachineActive(s) && s.payQueue.length > 0 && !claimed(s, w, 'pagar')) {
     start(w, s, { kind: 'pagar' }, WORK.collect, true);
     return true;
   }
@@ -200,7 +201,7 @@ function pickBalcao(s: DayState, w: Worker): boolean {
     start(w, s, { kind: 'anotar', customerId: next.id }, WORK.takeOrder, true);
     return true;
   }
-  if (s.coins.length > 0 && !claimed(s, w, 'cobrar')) {
+  if (!cardMachineActive(s) && s.coins.length > 0 && !claimed(s, w, 'cobrar')) {
     start(w, s, { kind: 'cobrar' }, WORK.collect, true);
     return true;
   }
@@ -266,6 +267,7 @@ function pickAssemble(s: DayState, w: Worker): boolean {
 }
 
 function pickCaldo(s: DayState, w: Worker): boolean {
+  if (autoMillActive(s)) return false; // moenda automática: o funcionário não soma (RN-161)
   const inProgress = s.workers.filter((o) => o.task?.kind === 'caldo').map((o) => o.task!.item as ItemId);
   const want = unmetItems(s, true, inProgress).find((id) => canMake(s, ITEMS[id]));
   if (!want) return false;
@@ -296,7 +298,7 @@ function pickOil(s: DayState, w: Worker): boolean {
 /** O Fritador tira do óleo no meio da janela do ponto: nunca queima (RN-43). Devolve true se tirou algo. */
 function fryerTakes(s: DayState, w: Worker, tachoIndex: number): boolean {
   const tacho = s.tachos[tachoIndex];
-  if (!tacho) return false;
+  if (!tacho || timerActive(s, tacho)) return false; // com o timer ativo a posição vira opcional: só as outras tarefas (RN-161)
   for (let i = 0; i < tacho.baskets.length; i++) {
     const f = tacho.baskets[i].frying;
     if (!f) continue;

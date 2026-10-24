@@ -20,7 +20,7 @@ export function devConfig(overrides: Partial<DayConfig> = {}): DayConfig {
     consumables: { copo: 40, saquinho: 100, embalagem: 0 },
     stations: ['balcao', 'bancada', 'tacho1', 'moenda'],
     tachos: [{ baskets: 2, oil: 'comum', thermostat: false, alarm: false, timer: false }],
-    equipment: { drainer: false, warmer: 0, mill: 'manual', thermalBag: false },
+    equipment: { drainer: false, warmer: 0, mill: 'manual', thermalBag: false, autoMill: false, cardMachine: false },
     staff: [],
     positions: ['balcao', 'colocador1', 'fritador1', 'trocador', 'moenda'],
     season: 'outono',

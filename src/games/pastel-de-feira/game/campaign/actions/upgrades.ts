@@ -97,22 +97,23 @@ export function buyTachoExtra(c: Campaign): ActionResult {
   return { ok: true, campaign: next };
 }
 
-export type TachoUpgrade = 'grande' | 'termostato' | 'alarme';
+export type TachoUpgrade = 'grande' | 'termostato' | 'alarme' | 'timer';
 
 /** Melhorias por tacho (RN-73): grande (4 cestos), termostato e alarme. */
 export function buyTachoUpgrade(c: Campaign, kind: TachoUpgrade, index: number): ActionResult {
   const t = c.owned.tachos[index];
   if (!t) return no('limite');
-  const owned = kind === 'grande' ? t.baskets === 4 : kind === 'termostato' ? t.thermostat : t.alarm;
+  const owned = kind === 'grande' ? t.baskets === 4 : kind === 'termostato' ? t.thermostat : kind === 'alarme' ? t.alarm : t.timer;
   if (owned) return no('limite');
-  const price = kind === 'grande' ? TACHO.largePrice : kind === 'termostato' ? TACHO.thermostatPrice : TACHO.alarmPrice;
+  const price = kind === 'grande' ? TACHO.largePrice : kind === 'termostato' ? TACHO.thermostatPrice : kind === 'alarme' ? TACHO.alarmPrice : TACHO.timerPrice;
   if (!canPay(c, price)) return no('semCaixa');
   const next = cloneCampaign(c);
   charge(next, price, true);
   const nt = next.owned.tachos[index];
   if (kind === 'grande') nt.baskets = 4;
   else if (kind === 'termostato') nt.thermostat = true;
-  else nt.alarm = true;
+  else if (kind === 'alarme') nt.alarm = true;
+  else nt.timer = true;
   return { ok: true, campaign: next };
 }
 

@@ -7,7 +7,9 @@ export type EquipId =
   | 'estufa'
   | 'estufa-grande'
   | 'moenda-motorizada'
-  | 'conta-parceira';
+  | 'conta-parceira'
+  | 'moenda-automatica'
+  | 'maquininha';
 
 export interface EquipDef {
   id: EquipId;
@@ -28,6 +30,8 @@ export const EQUIPMENT: Readonly<Record<EquipId, EquipDef>> = Object.freeze({
   estufa: { id: 'estufa', name: 'Estufa de vidro', desc: 'Guarda 6 pastéis prontos com a nota congelada por 60 s.', price: 300, minDay: 1, requires: [] },
   'estufa-grande': { id: 'estufa-grande', name: 'Estufa grande', desc: 'A estufa passa a guardar 12 pastéis.', price: 350, minDay: 1, requires: ['estufa'] },
   'conta-parceira': { id: 'conta-parceira', name: 'Conta Parceira do app', desc: '+4 comandas aceitas por dia (precisa da área de delivery).', price: 400, minDay: 1, requires: [] },
+  'moenda-automatica': { id: 'moenda-automatica', name: 'Moenda automática', desc: 'Extrai um caldo por pedido anotado, sozinha. Substitui a Moenda (Geral, R$ 55/dia). Precisa da moenda motorizada.', price: 900, minDay: 1, requires: ['moenda-motorizada'] },
+  maquininha: { id: 'maquininha', name: 'Maquininha de cartão', desc: 'Cobra sozinha o balcão e a fila de pagamento. Substitui parte do Balcão (Geral, R$ 55/dia).', price: 300, minDay: 1, requires: [] },
   'moenda-motorizada': { id: 'moenda-motorizada', name: 'Moenda motorizada', desc: 'Caldo em 2,5 s em vez de 6 s.', price: 500, minDay: 1, requires: [] },
 });
 
@@ -41,6 +45,7 @@ export const TACHO = {
   largePrice: 400,
   alarmPrice: 60,
   thermostatPrice: 350,
+  timerPrice: 600,
 } as const;
 
 export const COOLER = { price: 200, space: 1, max: 2 } as const;

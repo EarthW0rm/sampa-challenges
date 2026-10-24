@@ -4,6 +4,7 @@ import { center, type Layout, type Zone } from '../layout';
 import { drawPixelText } from '../pixelFont';
 import { currentQuality } from '../sim/quality';
 import { queueOf, xepaActive } from '../sim/customers';
+import { hasPower } from '../sim/world';
 import { fryWindow, isChanging, isDirty, isLocked } from '../sim/stations/fryer';
 import { millSeconds } from '../sim/stations/cane';
 import { homeStation } from '../sim/staff';
@@ -130,6 +131,11 @@ function drawTacho(ctx: CanvasRenderingContext2D, st: DayState, ui: UiState, z: 
       bar(ctx, x, y + 48, bw, 6, sec / win.burnAt, color);
     }
   });
+  if (t.timer) {
+    const on = hasPower(st);
+    box(ctx, { x: z.x + z.w - 22, y: z.y + 6, w: 16, h: 14 }, on ? PAL.green : PAL.red, PAL.shadow); // cesto com timer: verde ligado, vermelho sem energia
+    textCenter(ctx, 'T', z.x + z.w - 14, z.y + 9, PAL.shadow, 1);
+  }
   bar(ctx, z.x + 8, z.y + z.h - 22, z.w - 16, 6, isChanging(t) ? 0 : t.dirt, isDirty(t) ? PAL.red : PAL.oil);
   if (isLocked(t)) textCenter(ctx, 'TRAVADO', z.x + z.w / 2, z.y + z.h - 14, PAL.red, 1);
 }
@@ -298,7 +304,19 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
     }
   }
   const mo = layout.byId.get('moenda');
-  if (mo) bar(ctx, mo.x + 8, mo.y + 40, mo.w - 16, 8, st.mill.progress / millSeconds(st), PAL.green);
+  if (mo) {
+    bar(ctx, mo.x + 8, mo.y + 40, mo.w - 16, 8, (st.config.equipment.autoMill ? st.autoMill > 0 ? 1 - st.autoMill / millSeconds(st) : 0 : st.mill.progress / millSeconds(st)), PAL.green);
+    if (st.config.equipment.autoMill) {
+      const a = Math.floor(ui.clock * (st.autoMill > 0 ? 8 : 0)) % 4; // moenda automática girando
+      ctx.fillStyle = hasPower(st) ? PAL.gold : PAL.red;
+      ctx.fillRect(mo.x + 12 + a * 6, mo.y + 60, 5, 5);
+      textCenter(ctx, 'AUTO', mo.x + mo.w / 2, mo.y + 80, PAL.muted, 1);
+    }
+  }
+  if (bal && st.config.equipment.cardMachine) {
+    box(ctx, { x: bal.x + bal.w - 34, y: bal.y + 28, w: 24, h: 16 }, hasPower(st) ? PAL.blue : PAL.red, PAL.shadow); // maquininha
+    textCenter(ctx, 'CARD', bal.x + bal.w - 22, bal.y + 32, PAL.text, 1);
+  }
 
   // efeitos de evento: sem cobrir as zonas com cor opaca (RN-75)
   if (st.config.forecast === 'chuva') {

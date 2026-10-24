@@ -3,6 +3,7 @@ import type { Command, DayConfig, DayResult, SimEvent } from '../types';
 import { applyCommand } from './commands';
 import { updateCleaning } from './dirt';
 import { updateDelivery } from './delivery';
+import { updateAutomation } from './automation';
 import { updateOrders } from './orders';
 import { planWorld, updateWorld } from './world';
 import { updateCustomers } from './customers';
@@ -108,6 +109,7 @@ export class DaySim {
     updateDelivery(s, STEP);
     updateOrders(s, STEP);
     updateWorld(s, STEP);
+    updateAutomation(s, STEP);
     if (s.tick >= DAY_TICKS) this.close();
   }
 

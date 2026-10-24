@@ -293,6 +293,8 @@ export interface DayState {
   acceptedToday: number;
   /** Eventos surpresa do dia (RN-150, RN-152). */
   world: WorldState;
+  /** Moenda automática: segundos que faltam do caldo em extração, ou 0 (RN-160). */
+  autoMill: number;
   /** Avisos de evento para a tela, com tempo de exibição. */
   notices: { text: string; left: number }[];
   eating: Customer[];
@@ -346,6 +348,7 @@ export function createState(config: DayConfig, seed: number): DayState {
     acceptedToday: 0,
     world: { kind: null, at: 0, fired: false, used: false, powerLeft: 0, excursionLeft: 0, excursionGap: 0, log: [], pending: [] },
     notices: [],
+    autoMill: 0,
     eating: [],
     payQueue: [],
     tables: Array.from({ length: config.tables }, () => ({ seats: Array.from({ length: 4 }, () => 'livre' as SeatState) })),
