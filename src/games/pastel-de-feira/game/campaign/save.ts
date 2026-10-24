@@ -1,4 +1,5 @@
 import { CONSUMABLE_IDS, INGREDIENTS } from '../data/catalog';
+import { CHALLENGES } from '../data/challenges';
 import { EQUIP_IDS } from '../data/equipment';
 import { OFFICE, ROLE_IDS } from '../data/office';
 import { COURSE_IDS, POSITION_LABEL, TRAIT_IDS } from '../data/staff';
@@ -67,6 +68,10 @@ function isHistory(v: unknown): v is DayHistory {
   );
 }
 
+function isChallenge(v: unknown): boolean {
+  return isRec(v) && isStr(v.id) && CHALLENGES.some((d) => d.id === v.id) && isInt(v.acceptedOn, 1) && isInt(v.deadline, 1) && v.deadline >= v.acceptedOn && isNum(v.progress) && v.progress >= 0;
+}
+
 function isOrder(v: unknown, owned: Rec): boolean {
   return (
     isRec(v) && isStr(v.id) && isInt(v.dayId, 1) && isStr(v.item) && ITEMS[v.item] !== undefined && Array.isArray(owned.items) && (owned.items as string[]).includes(v.item) &&
@@ -126,6 +131,7 @@ export function isCampaign(v: unknown): v is Campaign {
   if (!Array.isArray(v.roles) || v.roles.length > OFFICE.roleSlots || new Set(v.roles).size !== v.roles.length || !v.roles.every((r) => isStr(r) && (ROLE_IDS as readonly string[]).includes(r))) return false;
   if (v.roles.length > 0 && !(o as Rec).office) return false;
   if (!Array.isArray(v.orders) || v.orders.length > 3 || !v.orders.every((x) => isOrder(x, v.owned as Rec))) return false;
+  if (!Array.isArray(v.challenges) || v.challenges.length > 3 || !v.challenges.every(isChallenge)) return false;
   const pr = v.promo;
   if (!isRec(pr) || !(pr.brindeN === 0 || isInt(pr.brindeN, 2, 6)) || !isInt(pr.chorinho, 0, 3) || !isBool(pr.xepa)) return false;
   if (!isNum(pr.xepaDiscount) || ![0.1, 0.2, 0.3, 0.4, 0.5].some((d) => Math.abs(d - (pr.xepaDiscount as number)) < 1e-9)) return false;

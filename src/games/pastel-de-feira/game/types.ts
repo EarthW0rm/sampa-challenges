@@ -223,6 +223,8 @@ export interface DayResult {
   reputation: { successes: number; charm: number; weightedFailures: number; rate: number; change: number };
   stockLeft: StockLot[];
   consumables: Record<ConsumableId, number>;
+  /** Contadores do dia usados pelos desafios (RN-136). */
+  counters: { drinks: number; especial: number; inspection: 'none' | 'passed' | 'failed' };
   /** Custo dos insumos dos brindes entregues (já incluído nos insumos usados). */
   giftCost: number;
   /** Resumo de cada funcionário no dia (energia, ociosidade). */

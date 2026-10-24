@@ -96,10 +96,12 @@ export function deliverItem(s: DayState, ref: ItemRef, customerId: number, by?: 
     else nota = Math.max(0, nota - NO_BAG_PENALTY); // sem saquinho (RN-28)
     if (nota < minQuality(s, line.profile ?? c.profile) && !line.gift) c.lowQuality = true; // paga, mas falha (RN-15)
     value = pastryValue(price, nota, s.config.reputation, c.group ? tablePremium(s) : 1);
+    if (ITEMS[itemId].base === 'especial') s.stats.especial++;
     s.ready.splice(s.ready.indexOf(pastry), 1);
   } else {
     value = drinkValue(price, s.config.reputation);
     addCharm(s, CHARM_CHORINHO * s.config.promo.chorinho); // chorinho dá encanto por nível (RN-123)
+    s.stats.drinks++;
     s.cups.splice(s.cups.indexOf(cup!), 1);
   }
   if (line.gift) {

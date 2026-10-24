@@ -51,6 +51,7 @@ export function newCampaign(opts: NewCampaignOptions): Campaign {
     },
     menu: { salgados: ['carne', 'queijo'], doces: [], bebidas: ['caldo-puro'] },
     prices,
+    challenges: [],
     orders: [],
     roles: [],
     promo: { brindeN: 0, chorinho: 0, xepa: false, xepaDiscount: 0.3 },

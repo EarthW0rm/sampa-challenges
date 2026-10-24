@@ -92,6 +92,17 @@ export interface BigOrderOffer {
   fine: number;
 }
 
+/** Desafio aceito da Associação da Feira (RN-135). */
+export interface ActiveChallenge {
+  id: string;
+  /** Dia do calendário em que foi aceito. */
+  acceptedOn: number;
+  /** Último dia do calendário em que vale. Depois disso expira sem penalidade. */
+  deadline: number;
+  /** Progresso (sequência de dias, por exemplo). */
+  progress: number;
+}
+
 export interface MenuChoice {
   salgados: ItemId[];
   doces: ItemId[];
@@ -129,6 +140,8 @@ export interface Campaign {
   owned: Owned;
   menu: MenuChoice;
   prices: Record<ItemId, number>;
+  /** Desafios aceitos (RN-135). */
+  challenges: ActiveChallenge[];
   /** Encomendas aceitas para o próximo Dia de Feira (RN-102). */
   orders: BigOrderOffer[];
   /** Cargos de gestão contratados, no máximo 3 (RN-100, RN-103). */
@@ -199,6 +212,8 @@ export interface Balance {
   wastePercent: number;
   bonus: number;
   fines: number;
+  /** Desafios concluídos no dia, com o prêmio. */
+  prizes: { id: string; name: string; prize: number }[];
   bankrupt: boolean;
   newDay: number;
   freeModeStarted: boolean;

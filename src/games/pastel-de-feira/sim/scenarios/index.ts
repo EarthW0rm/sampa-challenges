@@ -4,6 +4,7 @@ import { catalogo } from './catalogo';
 import { clientes } from './clientes';
 import { delivery } from './delivery';
 import { encomendas } from './encomendas';
+import { desafios } from './desafios';
 import { energia } from './energia';
 import { equipamentos } from './equipamentos';
 import { escritorio } from './escritorio';
@@ -41,6 +42,7 @@ export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   delivery,
   escritorio,
   encomendas,
+  desafios,
   promocoes,
   'xepa-tema': xepaTema,
   pagamento,

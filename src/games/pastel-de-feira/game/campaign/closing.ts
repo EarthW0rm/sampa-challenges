@@ -1,6 +1,7 @@
 import { XEPA_LEFTOVER_VALUE, THEME_REPUTATION_BONUS } from '../constants';
 import { CONSUMABLES, CONSUMABLE_IDS, INGREDIENTS } from '../data/catalog';
 import type { DayResult } from '../types';
+import { challengeById } from '../data/challenges';
 import { payroll } from './actions/staff';
 import { advanceFatigue } from './fatigue';
 import { CAMPAIGN_DAYS, COOLER_CAPACITY, cloneCampaign, dailySpaceFee, minReputation, profitGoal, round2 } from './campaign';
@@ -89,8 +90,6 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   const fines = clampMoney(result.costs.fines);
   if (fines > 0) lines.push({ id: 'multas', label: 'Multas de encomenda', amount: -round2(fines) });
 
-  const profit = round2(lines.reduce((n, l) => n + l.amount, 0));
-
   // 5. Caixa: compras já saíram no Preparo. Entram vendas e bônus; saem óleo e custos fixos.
   const cashIn = revenue + bonus + leftoverSale - clampMoney(result.costs.oil) - rent - wages - fines;
   c.cash = round2(c.cash + cashIn);
@@ -99,6 +98,24 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   const reputationBefore = campaign.reputation;
   const change = result.reputation.change > 0 && campaign.theme === 'tradicional' ? result.reputation.change * THEME_REPUTATION_BONUS : result.reputation.change;
   c.reputation = Math.max(1, Math.min(5, round2(reputationBefore + change)));
+
+  // 6b. Desafios da Associação: progresso, prêmio na conclusão e expiração sem penalidade (RN-135)
+  const prizes: { id: string; name: string; prize: number }[] = [];
+  const after: Campaign = { ...c, reputation: c.reputation };
+  c.challenges = c.challenges.flatMap((ch) => {
+    const def = challengeById(ch.id);
+    if (!def) return [];
+    const r = def.evaluate({ after, result, waste: wastePercent, progress: ch.progress });
+    if (r.done) {
+      prizes.push({ id: def.id, name: def.name, prize: def.prize });
+      return [];
+    }
+    return campaign.calendar >= ch.deadline ? [] : [{ ...ch, progress: r.progress }];
+  });
+  for (const p of prizes) lines.push({ id: `desafio-${p.id}`, label: `Prêmio: ${p.name}`, amount: p.prize });
+  const prizeCash = prizes.reduce((n, p) => n + p.prize, 0);
+  c.cash = round2(c.cash + prizeCash);
+  const profit = round2(lines.reduce((n, l) => n + l.amount, 0));
 
   // 7. Meta (RN-50, RN-54)
   const goal = campaign.freeMode ? null : profitGoal(campaign.day);
@@ -155,6 +172,7 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
     wastePercent,
     bonus,
     fines,
+    prizes,
     bankrupt: c.cash < 0,
     newDay: c.day,
     freeModeStarted,
