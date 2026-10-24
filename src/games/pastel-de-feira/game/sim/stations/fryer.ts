@@ -3,6 +3,7 @@ import {
   OIL_DIRT_PER_PASTRY, OIL_DIRT_PER_PASTRY_COTTON, OIL_LOCK_PERCENT, QUALITY_OVERDONE, QUALITY_PONTO, QUALITY_RAW,
   STEP,
 } from '../../constants';
+import { QUALITY_BONUS, THERMOSTAT } from '../../data/equipment';
 import { ITEMS, type Item } from '../../data/recipes';
 import { swapDemand } from '../customers';
 import { isAt } from '../pasteleiro';
@@ -12,11 +13,25 @@ const EPS = 1e-9;
 
 export type FryOutcome = 'cru' | 'ponto' | 'passado' | 'queimado';
 
+export interface FryWindow {
+  /** Janela do ponto [início, fim] em segundos de fritura. */
+  ponto: readonly [number, number];
+  /** Segundos até queimar. */
+  burnAt: number;
+}
+
+/** Janela de fritura do item neste tacho. O termostato alarga o ponto em 50% e adia a queima em 3 s (RN-73). */
+export function fryWindow(item: Item, tacho: Pick<Tacho, 'thermostat'>): FryWindow {
+  if (!tacho.thermostat) return { ponto: item.ponto, burnAt: item.burnAt };
+  const [a, b] = item.ponto;
+  return { ponto: [a, a + (b - a) * THERMOSTAT.pontoMult], burnAt: item.burnAt + THERMOSTAT.burnExtra };
+}
+
 /** Desfecho de um pastel tirado do óleo aos `seconds` de fritura (RN-23). */
-export function fryOutcome(item: Item, seconds: number): FryOutcome {
-  if (seconds >= item.burnAt - EPS) return 'queimado';
-  if (seconds < item.ponto[0] - EPS) return 'cru';
-  if (seconds <= item.ponto[1] + EPS) return 'ponto';
+export function fryOutcome(win: FryWindow, seconds: number): FryOutcome {
+  if (seconds >= win.burnAt - EPS) return 'queimado';
+  if (seconds < win.ponto[0] - EPS) return 'cru';
+  if (seconds <= win.ponto[1] + EPS) return 'ponto';
   return 'passado';
 }
 
@@ -27,11 +42,15 @@ export const isDirty = (t: Tacho): boolean => t.dirt >= OIL_DIRTY_THRESHOLD - EP
 export const isChanging = (t: Tacho): boolean => t.changeProgress > 0;
 
 /**
- * Modificadores de nota na saída do óleo (RN-24). Ponto de extensão: equipamentos (US-112),
- * traços e cursos (US-113) somam aqui.
+ * Modificadores de nota na saída do óleo (RN-24): óleo sujo −15, óleo de algodão +10, escorredor +10.
+ * Traços e cursos (US-113) somam aqui.
  */
-export function qualityModifiers(_s: DayState, tacho: Tacho): number {
-  return isDirty(tacho) ? -OIL_DIRTY_QUALITY_PENALTY : 0;
+export function qualityModifiers(s: DayState, tacho: Tacho): number {
+  let m = 0;
+  if (isDirty(tacho)) m -= OIL_DIRTY_QUALITY_PENALTY;
+  if (tacho.oil === 'algodao') m += QUALITY_BONUS.cotton;
+  if (s.config.equipment.drainer) m += QUALITY_BONUS.drainer;
+  return m;
 }
 
 /** Nota na saída do óleo por desfecho (RN-23), com modificadores, limitada a 0–100. */
@@ -40,35 +59,55 @@ export function outcomeQuality(s: DayState, tacho: Tacho, outcome: FryOutcome): 
   return Math.max(0, Math.min(100, base + qualityModifiers(s, tacho)));
 }
 
-/** Colocar o pastel montado num cesto livre (RN-42). */
+const isFree = (t: Tacho, i: number): boolean => !t.baskets[i].frying && t.baskets[i].shadow === null;
+
+/** Cesto parceiro de um pastel grande: o vizinho livre, senão qualquer livre (RN-30d). */
+function partnerBasket(t: Tacho, index: number): number {
+  for (const j of [index + 1, index - 1]) if (j >= 0 && j < t.baskets.length && isFree(t, j)) return j;
+  for (let j = 0; j < t.baskets.length; j++) if (j !== index && isFree(t, j)) return j;
+  return -1;
+}
+
+/** Colocar o pastel montado num cesto livre (RN-42). O Especial da Casa ocupa 2 cestos (RN-30d). */
 function place(s: DayState, tacho: Tacho, index: number): boolean {
-  const basket = tacho.baskets[index];
-  if (!basket || basket.frying || isLocked(tacho) || isChanging(tacho)) return false;
-  const pick =
-    s.assembled.find((a) => a.id === s.selectedAssembled) ?? s.assembled[0];
+  if (!tacho.baskets[index] || !isFree(tacho, index) || isLocked(tacho) || isChanging(tacho)) return false;
+  const pick = s.assembled.find((a) => a.id === s.selectedAssembled) ?? s.assembled[0];
   if (!pick) return false;
+  const big = ITEMS[pick.item].doughs > 1;
+  const partner = big ? partnerBasket(tacho, index) : -1;
+  if (big && partner < 0) return false; // sem 2 cestos livres: o jogador escolhe outro tacho
   s.assembled.splice(s.assembled.indexOf(pick), 1);
   s.selectedAssembled = null;
-  basket.frying = { id: pick.id, item: pick.item, ticks: 0, burned: false };
+  tacho.baskets[index].frying = { id: pick.id, item: pick.item, ticks: 0, burned: false, pontoAlerted: false, burnAlerted: false };
+  if (big) tacho.baskets[partner].shadow = index;
   const perPastry = tacho.oil === 'algodao' ? OIL_DIRT_PER_PASTRY_COTTON : OIL_DIRT_PER_PASTRY;
   tacho.dirt = Math.min(1, Math.round((tacho.dirt + perPastry) * 1e6) / 1e6);
   emit(s, 'colocou', pick.id);
   return true;
 }
 
+/** Tira o pastel do cesto (ou do parceiro) e libera os cestos. Devolve o pastel que estava fritando. */
+function release(tacho: Tacho, index: number): { frying: NonNullable<Tacho['baskets'][0]['frying']> } | null {
+  const main = tacho.baskets[index].shadow ?? index;
+  const f = tacho.baskets[main].frying;
+  if (!f) return null;
+  tacho.baskets[main].frying = null;
+  for (const b of tacho.baskets) if (b.shadow === main) b.shadow = null;
+  return { frying: f };
+}
+
 /** Tirar do óleo: o desfecho depende do tempo de fritura (RN-23). Queimado vira desperdício e libera o cesto. */
 function take(s: DayState, tacho: Tacho, index: number): boolean {
-  const basket = tacho.baskets[index];
-  const f = basket?.frying;
-  if (!f) return false;
-  basket.frying = null;
+  const rel = release(tacho, index);
+  if (!rel) return false;
+  const f = rel.frying;
   if (f.burned) {
     s.stats.burned++;
     emit(s, 'descartou', f.id);
     swapDemand(s);
     return true;
   }
-  const outcome = fryOutcome(ITEMS[f.item], f.ticks * STEP);
+  const outcome = fryOutcome(fryWindow(ITEMS[f.item], tacho), f.ticks * STEP);
   s.ready.push({ id: f.id, item: f.item, quality: outcomeQuality(s, tacho, outcome), readyAt: now(s) });
   emit(s, outcome === 'ponto' ? 'tirou_no_ponto' : outcome === 'cru' ? 'tirou_cru' : 'tirou_passado', f.id);
   return true;
@@ -78,8 +117,9 @@ function take(s: DayState, tacho: Tacho, index: number): boolean {
 export function tapBasket(s: DayState, station: string, index: number): boolean {
   if (!isAt(s, station as 'tacho1')) return false;
   const tacho = s.tachos[tachoIndex(station)];
-  if (!tacho) return false;
-  return tacho.baskets[index]?.frying ? take(s, tacho, index) : place(s, tacho, index);
+  const basket = tacho?.baskets[index];
+  if (!basket) return false;
+  return basket.frying || basket.shadow !== null ? take(s, tacho, index) : place(s, tacho, index);
 }
 
 /** Começa a trocar o óleo, segurando o tacho (RN-42). */
@@ -105,7 +145,7 @@ function finishOilChange(s: DayState, tacho: Tacho): void {
   emit(s, 'oleo_trocado');
 }
 
-/** Avança a fritura (parada durante a troca) e o progresso da troca. */
+/** Avança a fritura (parada durante a troca), os alarmes e o progresso da troca. */
 export function updateFryers(s: DayState, dt: number): void {
   for (const tacho of s.tachos) {
     if (isChanging(tacho)) {
@@ -117,7 +157,19 @@ export function updateFryers(s: DayState, dt: number): void {
       const f = b.frying;
       if (!f || f.burned) continue;
       f.ticks++;
-      if (f.ticks * STEP >= ITEMS[f.item].burnAt - EPS) {
+      const sec = f.ticks * STEP;
+      const win = fryWindow(ITEMS[f.item], tacho);
+      if (tacho.alarm) {
+        if (!f.pontoAlerted && sec >= win.ponto[0] - EPS) {
+          f.pontoAlerted = true;
+          emit(s, 'alarme_ponto', f.id);
+        }
+        if (!f.burnAlerted && sec >= win.burnAt - 1 - EPS) {
+          f.burnAlerted = true;
+          emit(s, 'alarme_queima', f.id);
+        }
+      }
+      if (sec >= win.burnAt - EPS) {
         f.burned = true;
         emit(s, 'queimou', f.id);
       }

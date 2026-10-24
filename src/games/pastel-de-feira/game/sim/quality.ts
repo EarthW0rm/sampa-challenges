@@ -1,6 +1,7 @@
 import {
   DECAY_DELAY, DECAY_PER_SECOND, QUALITY_FACTOR_MIN, QUALITY_FACTOR_SPAN, REPUTATION_PREMIUM,
 } from '../constants';
+import { WARMER } from '../data/equipment';
 import { starTier } from './customers';
 import type { Ready } from './state';
 
@@ -19,8 +20,15 @@ export const pastryValue = (price: number, nota: number, rep: number, tablePremi
 /** Caldo não tem nota (RN-26). */
 export const drinkValue = (price: number, rep: number): number => price * reputationPremium(rep);
 
-/** Nota atual de um pastel pronto: perde 2 pontos/s depois de 10 s de espera (RN-25). */
+/**
+ * Nota atual de um pastel pronto: perde 2 pontos/s depois de 10 s de espera (RN-25). Na estufa a nota
+ * fica congelada por 60 s e depois cai 1 ponto/s (RN-27).
+ */
 export function currentQuality(r: Ready, t: number): number {
+  if (r.warmed) {
+    const waited = Math.max(0, t - r.readyAt - WARMER.holdSeconds);
+    return clampQuality(r.quality - waited * WARMER.decayPerSecond);
+  }
   const waited = Math.max(0, t - r.readyAt - DECAY_DELAY);
   return clampQuality(r.quality - waited * DECAY_PER_SECOND);
 }

@@ -49,10 +49,15 @@ export interface Frying {
   /** Passos de fritura (inteiro: o ponto e a queima não acumulam erro de ponto flutuante). */
   ticks: number;
   burned: boolean;
+  /** Alarmes já disparados (uma vez por pastel). */
+  pontoAlerted: boolean;
+  burnAlerted: boolean;
 }
 
 export interface Basket {
   frying: Frying | null;
+  /** Índice do cesto principal quando este cesto está ocupado pelo outro lado de um pastel grande (RN-30d). */
+  shadow: number | null;
 }
 
 export interface Tacho {
@@ -62,6 +67,9 @@ export interface Tacho {
   dirt: number;
   /** Troca de óleo em andamento: progresso em segundos de 0 a HOLD_OIL_MANUAL. */
   changeProgress: number;
+  thermostat: boolean;
+  alarm: boolean;
+  timer: boolean;
 }
 
 /** Pastel pronto, esperando entrega. A nota decai com o tempo (RN-25). */
@@ -71,6 +79,8 @@ export interface Ready {
   /** Nota na saída do óleo, já com modificadores. */
   quality: number;
   readyAt: number;
+  /** Está na estufa: a nota fica congelada por 60 s (RN-27). */
+  warmed?: boolean;
 }
 
 export interface Cup {
@@ -166,10 +176,13 @@ export function createState(config: DayConfig, seed: number): DayState {
     assembled: [],
     selectedAssembled: null,
     tachos: config.tachos.map((t) => ({
-      baskets: Array.from({ length: t.baskets }, () => ({ frying: null })),
+      baskets: Array.from({ length: t.baskets }, () => ({ frying: null, shadow: null })),
       oil: t.oil,
       dirt: 0,
       changeProgress: 0,
+      thermostat: t.thermostat,
+      alarm: t.alarm,
+      timer: t.timer,
     })),
     ready: [],
     cups: [],

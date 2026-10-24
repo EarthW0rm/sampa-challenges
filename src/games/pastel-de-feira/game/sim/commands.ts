@@ -4,6 +4,7 @@ import { addIngredient, clearTray, closeAssembly, selectAssembled } from './stat
 import { startMill, stopMill } from './stations/cane';
 import { collectCoins, deliver, takeOrder } from './stations/counter';
 import { cancelOilChange, startOilChange, tapBasket } from './stations/fryer';
+import { warm } from './stations/warmer';
 import type { DayState } from './state';
 
 /** Aplica um comando do jogador. Devolve false se ele não vale no estado atual (vira `rejected`). */
@@ -25,6 +26,7 @@ export function applyCommand(s: DayState, cmd: Command): boolean {
         if (slot.k === 'montado') return selectAssembled(s, slot.id);
       }
       if (cmd.station.startsWith('tacho') && slot.k === 'cesto') return tapBasket(s, cmd.station, slot.index);
+      if (cmd.station === 'estufa' && slot.k === 'pronto') return warm(s, slot.id);
       return false;
     }
     case 'holdStart':

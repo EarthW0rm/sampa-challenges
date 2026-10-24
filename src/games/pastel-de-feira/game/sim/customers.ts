@@ -1,7 +1,7 @@
 import {
   ARRIVAL_BASE_INTERVAL, ARRIVAL_DAILY_DECAY, ARRIVAL_MIN_INTERVAL, EXIGENTE_RAMP_END_HOUR,
   EXIGENTE_RAMP_FIRST_DAY, EXIGENTE_RAMP_LAST_DAY, EXIGENTE_RAMP_MAX_BONUS, EXIGENTE_RAMP_START_HOUR,
-  FAIL_WEIGHT, LOW_REPUTATION_ARRIVAL, LOW_REPUTATION_LIMIT, ORDER_DRINK_CHANCE, ORDER_PASTRIES_MAX,
+  FAIL_WEIGHT, LOW_REPUTATION_ARRIVAL, LOW_REPUTATION_LIMIT, ORDER_DESSERT_CHANCE, ORDER_DESSERT_CHANCE_LATE, ORDER_DESSERT_LATE_HOUR, ORDER_DRINK_CHANCE, ORDER_PASTRIES_MAX,
   ORDER_PASTRIES_MIN, PATIENCE, PEAK_END_HOUR, PEAK_FACTOR, PEAK_START_HOUR, PROFILE_CEILING,
   PROFILE_MIX_BASE, PROFILE_MIX_EXPENSIVE, PROFILE_MIX_PRICE_INDEX, QUEUE_MAX, REPUTATION_CEILING_BONUS, hourAt,
 } from '../constants';
@@ -104,7 +104,7 @@ export function failOrder(s: DayState, c: Customer, weight: number): void {
 }
 
 /** Chegada de um cliente (RN-04, RN-05, RN-12, RN-13). */
-function spawnCustomer(s: DayState): void {
+export function spawnCustomer(s: DayState): void {
   const rng = s.rng.customers;
   s.stats.arrived++;
   if (s.customers.length >= QUEUE_MAX) {
@@ -118,10 +118,11 @@ function spawnCustomer(s: DayState): void {
   const ceiling = ceilingFor(profile, s.config.reputation);
 
   const available = s.config.menu.filter((m) => canMake(s, ITEMS[m.item]));
-  const pastries = available.filter((m) => ITEMS[m.item].kind !== 'bebida' && affordable(m, ceiling));
+  const pastries = available.filter((m) => ITEMS[m.item].kind === 'salgado' && affordable(m, ceiling));
+  const desserts = available.filter((m) => ITEMS[m.item].kind === 'doce' && affordable(m, ceiling));
   const drinks = available.filter((m) => ITEMS[m.item].kind === 'bebida' && affordable(m, ceiling));
   if (pastries.length === 0) {
-    const anyPastry = available.some((m) => ITEMS[m.item].kind !== 'bebida');
+    const anyPastry = available.some((m) => ITEMS[m.item].kind === 'salgado');
     if (anyPastry) {
       s.stats.lostPrice++;
       emit(s, 'cliente_perdido_preco');
@@ -135,6 +136,8 @@ function spawnCustomer(s: DayState): void {
   const items: ItemId[] = [];
   const n = rng.int(ORDER_PASTRIES_MIN, ORDER_PASTRIES_MAX);
   for (let i = 0; i < n; i++) items.push(rng.weighted(pastries, (m) => m.weight ?? 1)!.item);
+  const dessertChance = hourAt(now(s)) >= ORDER_DESSERT_LATE_HOUR ? ORDER_DESSERT_CHANCE_LATE : ORDER_DESSERT_CHANCE;
+  if (desserts.length > 0 && rng.chance(dessertChance)) items.push(rng.weighted(desserts, (m) => m.weight ?? 1)!.item);
   if (drinks.length > 0 && rng.chance(ORDER_DRINK_CHANCE)) items.push(rng.weighted(drinks, (m) => m.weight ?? 1)!.item);
   const c = addCustomer(s, profile, items);
   emit(s, 'cliente_chegou', c.id);

@@ -41,6 +41,10 @@ export const QUEUE_MAX = 6;
 export const ORDER_PASTRIES_MIN = 1;
 export const ORDER_PASTRIES_MAX = 2;
 export const ORDER_DRINK_CHANCE = 0.4;
+// RN-30e: doce como sobremesa
+export const ORDER_DESSERT_CHANCE = 0.25;
+export const ORDER_DESSERT_CHANCE_LATE = 0.35;
+export const ORDER_DESSERT_LATE_HOUR = 11;
 // RN-06: paciência base (s) do fim da fila até receber o pedido completo
 export const PATIENCE: Readonly<Record<'economico' | 'padrao' | 'exigente', number>> = {
   economico: 45,
