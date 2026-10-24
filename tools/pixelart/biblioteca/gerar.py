@@ -5,7 +5,7 @@ Uso (a partir de tools/pixelart):  python3 -m biblioteca.gerar ../../src/shared/
 import importlib, sys
 from .prim import Saida
 
-MODULOS = ['caes_lado', 'caes_costas', 'itens', 'fx']
+MODULOS = ['caes_lado', 'caes_costas', 'caes_pe', 'itens', 'fx']
 
 def main():
     saida = Saida(sys.argv[1])
