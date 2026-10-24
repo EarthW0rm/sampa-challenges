@@ -3,14 +3,16 @@ import type { GameProps } from '../../hub/types';
 import { ClosingScreen } from './components/ClosingScreen';
 import { DayScreen } from './components/DayScreen';
 import { EndScreen } from './components/EndScreen';
+import { HandoverDialog } from './components/HandoverDialog';
 import { NewCampaign } from './components/NewCampaign';
 import { PrepScreen } from './components/prep/PrepScreen';
 import { TitleScreen } from './components/TitleScreen';
 import { closeDay } from './game/campaign/closing';
+import { handoverValue, startFromHandover } from './game/campaign/actions/handover';
 import { daySeed, newCampaign, toDayConfig } from './game/campaign/campaign';
 import { browserStorage, clearSave, load, saveCampaign, type SavePhase } from './game/campaign/save';
 import type { Balance, Campaign, NewCampaignOptions } from './game/campaign/types';
-import { loadRecord, saveCashRecord, saveDayRecord } from './game/record';
+import { loadRecord, saveCashRecord, saveDayRecord, savePointRecord } from './game/record';
 import type { DayConfig, DayResult } from './game/types';
 import './styles.css';
 
@@ -20,6 +22,17 @@ interface Closing {
   balance: Balance;
   served: number;
   lost: number;
+  appCancelled: number;
+}
+
+/** Depuração: `localStorage['pastel-de-feira:forcar'] = 'fiscal' | 'energia' | 'excursao' | 'fogo' | 'queimado'` força o evento surpresa do dia. */
+function withDebug(config: DayConfig): DayConfig {
+  try {
+    const forced = localStorage.getItem('pastel-de-feira:forcar');
+    return forced ? { ...config, eventsOn: true, forceEvent: forced } : config;
+  } catch {
+    return config;
+  }
 }
 
 const randomSeed = (): number => Math.floor(Math.random() * 4294967294) + 1;
@@ -34,6 +47,9 @@ export default function PastelDeFeira({ onExit }: GameProps) {
   const [closing, setClosing] = useState<Closing | null>(null);
   const [warnSave, setWarnSave] = useState(false);
   const warned = useRef(false);
+  const [handover, setHandover] = useState<{ value: number; kind: 'zerado' | 'falencia' } | null>(null);
+  const [pointValue, setPointValue] = useState<number | null>(null);
+  const [backTo, setBackTo] = useState<Screen>('title');
 
   const persist = (c: Campaign, phase: SavePhase) => {
     if (saveCampaign(storage, c, phase) || warned.current) return;
@@ -48,7 +64,7 @@ export default function PastelDeFeira({ onExit }: GameProps) {
       const c = { ...save.campaign, resumes: save.campaign.resumes + 1 }; // nova semente (PA-13)
       persist(c, 'dia');
       setCampaign(c);
-      setDayConfig(toDayConfig(c));
+      setDayConfig(withDebug(toDayConfig(c)));
       setScreen('dia');
     } else {
       setCampaign(save.campaign);
@@ -57,7 +73,10 @@ export default function PastelDeFeira({ onExit }: GameProps) {
   };
 
   const onStartNew = (opts: Omit<NewCampaignOptions, 'seed'>) => {
-    const c = newCampaign({ ...opts, seed: randomSeed() });
+    const seed = randomSeed();
+    const c = pointValue !== null ? startFromHandover(pointValue, { ...opts, seed }) : newCampaign({ ...opts, seed });
+    if (pointValue !== null) savePointRecord(pointValue); // maior valor de ponto (RN-57)
+    setPointValue(null);
     clearSave(storage);
     persist(c, 'preparo');
     setCampaign(c);
@@ -71,7 +90,7 @@ export default function PastelDeFeira({ onExit }: GameProps) {
     if (out.campaign.freeMode) saveCashRecord(out.campaign.cash);
     persist(out.campaign, out.balance.bankrupt ? 'fim' : 'preparo');
     const o = result.orders;
-    setClosing({ balance: out.balance, served: o.served, lost: o.lostPatience + o.queueFull + o.lostPrice + o.noStock });
+    setClosing({ balance: out.balance, served: o.served, lost: o.lostPatience + o.queueFull + o.lostPrice + o.noStock, appCancelled: o.appCancelled });
     setCampaign(out.campaign);
     setScreen('fechamento');
   };
@@ -90,7 +109,20 @@ export default function PastelDeFeira({ onExit }: GameProps) {
           onExit={onExit}
         />
       )}
-      {screen === 'nova' && <NewCampaign onStart={onStartNew} onBack={() => setScreen('title')} />}
+      {screen === 'nova' && <NewCampaign onStart={onStartNew} onBack={() => { setPointValue(null); setScreen(pointValue !== null ? backTo : 'title'); }} />}
+      {handover && (
+        <HandoverDialog
+          value={handover.value}
+          kind={handover.kind}
+          onCancel={() => setHandover(null)}
+          onConfirm={() => {
+            setPointValue(handover.value);
+            setBackTo(screen);
+            setHandover(null);
+            setScreen('nova');
+          }}
+        />
+      )}
       {screen === 'preparo' && campaign && (
         <PrepScreen
           campaign={campaign}
@@ -100,10 +132,14 @@ export default function PastelDeFeira({ onExit }: GameProps) {
           }}
           onOpen={() => {
             persist(campaign, 'dia'); // checkpoint do início do dia (JA-06)
-            setDayConfig(toDayConfig(campaign));
+            setDayConfig(withDebug(toDayConfig(campaign)));
             setScreen('dia');
           }}
           onExit={onExit}
+          onHandover={() => {
+            const v = handoverValue(campaign, 'zerado');
+            if (v !== null) setHandover({ value: v, kind: 'zerado' });
+          }}
         />
       )}
       {screen === 'dia' && campaign && dayConfig && (
@@ -121,11 +157,21 @@ export default function PastelDeFeira({ onExit }: GameProps) {
           campaign={campaign}
           served={closing.served}
           lost={closing.lost}
+          appCancelled={closing.appCancelled}
           onNext={() => setScreen(closing.balance.bankrupt ? 'fim' : 'preparo')}
         />
       )}
       {screen === 'fim' && campaign && (
-        <EndScreen campaign={campaign} onNew={() => setScreen('nova')} onExit={onExit} />
+        <EndScreen
+          campaign={campaign}
+          pointValue={handoverValue(campaign, 'falencia')}
+          onPoint={() => {
+            const v = handoverValue(campaign, 'falencia');
+            if (v !== null) setHandover({ value: v, kind: 'falencia' });
+          }}
+          onNew={() => setScreen('nova')}
+          onExit={onExit}
+        />
       )}
     </div>
   );

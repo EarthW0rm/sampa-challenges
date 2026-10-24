@@ -15,6 +15,8 @@ import { UpgradesTab } from './UpgradesTab';
 
 interface Props {
   campaign: Campaign;
+  /** Passar o ponto depois de zerar (RN-57). */
+  onHandover?: () => void;
   onChange: (c: Campaign) => void;
   onOpen: () => void;
   onExit: () => void;
@@ -35,7 +37,7 @@ function visibleTabs(c: Campaign): { id: TabId; label: string }[] {
   return tabs;
 }
 
-export function PrepScreen({ campaign: c, onChange, onOpen, onExit }: Props) {
+export function PrepScreen({ campaign: c, onChange, onOpen, onExit, onHandover }: Props) {
   const [tab, setTab] = useState<TabId>('insumos');
   const [themeDismissed, setThemeDismissed] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
@@ -83,6 +85,11 @@ export function PrepScreen({ campaign: c, onChange, onOpen, onExit }: Props) {
           </div>
         )}
       </section>
+      {c.freeMode && onHandover && (
+        <button type="button" onClick={onHandover}>
+          Passar o ponto
+        </button>
+      )}
       <nav className="tabs" role="tablist">
         {tabs.map((t) => (
           <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>

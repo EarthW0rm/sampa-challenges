@@ -45,3 +45,6 @@ export const loadPointRecord = (store: Store | null = browser()): number => read
 export const saveDayRecord = (day: number, store: Store | null = browser()): boolean => raise(KEY_DAY, day, store);
 export const saveCashRecord = (cash: number, store: Store | null = browser()): boolean => raise(KEY_CASH, cash, store);
 export const savePointRecord = (value: number, store: Store | null = browser()): boolean => raise(KEY_POINT, value, store);
+
+/** Recorde do card do hub: o maior dia concluído e, depois de zerar, o maior caixa do modo livre (RN-56). */
+export const loadHubRecord = (store: Store | null = browser()): number => loadCashRecord(store) || loadRecord(store);

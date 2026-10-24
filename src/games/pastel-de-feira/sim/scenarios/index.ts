@@ -19,6 +19,7 @@ import { melhorias } from './melhorias';
 import { mesas } from './mesas';
 import { moenda } from './moenda';
 import { posicoes } from './posicoes';
+import { ponto } from './ponto';
 import { preparo } from './preparo';
 import { pagamento } from './pagamento';
 import { perfis } from './perfis';
@@ -51,6 +52,7 @@ export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   estacoes,
   automacao,
   perfis,
+  ponto,
   'eventos-previstos': eventosPrevistos,
   'eventos-surpresa': eventosSurpresa,
   promocoes,
