@@ -1,11 +1,13 @@
-import { FAIL_WEIGHT, NO_BAG_PENALTY, PROFILE_MIN_QUALITY } from '../../constants';
+import { DIRT_FAIL_LIMIT, DIRT_FAIL_WEIGHT, DIRT_PER_ORDER, EAT_SECONDS, HYGIENE_DIRT_FACTOR, FAIL_WEIGHT, NO_BAG_PENALTY, PROFILE_MIN_QUALITY, TABLE_PREMIUM } from '../../constants';
+import { addDirt } from '../dirt';
 import { PATIENCE_COURSE_BONUS } from '../../data/staff';
 import { ITEMS, type ItemId } from '../../data/recipes';
 import type { ItemRef } from '../../types';
 import { failOrder, menuEntry, removeCustomer } from '../customers';
 import { isAt } from '../pasteleiro';
 import { currentQuality, drinkValue, pastryValue, roundCents } from '../quality';
-import { recordSuccess } from '../reputation';
+import { recordFailure, recordSuccess } from '../reputation';
+import { collectPayment } from './tables';
 import { emit, newId, now, type Customer, type DayState, type OrderLine, type Worker } from '../state';
 
 /** Anota um cliente (RN-42). Quem anota com o curso de Atendimento deixa o cliente mais paciente (RN-118). */
@@ -21,7 +23,16 @@ export function noteOrder(s: DayState, c: Customer, by?: Worker): void {
 /** Anotar o cliente da frente: o primeiro da fila ainda não anotado (pasteleiro, no balcão). */
 export function takeOrder(s: DayState): boolean {
   if (!isAt(s, 'balcao')) return false;
-  const c = s.customers.find((x) => x.state === 'aguardando');
+  const c = s.customers.find((x) => x.state === 'aguardando' && x.place === 'fila');
+  if (!c) return false;
+  noteOrder(s, c);
+  return true;
+}
+
+/** Anotar o pedido de um grupo na mesa (pasteleiro nas mesas, RN-83). */
+export function takeTableOrder(s: DayState): boolean {
+  if (!isAt(s, 'mesas')) return false;
+  const c = s.customers.find((x) => x.state === 'aguardando' && x.place === 'mesa');
   if (!c) return false;
   noteOrder(s, c);
   return true;
@@ -46,7 +57,7 @@ export function lineMatches(c: Customer, line: OrderLine, delivered: ItemId): bo
   const want = ITEMS[line.item];
   const got = ITEMS[delivered];
   if ((want.kind === 'bebida') !== (got.kind === 'bebida')) return false;
-  return c.profile === 'exigente' ? line.item === delivered : want.base === got.base;
+  return (line.profile ?? c.profile) === 'exigente' ? line.item === delivered : want.base === got.base;
 }
 
 /** Item pronto de uma referência (pastel ou copo). */
@@ -55,7 +66,7 @@ export function itemOfRef(s: DayState, ref: ItemRef): ItemId | undefined {
 }
 
 /** Entrega um item pronto a um cliente anotado (RN-42, RN-63). Devolve false só se a ação não pôde valer. */
-export function deliverItem(s: DayState, ref: ItemRef, customerId: number): boolean {
+export function deliverItem(s: DayState, ref: ItemRef, customerId: number, by?: Worker): boolean {
   const c = s.customers.find((x) => x.id === customerId);
   if (!c || c.state !== 'anotado') return false;
   const pastry = ref.kind === 'pastel' ? s.ready.find((r) => r.id === ref.id) : undefined;
@@ -82,8 +93,8 @@ export function deliverItem(s: DayState, ref: ItemRef, customerId: number): bool
     let nota = currentQuality(pastry, now(s));
     if (s.consumables.saquinho > 0) s.consumables.saquinho--;
     else nota = Math.max(0, nota - NO_BAG_PENALTY); // sem saquinho (RN-28)
-    if (nota < PROFILE_MIN_QUALITY[c.profile]) c.lowQuality = true; // paga, mas falha (RN-15)
-    value = pastryValue(price, nota, s.config.reputation);
+    if (nota < PROFILE_MIN_QUALITY[line.profile ?? c.profile]) c.lowQuality = true; // paga, mas falha (RN-15)
+    value = pastryValue(price, nota, s.config.reputation, c.group ? TABLE_PREMIUM : 1);
     s.ready.splice(s.ready.indexOf(pastry), 1);
   } else {
     value = drinkValue(price, s.config.reputation);
@@ -96,12 +107,31 @@ export function deliverItem(s: DayState, ref: ItemRef, customerId: number): bool
   if (c.lines.every((l) => l.delivered !== null)) {
     if (c.lowQuality) failOrder(s, c, FAIL_WEIGHT.counter);
     else if (!c.failed) recordSuccess(s);
+    if (s.dirt >= DIRT_FAIL_LIMIT) recordFailure(s, DIRT_FAIL_WEIGHT); // entregue com a barraca imunda (RN-133)
+    addDirt(s, DIRT_PER_ORDER * (by?.courses.includes('higiene') ? HYGIENE_DIRT_FACTOR : 1)); // RN-131, RN-118
     s.stats.served++;
-    s.coins.push({ id: newId(s), amount: roundCents(c.owed) });
-    removeCustomer(s, c);
+    if (c.group) {
+      // o grupo come na mesa e paga depois, no balcão (RN-82, RN-87)
+      const i = s.customers.indexOf(c);
+      if (i >= 0) s.customers.splice(i, 1);
+      c.place = 'comendo';
+      c.timer = EAT_SECONDS;
+      s.eating.push(c);
+      emit(s, 'grupo_comendo', c.id);
+    } else {
+      s.coins.push({ id: newId(s), amount: roundCents(c.owed) });
+      removeCustomer(s, c);
+    }
   }
   return true;
 }
 
-/** Entrega pelo pasteleiro: só no balcão. */
-export const deliver = (s: DayState, ref: ItemRef, customerId: number): boolean => isAt(s, 'balcao') && deliverItem(s, ref, customerId);
+/** Entrega pelo pasteleiro: no balcão, ou nas mesas quando o grupo é atendido na mesa (RN-83). */
+export function deliver(s: DayState, ref: ItemRef, customerId: number): boolean {
+  const c = s.customers.find((x) => x.id === customerId);
+  if (!c) return false;
+  return isAt(s, c.service === 'mesa' ? 'mesas' : 'balcao') && deliverItem(s, ref, customerId);
+}
+
+/** Cobrar o primeiro grupo da fila de pagamento (pasteleiro no balcão, RN-87). */
+export const chargeNextGroup = (s: DayState): boolean => collectPayment(s);

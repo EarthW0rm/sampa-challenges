@@ -7,8 +7,24 @@ import type { Command, DayConfig, HoldAction, ItemRef, Profile, SimEvent, Statio
 export interface OrderLine {
   /** Item desejado. Muda só na troca automática (RN-35). */
   item: ItemId;
+  /** Perfil de quem pediu este item (grupos têm perfis diferentes, spec seção 4). */
+  profile?: Profile;
   /** Item entregue, quando já foi. */
   delivered: ItemId | null;
+}
+
+export type SeatState = 'livre' | 'ocupado' | 'sujo';
+
+export interface Table {
+  seats: SeatState[];
+}
+
+/** Grupo sentado numa mesa: um pedido conjunto, a paciência do mais impaciente (RN-85, RN-86). */
+export interface GroupInfo {
+  size: number;
+  table: number;
+  seats: number[];
+  profiles: Profile[];
 }
 
 export interface Customer {
@@ -30,6 +46,13 @@ export interface Customer {
   lowQuality: boolean;
   /** Valor acumulado dos itens entregues (vira moeda no balcão quando o pedido fecha). */
   owed: number;
+  /** Onde está: na fila do balcão, esperando na mesa, comendo ou na fila de pagamento (RN-83, RN-87). */
+  place: 'fila' | 'mesa' | 'comendo' | 'pagamento';
+  /** Quem atende o pedido: o balcão ou o garçom na mesa (RN-83). */
+  service: 'balcao' | 'mesa';
+  group?: GroupInfo;
+  /** Segundos que faltam para terminar de comer (RN-82) ou para a paciência de pagamento (RN-87). */
+  timer: number;
 }
 
 export interface Coin {
@@ -105,7 +128,7 @@ export interface Pasteleiro {
   hold: { action: HoldAction; station: StationId; item?: ItemId } | null;
 }
 
-export type TaskKind = 'anotar' | 'cobrar' | 'entregar' | 'montar' | 'colocar' | 'caldo' | 'trocar';
+export type TaskKind = 'anotar' | 'cobrar' | 'pagar' | 'entregar' | 'montar' | 'colocar' | 'caldo' | 'trocar' | 'limpar' | 'varrer';
 
 export interface WorkerTask {
   kind: TaskKind;
@@ -158,6 +181,9 @@ export interface Stats {
   burned: number;
   revenue: number;
   oilCost: number;
+  tableRevenue: number;
+  lostDirt: number;
+  payFail: number;
 }
 
 /** Estado mutável do Dia de Feira. Os arrays nunca são reatribuídos (o snapshot guarda referências). */
@@ -178,6 +204,15 @@ export interface DayState {
   stock: StockLot[];
   consumables: Record<ConsumableId, number>;
   customers: Customer[];
+  /** Grupos que já receberam o pedido e estão comendo. */
+  eating: Customer[];
+  /** Fila de pagamento do balcão, separada da fila de pedidos (RN-87). */
+  payQueue: Customer[];
+  tables: Table[];
+  /** Sujeira da barraca, de 0 a 100 (RN-130). */
+  dirt: number;
+  /** Progresso da limpeza que o pasteleiro faz segurando (mesa ou vassoura). */
+  cleaning: { progress: number; table: number | null };
   arrivalLeft: number;
   coins: Coin[];
   /** Ingredientes clicados na bancada, ainda sem "fechar". */
@@ -213,6 +248,11 @@ export function createState(config: DayConfig, seed: number): DayState {
     stock: config.stock.map((l) => ({ ...l })),
     consumables: { ...config.consumables },
     customers: [],
+    eating: [],
+    payQueue: [],
+    tables: Array.from({ length: config.tables }, () => ({ seats: Array.from({ length: 4 }, () => 'livre' as SeatState) })),
+    dirt: 0,
+    cleaning: { progress: 0, table: null },
     arrivalLeft: 1 + rng.customers.next() * 3,
     coins: [],
     tray: [],
@@ -241,7 +281,7 @@ export function createState(config: DayConfig, seed: number): DayState {
     rep: { successes: 0, charm: 0, failures: 0 },
     stats: {
       arrived: 0, served: 0, lostPatience: 0, wrong: 0, queueFull: 0, lostPrice: 0, noStock: 0,
-      burned: 0, revenue: 0, oilCost: 0,
+      burned: 0, revenue: 0, oilCost: 0, tableRevenue: 0, lostDirt: 0, payFail: 0,
     },
   };
 }

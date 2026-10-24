@@ -1,11 +1,12 @@
 import {
-  HOLD_OIL_MANUAL, OIL_CHANGE_COST, OIL_CHANGE_COST_COTTON, OIL_DIRTY_QUALITY_PENALTY, OIL_DIRTY_THRESHOLD,
+  DIRT_PER_BURNED, DIRT_PER_OIL_CHANGE, HOLD_OIL_MANUAL, OIL_CHANGE_COST, OIL_CHANGE_COST_COTTON, OIL_DIRTY_QUALITY_PENALTY, OIL_DIRTY_THRESHOLD,
   OIL_DIRT_PER_PASTRY, OIL_DIRT_PER_PASTRY_COTTON, OIL_LOCK_PERCENT, QUALITY_OVERDONE, QUALITY_PONTO, QUALITY_RAW,
   STEP,
 } from '../../constants';
 import { QUALITY_BONUS, THERMOSTAT } from '../../data/equipment';
 import { ITEMS, type Item } from '../../data/recipes';
 import { swapDemand } from '../customers';
+import { addDirt } from '../dirt';
 import { isAt } from '../pasteleiro';
 import { emit, now, type DayState, type Tacho } from '../state';
 
@@ -103,6 +104,7 @@ export function takeBasket(s: DayState, tacho: Tacho, index: number, extra = 0):
   const f = rel.frying;
   if (f.burned) {
     s.stats.burned++;
+    addDirt(s, DIRT_PER_BURNED); // RN-131
     emit(s, 'descartou', f.id);
     swapDemand(s);
     return true;
@@ -167,6 +169,7 @@ function finishOilChange(s: DayState, tacho: Tacho): void {
   tacho.dirt = 0;
   tacho.changeProgress = 0;
   s.stats.oilCost = Math.round((s.stats.oilCost + cost) * 100) / 100;
+  addDirt(s, DIRT_PER_OIL_CHANGE); // RN-131
   if (tacho.changeBy === -1) s.pasteleiro.hold = null;
   tacho.changeBy = 0;
   emit(s, 'oleo_trocado');

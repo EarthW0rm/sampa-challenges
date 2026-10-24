@@ -1,8 +1,10 @@
-import { STEP } from '../constants';
+import { HELPER_CLEAN_POINTS, HELPER_CLEAN_SECONDS, HYGIENE_CLEAN_FACTOR, STEP } from '../constants';
 import { AUTO_PRIORITY, ATTENDANCE_FACTOR, CARE_BONUS, ENERGY, FRYER_ONLY, FRY_COURSE_BONUS, OIL_COURSE_FACTOR, RAPID_FACTOR, RESISTANT_FATIGUE, WORK, WRONG_FLAVOR_CHANCE, type PositionId } from '../data/staff';
 import { ITEMS, type ItemId } from '../data/recipes';
 import type { ItemRef, StationId } from '../types';
 import { lineMatches, deliverItem, noteOrder, takeCoins } from './stations/counter';
+import { chargeGroup } from './stations/tables';
+import { addDirt, cleanTable, dirtyTable } from './dirt';
 import { assembleItem } from './stations/bench';
 import { makeCup, millSeconds } from './stations/cane';
 import { fryWindow, isChanging, nextFreeBasket, placeBasket, startWorkerOilChange, takeBasket } from './stations/fryer';
@@ -165,20 +167,55 @@ function bestFor(s: DayState, c: Customer): ItemRef | null {
 
 function pickBalcao(s: DayState, w: Worker): boolean {
   for (const c of s.customers) {
-    if (c.state !== 'anotado' || claimed(s, w, 'entregar', c.id)) continue;
+    if (c.state !== 'anotado' || c.place !== 'fila' || claimed(s, w, 'entregar', c.id)) continue;
     const found = bestFor(s, c);
     if (found) {
       start(w, s, { kind: 'entregar', customerId: c.id, ref: found }, WORK.deliver, true);
       return true;
     }
   }
-  const next = s.customers.find((c) => c.state === 'aguardando' && !claimed(s, w, 'anotar', c.id));
+  if (s.payQueue.length > 0 && !claimed(s, w, 'pagar')) {
+    start(w, s, { kind: 'pagar' }, WORK.collect, true);
+    return true;
+  }
+  const next = s.customers.find((c) => c.state === 'aguardando' && c.place === 'fila' && !claimed(s, w, 'anotar', c.id));
   if (next) {
     start(w, s, { kind: 'anotar', customerId: next.id }, WORK.takeOrder, true);
     return true;
   }
   if (s.coins.length > 0 && !claimed(s, w, 'cobrar')) {
     start(w, s, { kind: 'cobrar' }, WORK.collect, true);
+    return true;
+  }
+  return false;
+}
+
+/** Garçom: anota o grupo na mesa e entrega o pedido pronto (RN-83, RN-86). */
+function pickWaiter(s: DayState, w: Worker): boolean {
+  for (const c of s.customers) {
+    if (c.state !== 'anotado' || c.place !== 'mesa' || claimed(s, w, 'entregar', c.id)) continue;
+    const found = bestFor(s, c);
+    if (found) {
+      start(w, s, { kind: 'entregar', customerId: c.id, ref: found }, WORK.deliver, true);
+      return true;
+    }
+  }
+  const next = s.customers.find((c) => c.state === 'aguardando' && c.place === 'mesa' && !claimed(s, w, 'anotar', c.id));
+  if (!next) return false;
+  start(w, s, { kind: 'anotar', customerId: next.id }, WORK.takeOrder, true);
+  return true;
+}
+
+/** Ajudante: limpa a mesa suja (3 s) e, ocioso, varre a barraca: 10 pontos a cada 3 s (RN-84, RN-132). */
+function pickHelper(s: DayState, w: Worker): boolean {
+  const factor = w.courses.includes('higiene') ? HYGIENE_CLEAN_FACTOR : 1;
+  const table = dirtyTable(s);
+  if (table >= 0 && !s.workers.some((o) => o !== w && o.task?.kind === 'limpar' && o.task.tacho === table)) {
+    start(w, s, { kind: 'limpar', tacho: table }, WORK.cleanTable * factor);
+    return true;
+  }
+  if (s.dirt > 0) {
+    start(w, s, { kind: 'varrer' }, HELPER_CLEAN_SECONDS * factor);
     return true;
   }
   return false;
@@ -252,6 +289,8 @@ function pickTask(s: DayState, w: Worker): void {
   if (pos === 'balcao') pickBalcao(s, w);
   else if (pos === 'trocador') pickOil(s, w);
   else if (pos === 'moenda') pickCaldo(s, w);
+  else if (pos === 'garcom') pickWaiter(s, w);
+  else if (pos === 'ajudante') pickHelper(s, w);
   else if (pos.startsWith('colocador')) {
     if (!pickPlace(s, w, tachoNumber(pos))) pickAssemble(s, w);
   } else if (pos.startsWith('fritador')) {
@@ -281,8 +320,17 @@ function complete(s: DayState, w: Worker, t: WorkerTask): void {
     case 'cobrar':
       takeCoins(s);
       break;
+    case 'pagar':
+      chargeGroup(s);
+      break;
+    case 'limpar':
+      if (t.tacho !== undefined) cleanTable(s, t.tacho);
+      break;
+    case 'varrer':
+      addDirt(s, -HELPER_CLEAN_POINTS);
+      break;
     case 'entregar':
-      if (t.customerId !== undefined && t.ref) deliverItem(s, t.ref, t.customerId);
+      if (t.customerId !== undefined && t.ref) deliverItem(s, t.ref, t.customerId, w);
       break;
     case 'montar': {
       assembleItem(s, flavorFor(s, w, t.item!), w.traits.includes('caprichoso') ? CARE_BONUS : 0);

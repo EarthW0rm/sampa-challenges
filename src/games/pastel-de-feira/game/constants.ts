@@ -142,3 +142,29 @@ export const STOCK_CAPACITY = 120;
 
 /** Passos do dia inteiro (contador inteiro: o relógio não acumula erro de ponto flutuante). */
 export const DAY_TICKS = Math.round(DAY_SECONDS / STEP);
+
+// RN-80..87: mesas
+export const TABLE_SEATS = 4;
+export const TABLE_CHOICE = 0.3;
+export const GROUP_WEIGHTS: readonly number[] = [0.4, 0.3, 0.2, 0.1];
+export const TABLE_PATIENCE_FACTOR = 1.5;
+export const TABLE_PREMIUM = 1.15;
+export const EAT_SECONDS = 25;
+export const PAY_QUEUE_MAX = 4;
+export const PAY_PATIENCE = 20;
+
+// RN-130..133: sujeira da barraca (0 a 100)
+export const DIRT_MAX = 100;
+export const DIRT_PER_ORDER = 1;
+export const DIRT_PER_TABLE_CUSTOMER = 2;
+export const DIRT_PER_BURNED = 3;
+export const DIRT_PER_OIL_CHANGE = 5;
+export const DIRT_PATIENCE_LIMIT = 60;
+export const DIRT_PATIENCE_FACTOR = 0.8;
+export const DIRT_FAIL_LIMIT = 80;
+export const DIRT_FAIL_WEIGHT = 0.25;
+export const HELPER_CLEAN_POINTS = 10;
+export const HELPER_CLEAN_SECONDS = 3;
+export const BROOM_POINTS = 25;
+export const HYGIENE_DIRT_FACTOR = 0.7;
+export const HYGIENE_CLEAN_FACTOR = 0.7;

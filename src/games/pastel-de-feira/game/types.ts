@@ -29,6 +29,7 @@ export type Slot =
   | { k: 'fechar' }
   | { k: 'limpar' }
   | { k: 'montado'; id: number }
+  | { k: 'pagar' }
   | { k: 'cesto'; index: number }
   | { k: 'pronto'; id: number };
 
@@ -114,6 +115,10 @@ export interface DayConfig {
   staff: StaffConfig[];
   /** Posições que existem na barraca (RN-40). */
   positions: PositionId[];
+  /** Sujeira a partir da qual Exigentes não entram e a paciência cai (60; o tema Popular sobe para 75, RN-17). */
+  dirtLimit?: number;
+  /** Mesas compradas, 0 a 4 (RN-80). */
+  tables: number;
   /** Vagas da área de descanso, 0 sem área (RN-117). */
   restSlots: number;
   /** Caixas térmicas compradas (zona no layout). */
@@ -141,6 +146,11 @@ export type SimEventType =
   | 'estufa'
   | 'funcionario_descansa'
   | 'funcionario_volta'
+  | 'grupo_sentou'
+  | 'grupo_comendo'
+  | 'grupo_pagou'
+  | 'grupo_foi_embora'
+  | 'mesa_limpa'
   | 'entregou'
   | 'item_errado'
   | 'cobrou'
@@ -160,7 +170,7 @@ export interface SimEvent {
 export interface DayResult {
   day: number;
   ticks: number;
-  revenue: { counter: number; total: number };
+  revenue: { counter: number; table: number; total: number };
   costs: { oil: number };
   orders: {
     served: number;
@@ -169,6 +179,8 @@ export interface DayResult {
     queueFull: number;
     lostPrice: number;
     noStock: number;
+    lostDirt: number;
+    payFail: number;
   };
   waste: { burned: number; leftover: number };
   reputation: { successes: number; charm: number; weightedFailures: number; rate: number; change: number };

@@ -8,12 +8,15 @@ import { equipe } from './equipe';
 import { fechamento } from './fechamento';
 import { layout } from './layout';
 import { melhorias } from './melhorias';
+import { mesas } from './mesas';
 import { moenda } from './moenda';
 import { posicoes } from './posicoes';
 import { preparo } from './preparo';
+import { pagamento } from './pagamento';
 import { relogio } from './relogio';
 import { reputacao } from './reputacao';
 import { save } from './save';
+import { sujeira } from './sujeira';
 import { tacho } from './tacho';
 
 /** Grupos de cenários. Cada TF de regra acrescenta o seu aqui. */
@@ -29,6 +32,9 @@ export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   equipe,
   posicoes,
   energia,
+  mesas,
+  pagamento,
+  sujeira,
   save,
   reputacao,
   moenda,

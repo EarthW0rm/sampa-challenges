@@ -29,6 +29,7 @@ export function tapStation(s: DayState, station: StationId): boolean {
       }
     }
   }
+  if (p.hold?.action === 'limpar') s.cleaning = { progress: 0, table: null };
   p.hold = null;
   if (station === p.at) {
     p.to = null;

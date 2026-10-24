@@ -2,6 +2,7 @@ import { REPUTATION_MAX_DAILY_CHANGE, REPUTATION_RATE_GAIN, REPUTATION_TARGET_RA
 import type { DayResult } from '../types';
 import type { DayState } from './state';
 
+const round2 = (v: number): number => Math.round(v * 100) / 100;
 const clamp = (x: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, x));
 
 /**
@@ -32,7 +33,7 @@ export function buildResult(s: DayState): DayResult {
   return {
     day: s.config.day,
     ticks: s.tick,
-    revenue: { counter: s.stats.revenue, total: s.stats.revenue },
+    revenue: { counter: round2(s.stats.revenue - s.stats.tableRevenue), table: s.stats.tableRevenue, total: s.stats.revenue },
     costs: { oil: s.stats.oilCost },
     orders: {
       served: s.stats.served,
@@ -41,6 +42,8 @@ export function buildResult(s: DayState): DayResult {
       queueFull: s.stats.queueFull,
       lostPrice: s.stats.lostPrice,
       noStock: s.stats.noStock,
+      lostDirt: s.stats.lostDirt,
+      payFail: s.stats.payFail,
     },
     waste: { burned, leftover },
     reputation: { successes, charm, weightedFailures: failures, rate, change },

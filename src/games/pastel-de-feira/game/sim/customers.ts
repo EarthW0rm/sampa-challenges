@@ -1,13 +1,14 @@
 import {
   ARRIVAL_BASE_INTERVAL, ARRIVAL_DAILY_DECAY, ARRIVAL_MIN_INTERVAL, EXIGENTE_RAMP_END_HOUR,
   EXIGENTE_RAMP_FIRST_DAY, EXIGENTE_RAMP_LAST_DAY, EXIGENTE_RAMP_MAX_BONUS, EXIGENTE_RAMP_START_HOUR,
-  FAIL_WEIGHT, LOW_REPUTATION_ARRIVAL, LOW_REPUTATION_LIMIT, ORDER_DESSERT_CHANCE, ORDER_DESSERT_CHANCE_LATE, ORDER_DESSERT_LATE_HOUR, ORDER_DRINK_CHANCE, ORDER_PASTRIES_MAX,
+  DIRT_PATIENCE_FACTOR, DIRT_PATIENCE_LIMIT, FAIL_WEIGHT, LOW_REPUTATION_ARRIVAL, LOW_REPUTATION_LIMIT, ORDER_DESSERT_CHANCE, ORDER_DESSERT_CHANCE_LATE, ORDER_DESSERT_LATE_HOUR, ORDER_DRINK_CHANCE, ORDER_PASTRIES_MAX,
   ORDER_PASTRIES_MIN, PATIENCE, PEAK_END_HOUR, PEAK_FACTOR, PEAK_START_HOUR, PROFILE_CEILING,
-  PROFILE_MIX_BASE, PROFILE_MIX_EXPENSIVE, PROFILE_MIX_PRICE_INDEX, QUEUE_MAX, REPUTATION_CEILING_BONUS, hourAt,
+  PROFILE_MIX_BASE, PROFILE_MIX_EXPENSIVE, PROFILE_MIX_PRICE_INDEX, QUEUE_MAX, REPUTATION_CEILING_BONUS, TABLE_CHOICE, TABLE_PATIENCE_FACTOR, hourAt,
 } from '../constants';
 import { ITEMS, type ItemId } from '../data/recipes';
 import type { DayConfig, MenuEntry, Profile } from '../types';
 import { recordFailure } from './reputation';
+import { drawGroupSize, findTable, occupySeats, releaseSeats, waiterPresent } from './stations/tables';
 import { canMake, unitsMakeable } from './stock';
 import { emit, newId, now, type Customer, type DayState } from './state';
 
@@ -86,6 +87,9 @@ export function addCustomer(s: DayState, profile: Profile, items: readonly ItemI
     failed: false,
     lowQuality: false,
     owed: 0,
+    place: 'fila',
+    service: 'balcao',
+    timer: 0,
   };
   s.customers.push(c);
   return c;
@@ -94,6 +98,7 @@ export function addCustomer(s: DayState, profile: Profile, items: readonly ItemI
 export function removeCustomer(s: DayState, c: Customer): void {
   const i = s.customers.indexOf(c);
   if (i >= 0) s.customers.splice(i, 1);
+  if (c.place === 'fila' || c.place === 'mesa') releaseSeats(s, c, 'livre'); // quem desiste antes de comer deixa os lugares limpos
 }
 
 /** Registra a falha do pedido, uma vez só. */
@@ -103,35 +108,24 @@ export function failOrder(s: DayState, c: Customer, weight: number): void {
   recordFailure(s, weight);
 }
 
-/** Chegada de um cliente (RN-04, RN-05, RN-12, RN-13). */
-export function spawnCustomer(s: DayState): void {
-  const rng = s.rng.customers;
-  s.stats.arrived++;
-  if (s.customers.length >= QUEUE_MAX) {
-    s.stats.queueFull++;
-    recordFailure(s, FAIL_WEIGHT.queueFull);
-    emit(s, 'cliente_perdido_fila');
-    return;
-  }
-  const shares = profileShares(s.config.day, hourAt(now(s)), priceIndex(s.config));
-  const profile = rng.weighted(PROFILES, (p) => shares[p]) ?? 'padrao';
-  const ceiling = ceilingFor(profile, s.config.reputation);
+/** Clientes na fila do balcão: grupos atendidos pelo garçom esperam na mesa, fora da fila (RN-04, RN-83). */
+export const queueOf = (s: DayState): Customer[] => s.customers.filter((c) => c.place === 'fila');
 
+interface Drawn {
+  items: ItemId[];
+  lost: 'price' | 'stock' | null;
+}
+
+/** Sorteia o pedido de um cliente: 1–2 pastéis, doce e caldo dentro do teto e do estoque (RN-05, RN-13, RN-30e). */
+function drawOrder(s: DayState, profile: Profile): Drawn {
+  const rng = s.rng.customers;
+  const ceiling = ceilingFor(profile, s.config.reputation);
   const available = s.config.menu.filter((m) => canMake(s, ITEMS[m.item]));
   const pastries = available.filter((m) => ITEMS[m.item].kind === 'salgado' && affordable(m, ceiling));
   const desserts = available.filter((m) => ITEMS[m.item].kind === 'doce' && affordable(m, ceiling));
   const drinks = available.filter((m) => ITEMS[m.item].kind === 'bebida' && affordable(m, ceiling));
   if (pastries.length === 0) {
-    const anyPastry = available.some((m) => ITEMS[m.item].kind === 'salgado');
-    if (anyPastry) {
-      s.stats.lostPrice++;
-      emit(s, 'cliente_perdido_preco');
-    } else {
-      s.stats.noStock++;
-      recordFailure(s, FAIL_WEIGHT.noStock);
-      emit(s, 'cliente_perdido_estoque');
-    }
-    return;
+    return { items: [], lost: available.some((m) => ITEMS[m.item].kind === 'salgado') ? 'price' : 'stock' };
   }
   const items: ItemId[] = [];
   const n = rng.int(ORDER_PASTRIES_MIN, ORDER_PASTRIES_MAX);
@@ -139,8 +133,99 @@ export function spawnCustomer(s: DayState): void {
   const dessertChance = hourAt(now(s)) >= ORDER_DESSERT_LATE_HOUR ? ORDER_DESSERT_CHANCE_LATE : ORDER_DESSERT_CHANCE;
   if (desserts.length > 0 && rng.chance(dessertChance)) items.push(rng.weighted(desserts, (m) => m.weight ?? 1)!.item);
   if (drinks.length > 0 && rng.chance(ORDER_DRINK_CHANCE)) items.push(rng.weighted(drinks, (m) => m.weight ?? 1)!.item);
-  const c = addCustomer(s, profile, items);
+  return { items, lost: null };
+}
+
+function loseCustomer(s: DayState, lost: 'price' | 'stock'): void {
+  if (lost === 'price') {
+    s.stats.lostPrice++;
+    emit(s, 'cliente_perdido_preco');
+  } else {
+    s.stats.noStock++;
+    recordFailure(s, FAIL_WEIGHT.noStock);
+    emit(s, 'cliente_perdido_estoque');
+  }
+}
+
+/** Limiar de sujeira que afasta Exigentes e irrita todo mundo (RN-16, RN-133). */
+export const dirtLimit = (s: DayState): number => s.config.dirtLimit ?? DIRT_PATIENCE_LIMIT;
+
+/** Um cliente individual entra na fila do balcão (RN-04, RN-12, RN-13, RN-16). */
+function spawnIndividual(s: DayState, profile: Profile): void {
+  if (queueOf(s).length >= QUEUE_MAX) {
+    s.stats.queueFull++;
+    recordFailure(s, FAIL_WEIGHT.queueFull);
+    emit(s, 'cliente_perdido_fila');
+    return;
+  }
+  const order = drawOrder(s, profile);
+  if (order.lost) return loseCustomer(s, order.lost);
+  const c = addCustomer(s, profile, order.items);
   emit(s, 'cliente_chegou', c.id);
+}
+
+/** Membros extras de um grupo: só Padrão e Exigentes escolhem mesa (RN-81). */
+function groupProfiles(s: DayState, leader: Profile, size: number): Profile[] {
+  const shares = profileShares(s.config.day, hourAt(now(s)), priceIndex(s.config));
+  const out: Profile[] = [leader];
+  while (out.length < size) out.push(s.rng.customers.weighted(['padrao', 'exigente'] as const, (p) => shares[p]) ?? 'padrao');
+  return out;
+}
+
+/** Grupo na mesa: um pedido conjunto, cada item no perfil de quem pediu (RN-85, RN-86). Devolve false se não há mesa. */
+function seatGroup(s: DayState, profiles: Profile[]): boolean {
+  const size = profiles.length;
+  const table = findTable(s, size);
+  if (table < 0) return false;
+  const byWaiter = waiterPresent(s);
+  if (!byWaiter && queueOf(s).length >= QUEUE_MAX) {
+    s.stats.queueFull++;
+    recordFailure(s, FAIL_WEIGHT.queueFull);
+    emit(s, 'cliente_perdido_fila');
+    return true;
+  }
+  const lines: { item: ItemId; profile: Profile }[] = [];
+  let lost: 'price' | 'stock' | null = null;
+  for (const p of profiles) {
+    const order = drawOrder(s, p);
+    if (order.lost) lost = lost ?? order.lost;
+    for (const item of order.items) lines.push({ item, profile: p });
+  }
+  if (lines.length === 0) {
+    loseCustomer(s, lost ?? 'price');
+    return true;
+  }
+  const c = addCustomer(s, profiles[0], lines.map((l) => l.item));
+  c.lines.forEach((l, i) => (l.profile = lines[i].profile));
+  const base = Math.min(...profiles.map((p) => PATIENCE[p])) * TABLE_PATIENCE_FACTOR;
+  c.patience = base;
+  c.patienceMax = base;
+  c.service = byWaiter ? 'mesa' : 'balcao';
+  c.place = byWaiter ? 'mesa' : 'fila';
+  c.group = { size, table, seats: occupySeats(s, table, size), profiles };
+  emit(s, 'grupo_sentou', c.id);
+  return true;
+}
+
+/** Chegada de um cliente ou grupo (RN-04, RN-05, RN-12, RN-13, RN-81, RN-85). */
+export function spawnCustomer(s: DayState, forced?: Profile): void {
+  const rng = s.rng.customers;
+  s.stats.arrived++;
+  const shares = profileShares(s.config.day, hourAt(now(s)), priceIndex(s.config));
+  const profile = forced ?? rng.weighted(PROFILES, (p) => shares[p]) ?? 'padrao';
+  if (profile === 'exigente' && s.dirt >= dirtLimit(s)) {
+    s.stats.lostDirt++; // Exigente não entra numa barraca suja (RN-16)
+    return;
+  }
+  if (s.tables.length > 0 && profile !== 'economico' && rng.chance(TABLE_CHOICE)) {
+    const size = drawGroupSize(rng);
+    const profiles = groupProfiles(s, profile, size);
+    if (seatGroup(s, profiles)) return;
+    // sem mesa livre e limpa para todos: o grupo vai para o balcão como clientes individuais (RN-85)
+    for (const p of profiles) spawnIndividual(s, p);
+    return;
+  }
+  spawnIndividual(s, profile);
 }
 
 /** Unidades do item já em produção ou prontas (cobrem pedidos antes da troca de RN-35). */
@@ -153,19 +238,20 @@ function supplyOf(s: DayState, id: ItemId): number {
   return n;
 }
 
-function chooseSubstitute(s: DayState, c: Customer, wanted: ItemId): ItemId | null {
+function chooseSubstitute(s: DayState, profile: Profile, wanted: ItemId): ItemId | null {
+  const ceiling = ceilingFor(profile, s.config.reputation);
   const x = ITEMS[wanted];
   const xPrice = menuEntry(s, wanted)?.price ?? Infinity;
   const options = s.config.menu.filter((m) => {
     const it = ITEMS[m.item];
     return m.item !== wanted && it.category === x.category && canMake(s, it);
   });
-  if (c.profile === 'economico') {
-    const ok = options.filter((m) => affordable(m, c.ceiling));
+  if (profile === 'economico') {
+    const ok = options.filter((m) => affordable(m, ceiling));
     ok.sort((a, b) => unitsMakeable(s, ITEMS[b.item]) - unitsMakeable(s, ITEMS[a.item]) || a.price - b.price || (a.item < b.item ? -1 : 1));
     return ok[0]?.item ?? null;
   }
-  if (c.profile === 'padrao') {
+  if (profile === 'padrao') {
     const ok = options.filter((m) => m.price <= xPrice + EPS);
     ok.sort((a, b) => b.price - a.price || unitsMakeable(s, ITEMS[b.item]) - unitsMakeable(s, ITEMS[a.item]) || (a.item < b.item ? -1 : 1));
     return ok[0]?.item ?? null;
@@ -187,7 +273,7 @@ export function swapDemand(s: DayState): void {
     const gone = new Set<Customer>();
     for (const { c, line } of demand.slice(supplyOf(s, m.item))) {
       if (gone.has(c)) continue;
-      const sub = chooseSubstitute(s, c, m.item);
+      const sub = chooseSubstitute(s, line.profile ?? c.profile, m.item);
       if (sub) {
         line.item = sub;
         emit(s, 'troca_sabor', c.id);
@@ -209,13 +295,15 @@ export function updateCustomers(s: DayState, dt: number): void {
     spawnCustomer(s);
     s.arrivalLeft += nextArrival(s);
   }
+  // barraca suja: todos ficam 20% menos pacientes (RN-133)
+  const drain = s.dirt >= dirtLimit(s) ? dt / DIRT_PATIENCE_FACTOR : dt;
   for (let i = s.customers.length - 1; i >= 0; i--) {
     const c = s.customers[i];
-    c.patience -= dt;
+    c.patience -= drain;
     if (c.patience <= 0) {
       s.stats.lostPatience++;
       failOrder(s, c, FAIL_WEIGHT.counter);
-      s.customers.splice(i, 1);
+      removeCustomer(s, c);
       emit(s, 'paciencia_esgotou', c.id);
     }
   }

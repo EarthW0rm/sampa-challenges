@@ -3,6 +3,7 @@ import { ITEMS } from '../data/recipes';
 import { center, type Layout, type Zone } from '../layout';
 import { drawPixelText } from '../pixelFont';
 import { currentQuality } from '../sim/quality';
+import { queueOf } from '../sim/customers';
 import { fryWindow, isChanging, isDirty, isLocked } from '../sim/stations/fryer';
 import { millSeconds } from '../sim/stations/cane';
 import { homeStation } from '../sim/staff';
@@ -19,9 +20,10 @@ export function queueSpot(layout: Layout, i: number): { x: number; y: number } {
 
 /** Cliente sob o ponto (alvo de toque de 46×64). */
 export function customerAt(layout: Layout, st: DayState, x: number, y: number): Customer | null {
-  for (let i = 0; i < st.customers.length; i++) {
+  const queue = queueOf(st);
+  for (let i = 0; i < queue.length; i++) {
     const p = queueSpot(layout, i);
-    if (Math.abs(x - p.x) <= 22 && y <= p.y + 4 && y >= p.y - 60) return st.customers[i];
+    if (Math.abs(x - p.x) <= 22 && y <= p.y + 4 && y >= p.y - 60) return queue[i];
   }
   return null;
 }
@@ -147,7 +149,7 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
 
   // fila
-  st.customers.forEach((c, i) => {
+  queueOf(st).forEach((c, i) => {
     const p = queueSpot(layout, i);
     dog(ctx, p.x, p.y, furOf(c.id), { flip: true, ribbon: PROFILE_COLOR[c.profile] });
     drawBalloon(ctx, c, p.x, p.y - 38);

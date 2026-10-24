@@ -1,11 +1,13 @@
 import { DAY_TICKS, STEP, hourAt } from '../constants';
 import type { Command, DayConfig, DayResult, SimEvent } from '../types';
 import { applyCommand } from './commands';
+import { updateCleaning } from './dirt';
 import { updateCustomers } from './customers';
 import { updatePasteleiro } from './pasteleiro';
 import { buildResult } from './result';
 import { updateMill } from './stations/cane';
 import { updateStaff } from './staff';
+import { updateTables } from './stations/tables';
 import { updateFryers } from './stations/fryer';
 import { createState, emit, type DayState } from './state';
 
@@ -94,7 +96,9 @@ export class DaySim {
     updateStaff(s, STEP);
     updateFryers(s, STEP);
     updateMill(s, STEP);
+    updateCleaning(s, STEP);
     updateCustomers(s, STEP);
+    updateTables(s, STEP);
     if (s.tick >= DAY_TICKS) this.close();
   }
 
@@ -145,6 +149,8 @@ export class DaySim {
     const s = this.state;
     s.over = true;
     s.customers.length = 0; // quem estava na fila vai embora sem pagar e sem falha
+    s.eating.length = 0; // grupos nas mesas e na fila de pagamento também (RN-07)
+    s.payQueue.length = 0;
     emit(s, 'corte_seco');
     this.cached = buildResult(s);
   }

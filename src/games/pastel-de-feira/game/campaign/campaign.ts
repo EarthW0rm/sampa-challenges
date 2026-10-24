@@ -153,6 +153,7 @@ export function toDayConfig(c: Campaign): DayConfig {
     equipment: equipmentFlags(c),
     staff: c.staff.map((w) => ({ id: w.id, name: w.name, kind: w.kind, traits: [...w.traits], courses: [...w.courses], mode: w.mode, position: w.position })),
     positions: positionsAvailable(c),
+    tables: c.owned.tables,
     restSlots: c.owned.rest,
     coolers: c.owned.coolers,
   };
