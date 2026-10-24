@@ -1,4 +1,4 @@
-import { STOCK_CAPACITY, THEME_DIRT_LIMIT_POPULAR } from '../constants';
+import { GOAL_BASE, GOAL_GROWTH, STOCK_CAPACITY, THEME_DIRT_LIMIT_POPULAR } from '../constants';
 import { INGREDIENTS, DOUGH_SHELF_DAYS, CONSUMABLE_IDS } from '../data/catalog';
 import { ITEMS, type ItemId } from '../data/recipes';
 import { SPACE } from '../data/equipment';
@@ -91,7 +91,7 @@ export const expiryFor = (c: Campaign, ing: string): number =>
   INGREDIENTS[ing].kind === 'massa' ? c.calendar + DOUGH_SHELF_DAYS - 1 : c.calendar;
 
 /** Meta de lucro líquido do dia N (RN-50). */
-export const profitGoal = (day: number): number => Math.round(80 * Math.pow(1.18, day - 1) * 100) / 100;
+export const profitGoal = (day: number): number => Math.round(GOAL_BASE * Math.pow(GOAL_GROWTH, day - 1) * 100) / 100;
 
 /** Reputação mínima ao fim do dia N (RN-50). */
 export const minReputation = (day: number): number => (day <= 5 ? 2 : day <= 12 ? 3 : 3.5);

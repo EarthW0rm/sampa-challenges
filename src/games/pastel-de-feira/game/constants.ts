@@ -219,3 +219,7 @@ export function stepsFor(acc: number, dt: number, speed: 1 | 2): { steps: number
   if (a > STEP * MAX_STEPS_PER_FRAME) a = 0; // queda de FPS: fica mais lento, sem pular regras
   return { steps, acc: a };
 }
+
+// RN-50: meta de lucro do dia N = GOAL_BASE × GOAL_GROWTH^(N−1) (calibrada pelos robôs, TF-123-02)
+export const GOAL_BASE = 70;
+export const GOAL_GROWTH = 1.1;

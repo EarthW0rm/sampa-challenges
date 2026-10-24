@@ -16,6 +16,19 @@ export interface PlayerStyle {
 
 export const DEFAULT_STYLE: PlayerStyle = { reaction: 12, attentive: true };
 
+/** Segundos até acabar o ponto do primeiro pastel no óleo (Infinity se não há nenhum fritando). */
+function burnIn(s: DayState): number {
+  let left = Infinity;
+  for (const t of s.tachos) {
+    for (const b of t.baskets) {
+      const f = b.frying;
+      if (!f || f.burned) continue;
+      left = Math.min(left, fryWindow(ITEMS[f.item], t).ponto[1] - f.ticks * STEP);
+    }
+  }
+  return left;
+}
+
 const tachoStation = (i: number): StationId => `tacho${i + 1}` as StationId;
 
 export class Player {
@@ -40,7 +53,7 @@ export class Player {
     const hold = s.pasteleiro.hold;
     if (hold?.action === 'moenda') {
       // um copo por vez: solta para entregar e voltar a moer se ainda faltar
-      if (s.cups.length > 0 || unmetItems(s, true).length === 0) sim.dispatch({ type: 'holdEnd' });
+      if (s.cups.length > 0 || unmetItems(s, true).length === 0 || burnIn(s) < 0.8) sim.dispatch({ type: 'holdEnd' });
       return;
     }
     if (hold?.action === 'limpar') {
@@ -67,7 +80,7 @@ export class Player {
         const f = tacho.baskets[i].frying;
         if (!f) continue;
         const out = f.burned ? 'queimado' : fryOutcome(fryWindow(ITEMS[f.item], tacho), f.ticks * STEP);
-        if (out === 'queimado' || (out === 'ponto' && this.style.attentive)) {
+        if (out === 'queimado' || out === 'passado' || (out === 'ponto' && this.style.attentive)) {
           return this.go(s, tachoStation(t), { type: 'tapSlot', station: tachoStation(t), slot: { k: 'cesto', index: i } });
         }
       }
@@ -105,7 +118,7 @@ export class Player {
       if (cmd) return cmd;
     }
     // 8) caldo
-    if (unmetItems(s, true).length > 0 && s.config.stations.includes('moenda')) {
+    if (unmetItems(s, true).length > 0 && s.config.stations.includes('moenda') && burnIn(s) > 6.5) {
       return s.pasteleiro.at === 'moenda'
         ? { type: 'holdStart', station: 'moenda', action: 'moenda' }
         : { type: 'tapStation', station: 'moenda' };
