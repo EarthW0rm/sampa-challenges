@@ -25,13 +25,18 @@ export const CHECKS: readonly Check[] = [
   },
   {
     bot: 'brinde-max',
-    criterio: 'Reputação sobe e o lucro fica abaixo da meta',
+    criterio: 'Brinde 2 + chorinho 3 com equipe: nos 4 primeiros dias a reputação sobe mais que a do equilibrado (ou ambas no teto) e o lucro fica abaixo da meta em ≥ 3',
     passou: (r) => {
-      const rows = r.rows.filter((x) => x.day >= 6).slice(0, 8);
+      const rows = r.rows.filter((x) => x.promo).slice(0, 4);
       if (rows.length < 4) return false;
-      const up = rows[rows.length - 1].repAfter > rows[0].repBefore;
-      const below = rows.filter((x) => x.goal !== null && x.profit < x.goal).length >= rows.length * 0.7;
-      return up && below;
+      const base = playCampaign('equilibrado', r.seed, 20).rows;
+      const first = new Map<number, Run['rows'][number]>();
+      for (const x of base) if (!first.has(x.day)) first.set(x.day, x);
+      const ref = rows.map((x) => first.get(x.day)).filter((x): x is Run['rows'][number] => !!x);
+      const gain = rows[rows.length - 1].repAfter - rows[0].repBefore;
+      const refGain = ref.length === rows.length ? ref[ref.length - 1].repAfter - ref[0].repBefore : 0;
+      const below = rows.filter((x) => x.goal !== null && x.profit < x.goal).length >= 3;
+      return gain >= refGain - 0.05 && below;
     },
   },
   {

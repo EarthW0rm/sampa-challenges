@@ -12,6 +12,8 @@ export interface PlayerStyle {
   reaction: number;
   /** Tira o pastel do óleo no ponto (false = deixa passar, simulando jogador desatento). */
   attentive: boolean;
+  /** Aceita toda oferta do app com um toque (de qualquer posição, PA-14). */
+  acceptOffers?: boolean;
 }
 
 export const DEFAULT_STYLE: PlayerStyle = { reaction: 12, attentive: true };
@@ -58,6 +60,11 @@ export class Player {
     }
     if (hold?.action === 'limpar') {
       if (s.dirt <= 5) sim.dispatch({ type: 'holdEnd' });
+      return;
+    }
+    if (this.style.acceptOffers && s.offers.length > 0) {
+      sim.dispatch({ type: 'acceptOffer', offerId: s.offers[0].id });
+      this.wait = this.style.reaction;
       return;
     }
     if (s.pasteleiro.to !== null || hold) return;

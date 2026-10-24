@@ -35,6 +35,8 @@ export interface DayRow {
   rejected: number;
   staff: number;
   delivery: boolean;
+  /** Brinde e chorinho ligados neste dia. */
+  promo: boolean;
 }
 
 export interface Run {
@@ -108,12 +110,12 @@ function optimizePrices(c: Campaign): Campaign {
   return c;
 }
 
-export function invest(c: Campaign, last?: DayRow): Campaign {
+export function invest(c: Campaign, last?: DayRow, first: readonly string[] = []): Campaign {
   const reserve = 250 + c.day * 15;
   let bought = 0;
   const catalog = offers(c);
   const picked = new Set<string>();
-  for (const id of SHOP_ORDER) {
+  for (const id of [...first, ...SHOP_ORDER]) {
     if (bought >= 2) break;
     const o = catalog.find((x) => x.id === id && !picked.has(x.id));
     if (!o) continue;
@@ -135,10 +137,15 @@ export function invest(c: Campaign, last?: DayRow): Campaign {
 
 /** Joga um dia: Preparo do robô, dia na simulação, fechamento. */
 export function playOne(bot: BotName, c: Campaign, last?: DayRow): { campaign: Campaign; row: DayRow; bankrupt: boolean } {
-  if (bot === 'equilibrado' || bot === 'brinde-max') c = invest(c, last);
+  if (bot === 'equilibrado' || bot === 'brinde-max') c = invest(c, last, bot === 'brinde-max' ? ['caixa-termica'] : []); // brinde pede estoque: a caixa térmica vem antes
   else c = optimizePrices(c); // jogar bem inclui regular o preço pela reputação (RN-10)
   c = restock(c);
-  if (bot === 'brinde-max' && c.day >= 6 && c.staff.length > 0) c = setPromo(c, { brindeN: 2, chorinho: 3 }); // com equipe: o brinde pesa na margem, não na fila
+  if (bot === 'brinde-max' && c.day >= 2 && c.staff.length === 0 && c.owned.coolers > 0 && c.cash > 300) {
+    const cand = rollCandidates(c).find((k) => k.kind === 'fritador') ?? rollCandidates(c)[0];
+    if (cand) c = take(c, hire(c, cand.id)); // sozinho o pasteleiro não segura o brinde: a equipe vem primeiro
+  }
+  const promo = bot === 'brinde-max' && c.staff.length > 0 && c.owned.coolers > 0;
+  if (promo) c = setPromo(c, { brindeN: 2, chorinho: 3 });
   if (bot === 'armadilha' && c.day >= 5) {
     c = take(c, buyDeliveryArea({ ...c, cash: Math.max(c.cash, 2000) })); // o robô sempre tem caixa para a armadilha
     c = setDelivery(c, { on: true, auto: true });
@@ -146,7 +153,7 @@ export function playOne(bot: BotName, c: Campaign, last?: DayRow): { campaign: C
   }
   const config = toDayConfig(c);
   const sim = new DaySim(config, daySeed(c));
-  playDay(sim, new Player(STYLE));
+  playDay(sim, new Player(bot === 'armadilha' ? { ...STYLE, acceptOffers: true } : STYLE));
   const result = sim.result()!;
   const before = { day: c.day, rep: c.reputation, staff: c.staff.length, delivery: c.owned.delivery && c.deliveryOn };
   const out = closeDay(c, result);
@@ -158,7 +165,7 @@ export function playOne(bot: BotName, c: Campaign, last?: DayRow): { campaign: C
       day: before.day, profit: b.profit, goal: b.goal, met: b.met, repBefore: b.reputationBefore, repAfter: b.reputationAfter,
       minRep: b.minReputation, cash: out.campaign.cash, served: result.orders.served, lostPatience: result.orders.lostPatience,
       lostPrice: result.orders.lostPrice, noStock: result.orders.noStock, burned: result.waste.burned, rejected: sim.state.rejected,
-      staff: before.staff, delivery: before.delivery,
+      staff: before.staff, delivery: before.delivery, promo,
     },
   };
 }

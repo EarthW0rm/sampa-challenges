@@ -1,6 +1,6 @@
 import { CONSUMABLE_IDS, type ConsumableId, type IngredientId } from '../data/catalog';
 import { itemIngredients, ITEMS } from '../data/recipes';
-import { ARRIVAL_BASE_INTERVAL, ARRIVAL_DAILY_DECAY, ARRIVAL_MIN_INTERVAL, DAY_SECONDS, HOUR_SECONDS, LOW_REPUTATION_ARRIVAL, LOW_REPUTATION_LIMIT, ORDER_DRINK_CHANCE, ORDER_PASTRIES_MAX, ORDER_PASTRIES_MIN, PEAK_END_HOUR, PEAK_FACTOR, PEAK_START_HOUR } from '../constants';
+import { CHORINHO_DOSE, ARRIVAL_BASE_INTERVAL, ARRIVAL_DAILY_DECAY, ARRIVAL_MIN_INTERVAL, DAY_SECONDS, HOUR_SECONDS, LOW_REPUTATION_ARRIVAL, LOW_REPUTATION_LIMIT, ORDER_DRINK_CHANCE, ORDER_PASTRIES_MAX, ORDER_PASTRIES_MIN, PEAK_END_HOUR, PEAK_FACTOR, PEAK_START_HOUR } from '../constants';
 import { ceilingFor, profileShares } from '../sim/customers';
 import { capacityFree, menuEntries, stockOf } from './campaign';
 import type { Campaign } from './types';
@@ -52,9 +52,12 @@ export function suggestPurchase(c: Campaign): Suggestion {
       for (const [ing, per] of itemIngredients(ITEMS[m.item])) need[ing] = (need[ing] ?? 0) + u * per;
     }
   };
-  share(pastryEntries, buyers * avgPastries);
+  // brinde (RN-120): pedidos com ao menos N pastéis ganham 1 pastel extra; chorinho (RN-123) soma cana ao caldo
+  const giftChance = c.promo.brindeN > 0 ? Math.max(0, Math.min(1, (ORDER_PASTRIES_MAX - c.promo.brindeN + 1) / (ORDER_PASTRIES_MAX - ORDER_PASTRIES_MIN + 1))) : 0;
+  share(pastryEntries, buyers * (avgPastries + giftChance));
   share(dessertEntries, buyers * DESSERT_CHANCE);
   share(drinkEntries, buyers * ORDER_DRINK_CHANCE);
+  if (drinkEntries.length > 0 && c.promo.chorinho > 0) need.cana = (need.cana ?? 0) + buyers * ORDER_DRINK_CHANCE * CHORINHO_DOSE * c.promo.chorinho;
 
   const ingredients: Record<IngredientId, number> = {};
   let total = 0;
@@ -71,7 +74,7 @@ export function suggestPurchase(c: Campaign): Suggestion {
     for (const ing of Object.keys(ingredients)) ingredients[ing] = Math.floor(ingredients[ing] * k);
   }
 
-  const pastries = buyers * (avgPastries + (dessertEntries.length ? DESSERT_CHANCE : 0));
+  const pastries = buyers * (avgPastries + giftChance + (dessertEntries.length ? DESSERT_CHANCE : 0));
   const consumables = Object.fromEntries(CONSUMABLE_IDS.map((id) => [id, 0])) as Record<ConsumableId, number>;
   consumables.saquinho = Math.max(0, Math.ceil(pastries * SAFETY) - c.consumables.saquinho);
   consumables.copo = drinkEntries.length ? Math.max(0, Math.ceil(buyers * ORDER_DRINK_CHANCE * SAFETY) - c.consumables.copo) : 0;

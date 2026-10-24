@@ -66,5 +66,5 @@ Arte: `tools/pixelart/pastel_de_feira.py` (cenário, pisos, equipamentos, pasté
 1. `npm run typecheck && npm run build`.
 2. `node /tmp/pf-sim.mjs --scenario all` (esbuild de `sim/run.ts`, veja o `README.md`): todos os cenários devem passar.
 3. Replay: grave um dia (`startLog` + `recordReplay`), rode `--replay` duas vezes: o hash é idêntico.
-4. `--bots all --seeds 50`: `solo` e `equilibrado` passam; `armadilha` e `brinde-max` estão pendentes (ver `calibracao.md`).
+4. `--bots all --seeds 50`: os 4 robôs passam em ≥ 80% das sementes (ver `calibracao.md`).
 5. Navegador: `#/jogos/pastel-de-feira` em desktop e a ≈ 390 px; a barra "← Sampa Challenges" volta ao hub.

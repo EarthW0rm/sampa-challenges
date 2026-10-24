@@ -1,4 +1,4 @@
-import { STEP } from '../../game/constants';
+import { CHARM_GIFT, STEP } from '../../game/constants';
 import { giftFor, spawnCustomer, addCustomer } from '../../game/sim/customers';
 import { deliverItem } from '../../game/sim/stations/counter';
 import { stockQty } from '../../game/sim/stock';
@@ -75,7 +75,7 @@ export const promocoes: Scenario[] = [
       s.ready.push({ id: ++id, item: g.item, quality: 90, readyAt: s.tick * STEP });
       deliverItem(s, { kind: 'pastel', id }, c!.id);
       check(!s.customers.includes(c!), 'fechou');
-      checkNear(s.rep.charm, 0.5, 'brinde entregue: +0,5 de encanto');
+      checkNear(s.rep.charm, CHARM_GIFT, 'brinde entregue: encanto calibrado (P)');
       checkNear(s.stats.giftCost > 0 ? 1 : 0, 1, 'custo do brinde registrado');
       checkEq(s.stats.wrong, 0, 'sem erro');
       const dinheiro = c!.owed;

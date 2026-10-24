@@ -130,7 +130,7 @@ export const FAIL_WEIGHT = {
   payment: 1,
 } as const;
 export const APP_LOW_QUALITY = 40;
-export const CHARM_GIFT = 0.5;
+export const CHARM_GIFT = 1.5;
 export const CHARM_CHORINHO = 0.1;
 export const CHARM_INSPECTION = 2;
 export const REPUTATION_TARGET_RATE = 0.75;

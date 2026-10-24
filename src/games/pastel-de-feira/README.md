@@ -70,6 +70,7 @@ Mudou um número? Atualize esta tabela.
 | `GOAL_BASE` (P) | R$ 70 | meta de lucro do dia 1 (spec: 80; calibrado, ver `calibracao.md`) |
 | `GOAL_GROWTH` (P) | 1,10 | crescimento diário da meta (spec: 1,18; calibrado) |
 | `BRINDE_MIN_N`–`BRINDE_MAX_N` | 2–6 | faixa do brinde (RN-120) |
+| `CHARM_GIFT` (P) | 1,5 | encanto por brinde entregue (spec: 0,5; calibrado) |
 | `XEPA_START_HOUR` | 13 | a xepa só vale a partir das 13h |
 | `THEME_MIN_DAY` / `THEME_CHANGE_COST` | 5 / R$ 500 | tema da barraca |
 
