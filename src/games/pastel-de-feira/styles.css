@@ -134,3 +134,11 @@
 .pastel-de-feira *,
 .pastel-de-feira *::before,
 .pastel-de-feira *::after { box-sizing: border-box; }
+
+.pastel-de-feira .badge { display: inline-block; margin-right: 6px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 3px; font-size: 11px; color: var(--text); background: #2a2238; }
+.pastel-de-feira .muted { color: var(--muted); }
+.pastel-de-feira .field { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
+.pastel-de-feira select { font: inherit; color: var(--text); background: var(--panel); border: 2px solid var(--line); border-radius: 4px; min-height: 40px; padding: 0 6px; }
+.pastel-de-feira .courses { display: flex; flex-wrap: wrap; gap: 6px; flex-basis: 100%; }
+.pastel-de-feira .courses button { font-size: 12px; min-height: 40px; padding: 0 10px; }
+.pastel-de-feira .item.staff { align-items: flex-start; }

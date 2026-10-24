@@ -1,7 +1,7 @@
 import { H, W } from './constants';
 import { hitTest, inside, PANEL, type Layout } from './layout';
 import { controlAt, panelControls } from './render/panel';
-import { customerAt } from './render/scene';
+import { customerAt, workerAt } from './render/scene';
 import type { DayState } from './sim/state';
 import type { Command, StationId } from './types';
 import { PANEL_IDLE_SECONDS, type UiState } from './ui';
@@ -46,6 +46,12 @@ export function pointerDown(env: InputEnv, x: number, y: number): Command[] {
     return stamp(ui, cmds);
   }
 
+  const worker = workerAt(layout, state, x, y);
+  if (worker !== null) {
+    const w = state.workers.find((o) => o.id === worker);
+    // Só o fixo descansa por ordem do jogador; o automático descansa sozinho (RN-116)
+    return w && w.mode === 'fixo' && !w.resting ? stamp(ui, [{ type: 'sendRest', staffId: w.id }]) : [];
+  }
   const zone = hitTest(layout, x, y);
   if (!zone) {
     if (ui.panel) ui.panel = null; // toque fora do painel recolhe

@@ -5,6 +5,7 @@ import { drawPixelText } from '../pixelFont';
 import { currentQuality } from '../sim/quality';
 import { fryWindow, isChanging, isDirty, isLocked } from '../sim/stations/fryer';
 import { millSeconds } from '../sim/stations/cane';
+import { homeStation } from '../sim/staff';
 import { now, type Customer, type DayState } from '../sim/state';
 import type { UiState } from '../ui';
 import { SCALE } from '../hires';
@@ -22,6 +23,40 @@ export function customerAt(layout: Layout, st: DayState, x: number, y: number): 
     const p = queueSpot(layout, i);
     if (Math.abs(x - p.x) <= 22 && y <= p.y + 4 && y >= p.y - 60) return st.customers[i];
   }
+  return null;
+}
+
+/** Onde cada funcionário aparece: na zona da posição, na área de descanso ou ao lado da bancada quando ocioso. */
+export function workerSpots(layout: Layout, st: DayState): Map<number, { x: number; y: number }> {
+  const spots = new Map<number, { x: number; y: number }>();
+  let idle = 0;
+  let rest = 0;
+  for (const w of st.workers) {
+    let spot: { x: number; y: number } | null = null;
+    if (w.resting === 'area') {
+      const z = layout.byId.get('descanso');
+      if (z) spot = { x: z.x + 20 + rest++ * 28, y: z.y + z.h - 10 };
+    } else if (w.position) {
+      const home = w.position === 'trocador' ? ('tacho1' as const) : homeStation(w.position);
+      const z = home ? layout.byId.get(home) : undefined;
+      if (z) {
+        const n = Number(w.position.slice(-1));
+        const dx = w.position === 'trocador' ? z.w - 22 : w.position.startsWith('colocador') ? 22 + (n - 1) * 30 : 22;
+        spot = { x: z.x + dx, y: z.y + z.h - 8 };
+      }
+    }
+    if (!spot) {
+      const z = layout.byId.get('bancada') ?? layout.byId.get('fila')!;
+      spot = { x: z.x + 22 + (idle++ % 4) * 26, y: z.y + z.h - 8 - Math.floor(idle / 5) * 0 };
+    }
+    spots.set(w.id, spot);
+  }
+  return spots;
+}
+
+/** Funcionário sob o ponto (alvo de 30×48), para mandar descansar com um toque (RN-116). */
+export function workerAt(layout: Layout, st: DayState, x: number, y: number): number | null {
+  for (const [id, p] of workerSpots(layout, st)) if (Math.abs(x - p.x) <= 15 && y <= p.y + 4 && y >= p.y - 48) return id;
   return null;
 }
 
@@ -173,6 +208,14 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   }
   const mo = layout.byId.get('moenda');
   if (mo) bar(ctx, mo.x + 8, mo.y + 40, mo.w - 16, 8, st.mill.progress / millSeconds(st), PAL.green);
+
+  // equipe
+  for (const [id, spot] of workerSpots(layout, st)) {
+    const w = st.workers.find((x) => x.id === id)!;
+    dog(ctx, spot.x, spot.y, furOf(id * 7), { hat: w.kind === 'fritador' ? PAL.red : PAL.blue, bob: w.task ? Math.sin(ui.clock * 10 + id) : 0 });
+    bar(ctx, spot.x - 12, spot.y - 44, 24, 4, w.energy / 100, w.energy > 40 ? PAL.green : w.energy > 15 ? PAL.orange : PAL.red);
+    if (w.resting) textCenter(ctx, 'ZZ', spot.x, spot.y - 56, PAL.muted, 1);
+  }
 
   // pasteleiro
   const p = st.pasteleiro;

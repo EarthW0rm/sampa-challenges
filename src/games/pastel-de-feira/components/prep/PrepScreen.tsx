@@ -4,6 +4,7 @@ import type { Campaign } from '../../game/campaign/types';
 import { money, rep1, stars } from '../format';
 import { InventoryTab } from './InventoryTab';
 import { MenuTab } from './MenuTab';
+import { StaffTab } from './StaffTab';
 import { UpgradesTab } from './UpgradesTab';
 
 interface Props {
@@ -13,15 +14,17 @@ interface Props {
   onExit: () => void;
 }
 
-type TabId = 'insumos' | 'cardapio' | 'melhorias';
+type TabId = 'insumos' | 'cardapio' | 'melhorias' | 'equipe';
 
 /** Abas só aparecem quando desbloqueadas (RN-171). Melhorias, Equipe, Escritório e Associação entram nas US seguintes. */
-function visibleTabs(_c: Campaign): { id: TabId; label: string }[] {
-  return [
+function visibleTabs(c: Campaign): { id: TabId; label: string }[] {
+  const tabs: { id: TabId; label: string }[] = [
     { id: 'insumos', label: 'Insumos' },
     { id: 'cardapio', label: 'Cardápio' },
     { id: 'melhorias', label: 'Melhorias' },
   ];
+  if (c.day >= 2 || c.staff.length > 0) tabs.push({ id: 'equipe', label: 'Equipe' });
+  return tabs;
 }
 
 export function PrepScreen({ campaign: c, onChange, onOpen, onExit }: Props) {
@@ -52,6 +55,7 @@ export function PrepScreen({ campaign: c, onChange, onOpen, onExit }: Props) {
       {tab === 'insumos' && <InventoryTab campaign={c} onChange={onChange} />}
       {tab === 'cardapio' && <MenuTab campaign={c} onChange={onChange} />}
       {tab === 'melhorias' && <UpgradesTab campaign={c} onChange={onChange} />}
+      {tab === 'equipe' && <StaffTab campaign={c} onChange={onChange} />}
       <footer className="prep-foot">
         <button type="button" onClick={onExit}>
           Sair
