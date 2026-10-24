@@ -1,6 +1,8 @@
 import { DAY_TICKS, STEP, hourAt } from '../constants';
 import type { Command, DayConfig, DayResult, SimEvent } from '../types';
+import { applyCommand } from './commands';
 import { updateCustomers } from './customers';
+import { updatePasteleiro } from './pasteleiro';
 import { createState, emit, type DayState } from './state';
 
 /** Visão só de leitura do dia, reaproveitada entre quadros (os arrays são os do próprio estado). */
@@ -82,6 +84,7 @@ export class DaySim {
     if (s.over || s.paused) return;
     this.applyCommands();
     s.tick++;
+    updatePasteleiro(s, STEP);
     updateCustomers(s, STEP);
     if (s.tick >= DAY_TICKS) this.close();
   }
@@ -123,7 +126,7 @@ export class DaySim {
         if (s.seenGestures.has(cmd.g)) continue;
         s.seenGestures.add(cmd.g);
       }
-      s.rejected++; // nenhum comando de estação existe ainda; as TFs seguintes tratam cada um
+      if (!applyCommand(s, cmd)) s.rejected++;
     }
     list.length = 0;
   }

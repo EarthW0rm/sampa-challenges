@@ -1,0 +1,32 @@
+import type { Command } from '../types';
+import { tapStation } from './pasteleiro';
+import { addIngredient, clearTray, closeAssembly, selectAssembled } from './stations/bench';
+import { collectCoins, deliver, takeOrder } from './stations/counter';
+import type { DayState } from './state';
+
+/** Aplica um comando do jogador. Devolve false se ele não vale no estado atual (vira `rejected`). */
+export function applyCommand(s: DayState, cmd: Command): boolean {
+  switch (cmd.type) {
+    case 'tapStation':
+      return tapStation(s, cmd.station);
+    case 'tapSlot': {
+      const slot = cmd.slot;
+      if (cmd.station === 'balcao') {
+        if (slot.k === 'anotar') return takeOrder(s);
+        if (slot.k === 'moedas') return collectCoins(s);
+        return false;
+      }
+      if (cmd.station === 'bancada') {
+        if (slot.k === 'ingrediente') return addIngredient(s, slot.id);
+        if (slot.k === 'fechar') return closeAssembly(s);
+        if (slot.k === 'limpar') return clearTray(s);
+        if (slot.k === 'montado') return selectAssembled(s, slot.id);
+      }
+      return false;
+    }
+    case 'deliver':
+      return deliver(s, cmd.item, cmd.customerId);
+    default:
+      return false;
+  }
+}

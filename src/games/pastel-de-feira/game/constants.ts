@@ -98,6 +98,10 @@ export const HOLD_OIL_MANUAL = 8;
 export const HOLD_CLEAN_TABLE = 3;
 export const HOLD_BROOM = 4;
 
+/** Pastéis montados esperando na bancada e ingredientes no prato (P). */
+export const BENCH_CAPACITY = 6;
+export const BENCH_TRAY_MAX = 4;
+
 // RN-46: óleo
 export const OIL_DIRT_PER_PASTRY = 0.04;
 export const OIL_DIRT_PER_PASTRY_COTTON = 0.03;
