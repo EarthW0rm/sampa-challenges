@@ -2,6 +2,12 @@ import { newCampaign, cloneCampaign } from '../../game/campaign/campaign';
 import { clearSave, load, migrate, saveCampaign, saveCheckpoint, SAVE_KEY, type Migration, type StorageLike } from '../../game/campaign/save';
 import type { Campaign } from '../../game/campaign/types';
 import { loadCashRecord, loadRecord, saveCashRecord, saveDayRecord } from '../../game/record';
+import { closeDay } from '../../game/campaign/closing';
+import { setPromo } from '../../game/campaign/actions/menu';
+import { daySeed, toDayConfig } from '../../game/campaign/campaign';
+import { DaySim } from '../../game/sim/day';
+import { restock } from '../bots';
+import { Player, playDay } from '../player';
 import { check, checkEq, type Scenario } from '../harness';
 
 class FakeStorage implements StorageLike {
@@ -90,6 +96,23 @@ export const save: Scenario[] = [
       checkEq(load(st).save!.phase, 'dia', 'fase dia');
       clearSave(st);
       checkEq(load(st).save, null, 'limpou');
+    },
+  },
+  {
+    id: 'fechamento-com-chorinho-continua-salvavel',
+    rules: 'RN-55, RN-123',
+    run(seed) {
+      // o chorinho gasta 0,1 dose de cana por nível: a sobra é fracionária e o save não pode virar "inválido"
+      let c = setPromo(newCampaign({ profile: 'tradicional', eventsOn: false, tutorial: false, seed }), { chorinho: 3 });
+      c = restock(c);
+      const sim = new DaySim(toDayConfig(c), daySeed(c));
+      playDay(sim, new Player());
+      const out = closeDay(c, sim.result()!).campaign;
+      const st = new FakeStorage();
+      check(saveCampaign(st, out, 'preparo'), 'gravou');
+      const loaded = load(st);
+      check(loaded.save !== null && loaded.aviso === undefined, 'o save depois do fechamento é aceito');
+      check(out.inventory.every((l) => Math.abs(l.qty * 100 - Math.round(l.qty * 100)) < 1e-6), 'sobras com no máximo 2 casas');
     },
   },
   {

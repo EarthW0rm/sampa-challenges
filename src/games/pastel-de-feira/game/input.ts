@@ -39,11 +39,14 @@ export function pointerDown(env: InputEnv, x: number, y: number): Command[] {
 
   if (ui.panel && inside(PANEL, x, y)) {
     const hit = controlAt(panelControls(state, ui), x, y);
-    if (!hit) return [];
-    const cmds = hit.run();
-    const rel = hit.release;
-    ui.release = rel ? () => stamp(ui, rel()) : null;
-    return stamp(ui, cmds);
+    if (hit) {
+      const cmds = hit.run();
+      const rel = hit.release;
+      ui.release = rel ? () => stamp(ui, rel()) : null;
+      return stamp(ui, cmds);
+    }
+    // toque no vazio do painel: recolhe e vale como toque na barraca por baixo (mesas, Expedição…)
+    ui.panel = null;
   }
 
   if (inside(ALERT_BAND, x, y) && state.offers.length > 0) return stamp(ui, [{ type: 'acceptOffer', offerId: state.offers[0].id }]);

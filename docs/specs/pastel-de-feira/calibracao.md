@@ -35,6 +35,8 @@ Nenhuma regra (RN) foi alterada: só valores marcados (P). Chegada (RN-02), pre�
 | `brinde-max` | Brinde 2 + chorinho 3 com equipe: nos 4 primeiros dias a reputação sobe mais que a do equilibrado (ou ambas no teto) e o lucro fica abaixo da meta em ≥ 3 | 42/50 (84%) | passou |
 | `equilibrado` | Campanha de 20 dias vencível e meta do dia 20 não trivial | 50/50 (100%) | passou |
 
+Cada fechamento de dia dos robôs também confere que o save continua válido (ida e volta por JSON).
+
 ## Tabelas por dia (média das sementes; só a primeira tentativa de cada dia)
 
 ### `solo`
@@ -64,7 +66,7 @@ Nenhuma regra (RN) foi alterada: só valores marcados (P). Chegada (RN-02), pre�
 | 2 | 135 | 77 | 88% | 3.3 | 18 | 4 | 0 | 50 |
 | 3 | 140 | 85 | 96% | 3.4 | 18 | 4 | 0 | 50 |
 | 4 | 141 | 93 | 86% | 3.5 | 19 | 5 | 0 | 50 |
-| 5 | -30 | 102 | 0% | 2.7 | 8 | 15 | 11 | 50 |
+| 5 | -54 | 102 | 0% | 2.7 | 8 | 15 | 11 | 50 |
 
 ### `brinde-max`
 
@@ -75,11 +77,11 @@ Nenhuma regra (RN) foi alterada: só valores marcados (P). Chegada (RN-02), pre�
 | 3 | 127 | 85 | 86% | 3.4 | 18 | 4 | 0 | 50 |
 | 4 | 123 | 93 | 76% | 3.5 | 19 | 6 | 0 | 50 |
 | 5 | 119 | 102 | 66% | 3.8 | 19 | 6 | 0 | 50 |
-| 6 | 108 | 113 | 52% | 4.2 | 20 | 5 | 0 | 50 |
-| 7 | 67 | 124 | 39% | 4.5 | 19 | 7 | 0 | 46 |
-| 8 | 42 | 136 | 10% | 4.7 | 18 | 9 | 0 | 40 |
-| 9 | 40 | 150 | 0% | 4.9 | 21 | 7 | 0 | 18 |
-| 10 | 45 | 165 | 0% | 5.0 | 22 | 10 | 0 | 3 |
+| 6 | 108 | 113 | 52% | 4.2 | 20 | 6 | 0 | 50 |
+| 7 | 62 | 124 | 37% | 4.5 | 19 | 8 | 0 | 46 |
+| 8 | 55 | 136 | 17% | 4.7 | 19 | 8 | 0 | 42 |
+| 9 | 30 | 150 | 0% | 4.9 | 20 | 8 | 0 | 23 |
+| 10 | 26 | 165 | 0% | 5.0 | 22 | 8 | 0 | 5 |
 
 ### `equilibrado`
 

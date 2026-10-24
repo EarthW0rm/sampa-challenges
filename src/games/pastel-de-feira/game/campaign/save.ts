@@ -56,7 +56,7 @@ const THEMES: readonly Theme[] = ['popular', 'tradicional', 'gourmet'];
 
 function isLot(v: unknown): v is InvLot {
   return (
-    isRec(v) && isStr(v.ingredient) && INGREDIENTS[v.ingredient] !== undefined && isInt(v.qty, 0, 100000) &&
+    isRec(v) && isStr(v.ingredient) && INGREDIENTS[v.ingredient] !== undefined && isNum(v.qty) && v.qty >= 0 && v.qty <= 100000 && // fracionário: o chorinho gasta 0,1 dose de cana por nível
     isNum(v.unitCost) && v.unitCost >= 0 && v.unitCost < 1000 && isInt(v.expires, 1, 1e6) && isBool(v.inCooler)
   );
 }
@@ -64,7 +64,7 @@ function isLot(v: unknown): v is InvLot {
 function isHistory(v: unknown): v is DayHistory {
   return (
     isRec(v) && isInt(v.day, 1) && isInt(v.calendar, 1) && isNum(v.revenue) && isNum(v.profit) && isNum(v.reputation) &&
-    isBool(v.met) && isInt(v.served) && isInt(v.lost) && isInt(v.wasteUnits)
+    isBool(v.met) && isInt(v.served) && isInt(v.lost) && isNum(v.wasteUnits) && v.wasteUnits >= 0
   );
 }
 

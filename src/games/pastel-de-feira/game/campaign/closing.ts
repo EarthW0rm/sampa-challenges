@@ -29,7 +29,7 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
     const reported = result.stockLeft[i];
     const left = reported?.ingredient === lot.ingredient ? Math.min(lot.qty, Math.max(0, reported.qty)) : lot.qty;
     usedCost += (lot.qty - left) * lot.unitCost;
-    lot.qty = left;
+    lot.qty = round2(left); // o chorinho deixa sobras fracionárias de cana
   });
   c.inventory = lotsToday;
 
@@ -156,7 +156,7 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
       met,
       served: result.orders.served,
       lost: result.orders.lostPatience + result.orders.queueFull + result.orders.lostPrice + result.orders.noStock,
-      wasteUnits: discarded,
+      wasteUnits: round2(discarded),
     },
   ].slice(-HISTORY_MAX);
 

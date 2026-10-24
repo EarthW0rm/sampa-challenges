@@ -5,6 +5,7 @@ import { setDelivery, setPrice, setPromo, toggleMenuItem } from '../game/campaig
 import { hire, rollCandidates } from '../game/campaign/actions/staff';
 import { buyDeliveryArea } from '../game/campaign/actions/upgrades';
 import { offers } from '../game/campaign/shop';
+import { isCampaign } from '../game/campaign/save';
 import { suggestPurchase } from '../game/campaign/suggest';
 import { clampPrice } from '../game/campaign/pricing';
 import { ITEMS } from '../game/data/recipes';
@@ -147,9 +148,14 @@ export function playOne(bot: BotName, c: Campaign, last?: DayRow): { campaign: C
   const promo = bot === 'brinde-max' && c.staff.length > 0 && c.owned.coolers > 0;
   if (promo) c = setPromo(c, { brindeN: 2, chorinho: 3 });
   if (bot === 'armadilha' && c.day >= 5) {
-    c = take(c, buyDeliveryArea({ ...c, cash: Math.max(c.cash, 2000) })); // o robô sempre tem caixa para a armadilha
+    c = { ...c, cash: Math.max(c.cash, 2000) }; // o robô sempre tem caixa para a armadilha
+    for (let i = 0; i < 6 && !c.owned.delivery; i++) {
+      const r = buyDeliveryArea(c);
+      if (r.ok) c = r.campaign;
+      else if (r.motivo === 'semEspaco') c = take(c, offers(c).find((o) => o.id === 'm2')!.buy(c));
+      else break;
+    }
     c = setDelivery(c, { on: true, auto: true });
-    if (!c.owned.delivery) c = { ...c, owned: { ...c.owned, delivery: true } };
   }
   const config = toDayConfig(c);
   const sim = new DaySim(config, daySeed(c));
@@ -157,6 +163,8 @@ export function playOne(bot: BotName, c: Campaign, last?: DayRow): { campaign: C
   const result = sim.result()!;
   const before = { day: c.day, rep: c.reputation, staff: c.staff.length, delivery: c.owned.delivery && c.deliveryOn };
   const out = closeDay(c, result);
+  // todo fechamento de dia tem que continuar salvável (ida e volta pelo JSON)
+  if (!isCampaign(JSON.parse(JSON.stringify(out.campaign)))) throw new Error(`save inválido depois do dia ${before.day} (semente ${c.seed})`);
   const b = out.balance;
   return {
     campaign: out.campaign,
