@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/EarthW0rm/sampa-challenges/compare/v1.1.0...v1.2.0) (2026-10-24)
+
+
+### Features
+
+* **fuga-rocam:** novo jogo de fuga em labirinto pelas ruas de São Paulo ([#7](https://github.com/EarthW0rm/sampa-challenges/issues/7)) ([c9042cf](https://github.com/EarthW0rm/sampa-challenges/commit/c9042cf8c9fa427cf1d0826dc63f5bf06f00a065))
+* **sinuca-de-bar:** novo jogo de sinuca de bar com IA de 3 níveis ([#6](https://github.com/EarthW0rm/sampa-challenges/issues/6)) ([0397eb6](https://github.com/EarthW0rm/sampa-challenges/commit/0397eb650184aae1838ae1357243cf51c8ecbc0c))
+
 ## [1.1.0](https://github.com/EarthW0rm/sampa-challenges/compare/v1.0.0...v1.1.0) (2026-10-22)
 
 
