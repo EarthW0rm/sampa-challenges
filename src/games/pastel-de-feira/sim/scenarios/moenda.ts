@@ -81,7 +81,7 @@ export const moenda: Scenario[] = [
       sim.dispatch({ type: 'deliver', item: { kind: 'copo', id: 1 }, customerId: c.id });
       sim.step();
       checkEq(s.coins.length, 1, 'pago');
-      checkNear(s.coins[0].amount, 7 * 1.1, 'preço × prêmio de reputação (4 estrelas), sem fator de qualidade');
+      checkNear(s.coins[0].amount, 6 * 1.1, 'preço × prêmio de reputação (4 estrelas), sem fator de qualidade');
       checkEq(s.consumables.saquinho, 100, 'caldo não gasta saquinho');
     },
   },

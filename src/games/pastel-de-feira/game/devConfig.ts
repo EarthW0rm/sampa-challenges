@@ -6,9 +6,9 @@ export function devConfig(overrides: Partial<DayConfig> = {}): DayConfig {
     day: 1,
     reputation: 3,
     menu: [
-      { item: 'carne', price: 8 },
-      { item: 'queijo', price: 8 },
-      { item: 'caldo-puro', price: 7 },
+      { item: 'carne', price: 7 },
+      { item: 'queijo', price: 7 },
+      { item: 'caldo-puro', price: 6 },
     ],
     stock: [
       { ingredient: 'massa', qty: 80, daysLeft: 3 },

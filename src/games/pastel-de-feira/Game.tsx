@@ -1,31 +1,31 @@
-import { useEffect, useRef } from 'react';
+import { useState } from 'react';
 import type { GameProps } from '../../hub/types';
-import { H, W } from './game/constants';
-import { SCALE } from './game/hires';
+import { DayScreen } from './components/DayScreen';
+import { DaySummary } from './components/DaySummary';
+import { devConfig } from './game/devConfig';
+import type { DayResult } from './game/types';
 import './styles.css';
 
-/** Placeholder da TF-110-01: limpa o canvas 640×480 com a cor da feira. */
+/** US-110: um Dia de Feira solo com a config de desenvolvimento. A campanha entra na US-111. */
 export default function PastelDeFeira({ onExit }: GameProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const ctx = canvasRef.current!.getContext('2d')!;
-    ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
-    ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = '#e8a13a';
-    ctx.fillRect(0, 0, W, H);
-  }, []);
+  const [seed, setSeed] = useState(() => Date.now() % 2147483647);
+  const [result, setResult] = useState<DayResult | null>(null);
+  const [config] = useState(() => devConfig());
 
   return (
     <div className="pastel-de-feira">
-      <main className="screen">
-        <h1>Pastel de Feira</h1>
-        <canvas ref={canvasRef} width={W * SCALE} height={H * SCALE} aria-label="Área do jogo" />
-        <p>Em obras.</p>
-        <button type="button" onClick={onExit}>
-          Voltar para os jogos
-        </button>
-      </main>
+      {result ? (
+        <DaySummary
+          result={result}
+          onAgain={() => {
+            setResult(null);
+            setSeed(Math.floor(Math.random() * 2147483646) + 1);
+          }}
+          onExit={onExit}
+        />
+      ) : (
+        <DayScreen key={seed} config={config} seed={seed} onDone={setResult} onExit={onExit} />
+      )}
     </div>
   );
 }

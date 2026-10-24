@@ -89,11 +89,11 @@ export const balcao: Scenario[] = [
       sim.step();
       checkEq(s.customers.length, 0, 'cliente saiu');
       checkEq(s.coins.length, 1, 'moeda no balcão');
-      checkNear(s.coins[0].amount, 8 * (0.8 + 0.4 * 0.8), 'valor = preço × fator de qualidade (nota 80)');
+      checkNear(s.coins[0].amount, 7 * (0.8 + 0.4 * 0.8), 'valor = preço × fator de qualidade (nota 80)');
       checkEq(s.rep.successes, 1, 'sucesso registrado');
       checkEq(s.consumables.saquinho, 99, 'saquinho consumido');
       slot(sim, 'balcao', { k: 'moedas' });
-      checkNear(s.stats.revenue, 8.96, 'receita cobrada');
+      checkNear(s.stats.revenue, 7.84, 'receita cobrada');
       checkEq(s.coins.length, 0, 'moeda recolhida');
     },
   },

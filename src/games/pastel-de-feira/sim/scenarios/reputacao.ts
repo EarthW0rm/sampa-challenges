@@ -88,7 +88,7 @@ export const reputacao: Scenario[] = [
       s.ready.push({ id: 1, item: 'carne', quality: 80, readyAt: s.tick / 60 });
       sim.dispatch({ type: 'deliver', item: { kind: 'pastel', id: 1 }, customerId: c.id });
       sim.step();
-      checkNear(s.coins[0].amount, 8 * (0.8 + 0.4 * 0.7), 'nota 70 depois do desconto de 10 pontos');
+      checkNear(s.coins[0].amount, 7 * (0.8 + 0.4 * 0.7), 'nota 70 depois do desconto de 10 pontos');
     },
   },
   {
