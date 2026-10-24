@@ -3,6 +3,7 @@ import type { ItemId } from '../data/recipes';
 import { ITEMS } from '../data/recipes';
 import type { Profile } from '../types';
 import type { Rect } from '../layout';
+import { getAssets, LIB_PX, type Equipe, type Pose, type Aparencia } from '../assets';
 
 /** Paleta dos placeholders geométricos (a arte final troca isto na US-121). */
 export const PAL = {
@@ -94,4 +95,40 @@ export function dog(
     ctx.fillRect(5, -38, 10, 5);
   }
   ctx.restore();
+}
+
+/** Desenha um sprite 2× nativo com o pé central em (x, y); `flip` espelha. */
+export function blitFeet(ctx: CanvasRenderingContext2D, img: CanvasImageSource & { width: number; height: number }, x: number, y: number, flip = false): void {
+  const w = img.width / LIB_PX;
+  const h = img.height / LIB_PX;
+  ctx.save();
+  ctx.translate(Math.round(x), Math.round(y));
+  if (flip) ctx.scale(-1, 1);
+  ctx.fillStyle = 'rgba(27,18,32,0.35)';
+  ctx.fillRect(-Math.round(w / 2) + 2, -1, Math.round(w) - 4, 3);
+  ctx.drawImage(img, -Math.round(w / 2), -h, w, h);
+  ctx.restore();
+}
+
+/** Cliente com a aparência sorteada; sem arte carregada cai no placeholder geométrico. */
+export function drawCliente(ctx: CanvasRenderingContext2D, a: Aparencia, pose: Pose, x: number, y: number, o: { flip?: boolean; ribbon?: string; fallbackFur?: string } = {}): void {
+  const img = getAssets()?.cliente(a.raca, a.porte, a.cor, pose);
+  if (img) {
+    blitFeet(ctx, img, x, y, o.flip);
+    if (o.ribbon) {
+      ctx.fillStyle = o.ribbon; // indicador fixo do perfil (RN-165)
+      ctx.fillRect(Math.round(x) - 5, Math.round(y) - img.height / LIB_PX - 4, 10, 3);
+    }
+    return;
+  }
+  dog(ctx, x, y, o.fallbackFur ?? furOf(0), { flip: o.flip, ribbon: o.ribbon });
+}
+
+export function drawEquipe(ctx: CanvasRenderingContext2D, kind: Equipe, cor: string, pose: Pose, x: number, y: number, o: { flip?: boolean; bob?: number } = {}): void {
+  const img = getAssets()?.equipe(kind, cor, pose);
+  if (img) {
+    blitFeet(ctx, img, x, y + Math.round(o.bob ?? 0), o.flip);
+    return;
+  }
+  dog(ctx, x, y, cor, { flip: o.flip, hat: kind === 'func_fritador' ? PAL.red : kind === 'func_geral' ? PAL.blue : '#f4efe2', bob: o.bob });
 }

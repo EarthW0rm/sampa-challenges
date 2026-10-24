@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GameProps } from '../../hub/types';
 import { ClosingScreen } from './components/ClosingScreen';
 import { DayScreen } from './components/DayScreen';
@@ -7,6 +7,7 @@ import { HandoverDialog } from './components/HandoverDialog';
 import { NewCampaign } from './components/NewCampaign';
 import { PrepScreen } from './components/prep/PrepScreen';
 import { TitleScreen } from './components/TitleScreen';
+import { loadAll } from './game/assets';
 import { closeDay } from './game/campaign/closing';
 import { handoverValue, startFromHandover } from './game/campaign/actions/handover';
 import { daySeed, newCampaign, toDayConfig } from './game/campaign/campaign';
@@ -50,6 +51,20 @@ export default function PastelDeFeira({ onExit }: GameProps) {
   const [handover, setHandover] = useState<{ value: number; kind: 'zerado' | 'falencia' } | null>(null);
   const [pointValue, setPointValue] = useState<number | null>(null);
   const [backTo, setBackTo] = useState<Screen>('title');
+
+  const [art, setArt] = useState<'carregando' | 'erro' | 'ok'>('carregando');
+  const [artTry, setArtTry] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    setArt('carregando');
+    loadAll().then(
+      () => alive && setArt('ok'),
+      () => alive && setArt('erro'),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [artTry]);
 
   const persist = (c: Campaign, phase: SavePhase) => {
     if (saveCampaign(storage, c, phase) || warned.current) return;
@@ -95,6 +110,24 @@ export default function PastelDeFeira({ onExit }: GameProps) {
     setScreen('fechamento');
   };
 
+
+  if (art !== 'ok') {
+    return (
+      <div className="pastel-de-feira">
+        <div className="menu" role="status">
+          {art === 'carregando' ? (
+            <p>Montando a barraca…</p>
+          ) : (
+            <>
+              <p className="warn">Não foi possível carregar as imagens do jogo.</p>
+              <button onClick={() => setArtTry((n) => n + 1)}>Tentar de novo</button>
+              <button onClick={onExit}>Voltar</button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pastel-de-feira">

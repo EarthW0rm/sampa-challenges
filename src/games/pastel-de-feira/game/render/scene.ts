@@ -11,7 +11,8 @@ import { homeStation } from '../sim/staff';
 import { now, type Customer, type DayState } from '../sim/state';
 import type { UiState } from '../ui';
 import { SCALE } from '../hires';
-import { bar, box, dog, furOf, itemColor, PAL, PROFILE_COLOR, textCenter } from './draw';
+import { aparenciaDe, type Pose } from '../assets';
+import { bar, box, drawCliente, drawEquipe, itemColor, PAL, PROFILE_COLOR, textCenter } from './draw';
 
 /** Posição do cliente `i` da fila (frente à direita, perto do balcão). */
 export function queueSpot(layout: Layout, i: number): { x: number; y: number } {
@@ -147,7 +148,7 @@ export function seatSpot(z: Zone, table: number, seat: number): { x: number; y: 
   return { x: tx + 14 + (seat % 2) * 56, y: ty + (seat < 2 ? 18 : 62) };
 }
 
-function drawTables(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): void {
+function drawTables(ctx: CanvasRenderingContext2D, st: DayState, z: Zone, ui: UiState): void {
   st.tables.forEach((t, i) => {
     const tx = z.x + 12 + (i % 2) * 146;
     const ty = z.y + 26 + Math.floor(i / 2) * 68;
@@ -169,7 +170,7 @@ function drawTables(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): void 
     g.seats.forEach((seatIdx, j) => {
       const p = seatSpot(z, g.table, seatIdx);
       if (c.place === 'fila') return; // reservado: o grupo está na fila do balcão
-      dog(ctx, p.x, p.y, furOf(c.id + j * 3), { flip: seatIdx % 2 === 1, ribbon: PROFILE_COLOR[g.profiles[j] ?? c.profile] });
+      drawCliente(ctx, aparenciaDe(st.seed, c.id, j), c.place === 'comendo' ? (Math.floor(ui.clock * 3) % 2 ? 'comendo_1' : 'comendo_0') : 'sentado', p.x, p.y, { flip: seatIdx % 2 === 1, ribbon: PROFILE_COLOR[g.profiles[j] ?? c.profile] });
     });
     const first = seatSpot(z, g.table, g.seats[0]);
     if (c.place === 'comendo') bar(ctx, first.x - 10, first.y - 46, 40, 4, 1 - c.timer / 25, PAL.gold);
@@ -190,7 +191,7 @@ function drawDispatch(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): voi
   st.motoboys.slice(0, 2).forEach((m, i) => {
     const x = z.x + z.w - 22 - i * 34;
     const y = z.y + z.h - 10;
-    dog(ctx, x, y, furOf(m.id * 5), { flip: true, hat: PAL.green });
+    drawCliente(ctx, aparenciaDe(st.seed, 100000 + m.id), 'parado', x, y, { flip: true, ribbon: PAL.green });
     bar(ctx, x - 12, y - 44, 24, 4, m.waitLeft / 25, m.waitLeft > 8 ? PAL.green : PAL.red);
   });
 }
@@ -199,7 +200,7 @@ function drawPayQueue(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): voi
   st.payQueue.forEach((c, i) => {
     const x = z.x + z.w - 16 - i * 34;
     const y = z.y + z.h - 12;
-    dog(ctx, x, y, furOf(c.id), { flip: true, ribbon: PAL.gold });
+    drawCliente(ctx, aparenciaDe(st.seed, c.id), 'feliz', x, y, { flip: true, ribbon: PAL.gold });
     bar(ctx, x - 12, y - 44, 24, 4, c.timer / 20, c.timer > 6 ? PAL.green : PAL.red);
   });
 }
@@ -225,7 +226,7 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   // fila
   queueOf(st).forEach((c, i) => {
     const p = queueSpot(layout, i);
-    dog(ctx, p.x, p.y, furOf(c.id), { flip: true, ribbon: PROFILE_COLOR[c.profile] });
+    drawCliente(ctx, aparenciaDe(st.seed, c.id), c.patience < c.patienceMax * 0.3 ? 'bravo' : 'parado', p.x, p.y, { flip: true, ribbon: PROFILE_COLOR[c.profile] });
     drawBalloon(ctx, c, p.x, p.y - 38);
   });
 
@@ -275,7 +276,7 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
 
   // mesas, fila de pagamento e sujeira
   const me = layout.byId.get('mesas');
-  if (me) drawTables(ctx, st, me);
+  if (me) drawTables(ctx, st, me, ui);
   if (bal && st.tables.length > 0) drawPayQueue(ctx, st, bal);
   const off = layout.byId.get('escritorio');
   if (off) {
@@ -353,7 +354,8 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   // equipe
   for (const [id, spot] of workerSpots(layout, st)) {
     const w = st.workers.find((x) => x.id === id)!;
-    dog(ctx, spot.x, spot.y, furOf(id * 7), { hat: w.kind === 'fritador' ? PAL.red : PAL.blue, bob: w.task ? Math.sin(ui.clock * 10 + id) : 0 });
+    const pose: Pose = w.task && !w.resting ? (Math.floor(ui.clock * 4 + id) % 2 ? 'andando_1' : 'andando_0') : 'parado';
+    drawEquipe(ctx, w.kind === 'fritador' ? 'func_fritador' : 'func_geral', aparenciaDe(st.seed, 200000 + id).cor, pose, spot.x, spot.y);
     bar(ctx, spot.x - 12, spot.y - 44, 24, 4, w.energy / 100, w.energy > 40 ? PAL.green : w.energy > 15 ? PAL.orange : PAL.red);
     if (w.resting) textCenter(ctx, 'ZZ', spot.x, spot.y - 56, PAL.muted, 1);
   }
@@ -373,6 +375,6 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
         flip = a.x < anchor(from).x;
       }
     }
-    dog(ctx, pos.x, pos.y, '#c9915a', { hat: '#f4efe2', ribbon: PAL.gold, flip, bob: p.to ? Math.sin(ui.clock * 24) * 1.5 : 0 });
+    drawEquipe(ctx, 'pasteleiro', '#d9903f', p.to ? (Math.floor(ui.clock * 6) % 2 ? 'andando_1' : 'andando_0') : 'parado', pos.x, pos.y, { flip });
   }
 }
