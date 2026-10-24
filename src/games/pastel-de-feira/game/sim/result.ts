@@ -46,5 +46,6 @@ export function buildResult(s: DayState): DayResult {
     reputation: { successes, charm, weightedFailures: failures, rate, change },
     stockLeft: s.stock.map((l) => ({ ...l })),
     consumables: { ...s.consumables },
+    staff: s.workers.map((w) => ({ id: w.id, idleSeconds: w.idleSeconds, restSeconds: w.restSeconds, endEnergy: w.energy, minEnergy: w.minEnergy })),
   };
 }

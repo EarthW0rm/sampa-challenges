@@ -1,4 +1,5 @@
 import { COOLER, EQUIPMENT, MENU_BOARDS, SPACE, TACHO, type EquipId } from '../../data/equipment';
+import { REST_AREA } from '../../data/staff';
 import { BASE_RECIPES, ITEMS, UPGRADES, itemId, type ItemId } from '../../data/recipes';
 import { cloneCampaign, freeM2, round2, totalM2 } from '../campaign';
 import { defaultPrice } from '../pricing';
@@ -147,5 +148,26 @@ export function buyMenuBoard(c: Campaign, kind: 'salgado' | 'doce'): ActionResul
   charge(next, price, false);
   if (kind === 'salgado') next.owned.slotsSalgado++;
   else next.owned.slotsDoce++;
+  return { ok: true, campaign: next };
+}
+
+/** Área de descanso (RN-117): R$ 120, 1 m², 2 vagas; cada vaga extra custa R$ 80, até 4. */
+export function buyRestArea(c: Campaign): ActionResult {
+  if (c.owned.rest > 0) return no('limite');
+  if (freeM2(c) < REST_AREA.space) return no('semEspaco');
+  if (!canPay(c, REST_AREA.price)) return no('semCaixa');
+  const next = cloneCampaign(c);
+  charge(next, REST_AREA.price, true);
+  next.owned.rest = REST_AREA.firstSlots;
+  return { ok: true, campaign: next };
+}
+
+export function buyRestSlot(c: Campaign): ActionResult {
+  if (c.owned.rest === 0) return no('requer');
+  if (c.owned.rest >= REST_AREA.maxSlots) return no('limite');
+  if (!canPay(c, REST_AREA.slotPrice)) return no('semCaixa');
+  const next = cloneCampaign(c);
+  charge(next, REST_AREA.slotPrice, true);
+  next.owned.rest++;
   return { ok: true, campaign: next };
 }

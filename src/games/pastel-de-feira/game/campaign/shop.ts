@@ -1,8 +1,9 @@
 import { INGREDIENTS } from '../data/catalog';
 import { COOLER, EQUIPMENT, EQUIP_IDS, MENU_BOARDS, SPACE, TACHO } from '../data/equipment';
+import { REST_AREA } from '../data/staff';
 import { BASE_RECIPE_IDS, BASE_RECIPES, ITEMS, UPGRADES, itemId } from '../data/recipes';
 import {
-  buyCooler, buyDrink, buyEquipment, buyMenuBoard, buyRecipe, buySpace, buyTachoExtra, buyTachoUpgrade, buyVersion,
+  buyCooler, buyDrink, buyRestArea, buyRestSlot, buyEquipment, buyMenuBoard, buyRecipe, buySpace, buyTachoExtra, buyTachoUpgrade, buyVersion,
 } from './actions/upgrades';
 import { totalM2 } from './campaign';
 import type { ActionResult, Campaign, Refusal } from './types';
@@ -57,6 +58,8 @@ export function offers(c: Campaign): Offer[] {
   });
   if (c.owned.tachos.length < TACHO.max) out.push({ id: 'tacho-extra', section: 'espaco', name: 'Tacho extra', desc: `Ocupa ${TACHO.extraSpace} m². Máximo ${TACHO.max} tachos.`, price: TACHO.extraPrice, buy: buyTachoExtra });
   if (c.owned.coolers < COOLER.max) out.push({ id: 'caixa-termica', section: 'espaco', name: 'Caixa térmica', desc: `Ocupa ${COOLER.space} m². +80 de estoque; recheios duram +1 dia.`, price: COOLER.price, buy: buyCooler });
+  if (c.owned.rest === 0) out.push({ id: 'descanso', section: 'espaco', name: 'Área de descanso', desc: `Ocupa ${REST_AREA.space} m², ${REST_AREA.firstSlots} vagas. Recupera 4 de energia por segundo.`, price: REST_AREA.price, buy: buyRestArea });
+  else if (c.owned.rest < REST_AREA.maxSlots) out.push({ id: 'vaga-descanso', section: 'espaco', name: `Vaga de descanso (${c.owned.rest + 1}ª)`, desc: 'Mais um funcionário descansa na área ao mesmo tempo.', price: REST_AREA.slotPrice, buy: buyRestSlot });
   if (totalM2(c) < SPACE.max) {
     out.push({ id: 'm2', section: 'espaco', name: 'Mais 1 m²', desc: `Taxa de R$ ${SPACE.dailyFee} por dia. Total ${totalM2(c)} de ${SPACE.max} m².`, price: SPACE.price, buy: (x) => buySpace(x, 1) });
   }

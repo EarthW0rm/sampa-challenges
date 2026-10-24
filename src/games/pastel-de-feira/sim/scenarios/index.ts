@@ -2,12 +2,14 @@ import type { Scenario } from '../harness';
 import { balcao } from './balcao';
 import { catalogo } from './catalogo';
 import { clientes } from './clientes';
+import { energia } from './energia';
 import { equipamentos } from './equipamentos';
 import { equipe } from './equipe';
 import { fechamento } from './fechamento';
 import { layout } from './layout';
 import { melhorias } from './melhorias';
 import { moenda } from './moenda';
+import { posicoes } from './posicoes';
 import { preparo } from './preparo';
 import { relogio } from './relogio';
 import { reputacao } from './reputacao';
@@ -25,6 +27,8 @@ export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   melhorias,
   equipamentos,
   equipe,
+  posicoes,
+  energia,
   save,
   reputacao,
   moenda,

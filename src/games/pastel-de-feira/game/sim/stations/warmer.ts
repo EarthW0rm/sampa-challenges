@@ -12,7 +12,11 @@ export const warmedCount = (s: DayState): number => s.ready.filter((r) => r.warm
  * A estufa é compartilhada entre balcão, mesa e app (RN-96). Cheia: o pastel fica no balcão.
  */
 export function warm(s: DayState, id: number): boolean {
-  if (!isAt(s, 'estufa')) return false;
+  return isAt(s, 'estufa') && warmReady(s, id);
+}
+
+/** Guarda na estufa sem exigir o pasteleiro: o Fritador faz isso ao tirar do óleo (RN-40). */
+export function warmReady(s: DayState, id: number): boolean {
   const r = s.ready.find((x) => x.id === id);
   if (!r || r.warmed || warmedCount(s) >= warmerCapacity(s)) return false;
   r.quality = currentQuality(r, now(s));

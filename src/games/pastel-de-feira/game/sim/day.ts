@@ -5,6 +5,7 @@ import { updateCustomers } from './customers';
 import { updatePasteleiro } from './pasteleiro';
 import { buildResult } from './result';
 import { updateMill } from './stations/cane';
+import { updateStaff } from './staff';
 import { updateFryers } from './stations/fryer';
 import { createState, emit, type DayState } from './state';
 
@@ -38,6 +39,8 @@ function isCommand(v: unknown): v is Command {
       return typeof v.station === 'string' && isObject(v.slot) && typeof v.slot.k === 'string';
     case 'holdStart':
       return typeof v.station === 'string' && typeof v.action === 'string';
+    case 'sendRest':
+      return typeof v.staffId === 'number';
     case 'deliver':
       return isObject(v.item) && typeof v.item.id === 'number' && typeof v.customerId === 'number';
     default:
@@ -88,6 +91,7 @@ export class DaySim {
     this.applyCommands();
     s.tick++;
     updatePasteleiro(s, STEP);
+    updateStaff(s, STEP);
     updateFryers(s, STEP);
     updateMill(s, STEP);
     updateCustomers(s, STEP);

@@ -3,6 +3,7 @@ import { INGREDIENTS, DOUGH_SHELF_DAYS, CONSUMABLE_IDS } from '../data/catalog';
 import { ITEMS, type ItemId } from '../data/recipes';
 import { SPACE } from '../data/equipment';
 import { orderStations } from '../layout';
+import { positionsAvailable } from './positions';
 import type { DayConfig, EquipmentFlags, MenuEntry, StationId } from '../types';
 import type { Campaign, NewCampaignOptions } from './types';
 import { fatigueFactor } from './fatigue';
@@ -150,6 +151,9 @@ export function toDayConfig(c: Campaign): DayConfig {
     stations: stationsOf(c),
     tachos: c.owned.tachos.map((t) => ({ ...t })),
     equipment: equipmentFlags(c),
+    staff: c.staff.map((w) => ({ id: w.id, name: w.name, kind: w.kind, traits: [...w.traits], courses: [...w.courses], mode: w.mode, position: w.position })),
+    positions: positionsAvailable(c),
+    restSlots: c.owned.rest,
     coolers: c.owned.coolers,
   };
 }

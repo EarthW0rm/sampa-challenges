@@ -32,6 +32,18 @@ export function stopMill(s: DayState): void {
   if (s.pasteleiro.hold?.action === 'moenda') s.pasteleiro.hold = null;
 }
 
+/** Faz um copo de caldo: consome cana, complemento e copo (RN-26, RN-39a). */
+export function makeCup(s: DayState, id: ItemId): boolean {
+  const item = ITEMS[id];
+  if (!item || !canMake(s, item)) return false;
+  for (const [ing, need] of itemIngredients(item)) consumeIngredient(s, ing, need);
+  s.consumables.copo--;
+  const cup = { id: newId(s), item: item.id };
+  s.cups.push(cup);
+  emit(s, 'caldo_pronto', cup.id);
+  return true;
+}
+
 /** Avança a extração enquanto o pasteleiro segura a moenda. */
 export function updateMill(s: DayState, dt: number): void {
   const hold = s.pasteleiro.hold;
@@ -40,11 +52,7 @@ export function updateMill(s: DayState, dt: number): void {
   if (s.mill.progress < millSeconds(s) - EPS) return;
   const item = ITEMS[s.mill.item];
   s.mill.progress = 0;
-  for (const [ing, need] of itemIngredients(item)) consumeIngredient(s, ing, need);
-  s.consumables.copo--;
-  const cup = { id: newId(s), item: item.id };
-  s.cups.push(cup);
-  emit(s, 'caldo_pronto', cup.id);
+  makeCup(s, item.id);
   if (!canMake(s, item)) {
     s.pasteleiro.hold = null;
     swapDemand(s);

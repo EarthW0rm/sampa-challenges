@@ -1,4 +1,5 @@
 import type { ConsumableId, IngredientId } from './data/catalog';
+import type { CourseId, PositionId, StaffKind, TraitId } from './data/staff';
 import type { ItemId } from './data/recipes';
 
 /** Tipos compartilhados entre simulação, campanha e apresentação (plan.md 3.2). */
@@ -44,6 +45,7 @@ export type Command =
   | { type: 'holdStart'; station: StationId; action: HoldAction; item?: ItemId; g?: number }
   | { type: 'holdEnd'; g?: number }
   | { type: 'deliver'; item: ItemRef; customerId: number; g?: number }
+  | { type: 'sendRest'; staffId: number; g?: number }
   | { type: 'pause' }
   | { type: 'resume' }
   | { type: 'setSpeed'; speed: 1 | 2 };
@@ -75,6 +77,17 @@ export interface TachoConfig {
   timer: boolean;
 }
 
+/** Funcionário que entra no dia (campanha → simulação). */
+export interface StaffConfig {
+  id: number;
+  name: string;
+  kind: StaffKind;
+  traits: TraitId[];
+  courses: CourseId[];
+  mode: 'fixo' | 'auto';
+  position: PositionId | null;
+}
+
 /** Equipamentos globais que o dia usa. */
 export interface EquipmentFlags {
   /** Escorredor profissional: nota +10 (RN-24). */
@@ -98,6 +111,11 @@ export interface DayConfig {
   stations: StationId[];
   tachos: TachoConfig[];
   equipment: EquipmentFlags;
+  staff: StaffConfig[];
+  /** Posições que existem na barraca (RN-40). */
+  positions: PositionId[];
+  /** Vagas da área de descanso, 0 sem área (RN-117). */
+  restSlots: number;
   /** Caixas térmicas compradas (zona no layout). */
   coolers: number;
 }
@@ -121,6 +139,8 @@ export type SimEventType =
   | 'alarme_ponto'
   | 'alarme_queima'
   | 'estufa'
+  | 'funcionario_descansa'
+  | 'funcionario_volta'
   | 'entregou'
   | 'item_errado'
   | 'cobrou'
@@ -154,4 +174,14 @@ export interface DayResult {
   reputation: { successes: number; charm: number; weightedFailures: number; rate: number; change: number };
   stockLeft: StockLot[];
   consumables: Record<ConsumableId, number>;
+  /** Resumo de cada funcionário no dia (energia, ociosidade). */
+  staff: StaffDayResult[];
+}
+
+export interface StaffDayResult {
+  id: number;
+  idleSeconds: number;
+  restSeconds: number;
+  endEnergy: number;
+  minEnergy: number;
 }

@@ -69,7 +69,7 @@ function partnerBasket(t: Tacho, index: number): number {
 }
 
 /** Colocar o pastel montado num cesto livre (RN-42). O Especial da Casa ocupa 2 cestos (RN-30d). */
-function place(s: DayState, tacho: Tacho, index: number): boolean {
+export function placeBasket(s: DayState, tacho: Tacho, index: number): boolean {
   if (!tacho.baskets[index] || !isFree(tacho, index) || isLocked(tacho) || isChanging(tacho)) return false;
   const pick = s.assembled.find((a) => a.id === s.selectedAssembled) ?? s.assembled[0];
   if (!pick) return false;
@@ -78,7 +78,7 @@ function place(s: DayState, tacho: Tacho, index: number): boolean {
   if (big && partner < 0) return false; // sem 2 cestos livres: o jogador escolhe outro tacho
   s.assembled.splice(s.assembled.indexOf(pick), 1);
   s.selectedAssembled = null;
-  tacho.baskets[index].frying = { id: pick.id, item: pick.item, ticks: 0, burned: false, pontoAlerted: false, burnAlerted: false };
+  tacho.baskets[index].frying = { id: pick.id, item: pick.item, ticks: 0, burned: false, pontoAlerted: false, burnAlerted: false, bonus: pick.bonus };
   if (big) tacho.baskets[partner].shadow = index;
   const perPastry = tacho.oil === 'algodao' ? OIL_DIRT_PER_PASTRY_COTTON : OIL_DIRT_PER_PASTRY;
   tacho.dirt = Math.min(1, Math.round((tacho.dirt + perPastry) * 1e6) / 1e6);
@@ -97,7 +97,7 @@ function release(tacho: Tacho, index: number): { frying: NonNullable<Tacho['bask
 }
 
 /** Tirar do óleo: o desfecho depende do tempo de fritura (RN-23). Queimado vira desperdício e libera o cesto. */
-function take(s: DayState, tacho: Tacho, index: number): boolean {
+export function takeBasket(s: DayState, tacho: Tacho, index: number, extra = 0): boolean {
   const rel = release(tacho, index);
   if (!rel) return false;
   const f = rel.frying;
@@ -108,7 +108,7 @@ function take(s: DayState, tacho: Tacho, index: number): boolean {
     return true;
   }
   const outcome = fryOutcome(fryWindow(ITEMS[f.item], tacho), f.ticks * STEP);
-  s.ready.push({ id: f.id, item: f.item, quality: outcomeQuality(s, tacho, outcome), readyAt: now(s) });
+  s.ready.push({ id: f.id, item: f.item, quality: Math.min(100, outcomeQuality(s, tacho, outcome) + (f.bonus ?? 0) + extra), readyAt: now(s) });
   emit(s, outcome === 'ponto' ? 'tirou_no_ponto' : outcome === 'cru' ? 'tirou_cru' : 'tirou_passado', f.id);
   return true;
 }
@@ -119,7 +119,7 @@ export function tapBasket(s: DayState, station: string, index: number): boolean 
   const tacho = s.tachos[tachoIndex(station)];
   const basket = tacho?.baskets[index];
   if (!basket) return false;
-  return basket.frying || basket.shadow !== null ? take(s, tacho, index) : place(s, tacho, index);
+  return basket.frying || basket.shadow !== null ? takeBasket(s, tacho, index) : placeBasket(s, tacho, index);
 }
 
 /** Começa a trocar o óleo, segurando o tacho (RN-42). */
@@ -128,12 +128,38 @@ export function startOilChange(s: DayState, station: string): boolean {
   if (!tacho || !isAt(s, station as 'tacho1')) return false;
   s.pasteleiro.hold = { action: 'oleo', station: station as 'tacho1' };
   tacho.changeProgress = EPS;
+  tacho.changeTotal = HOLD_OIL_MANUAL;
+  tacho.changeBy = -1;
   return true;
+}
+
+/** Um funcionário começa a trocar o óleo: o tacho para durante `seconds` (RN-43, RN-46). */
+export function startWorkerOilChange(tacho: Tacho, workerId: number, seconds: number): void {
+  tacho.changeProgress = EPS;
+  tacho.changeTotal = seconds;
+  tacho.changeBy = workerId;
+}
+
+/** Livre para receber o próximo pastel montado? Devolve o cesto escolhido ou -1 (RN-30d). */
+export function nextFreeBasket(s: DayState, tacho: Tacho): number {
+  if (isLocked(tacho) || isChanging(tacho)) return -1;
+  const pick = s.assembled[0];
+  if (!pick) return -1;
+  const big = ITEMS[pick.item].doughs > 1;
+  for (let i = 0; i < tacho.baskets.length; i++) {
+    if (isFree(tacho, i) && (!big || partnerBasket(tacho, i) >= 0)) return i;
+  }
+  return -1;
 }
 
 /** Soltar antes do fim cancela sem custo. */
 export function cancelOilChange(s: DayState): void {
-  for (const t of s.tachos) t.changeProgress = 0;
+  for (const t of s.tachos) {
+    if (t.changeBy === -1) {
+      t.changeProgress = 0;
+      t.changeBy = 0;
+    }
+  }
 }
 
 function finishOilChange(s: DayState, tacho: Tacho): void {
@@ -141,7 +167,8 @@ function finishOilChange(s: DayState, tacho: Tacho): void {
   tacho.dirt = 0;
   tacho.changeProgress = 0;
   s.stats.oilCost = Math.round((s.stats.oilCost + cost) * 100) / 100;
-  s.pasteleiro.hold = null;
+  if (tacho.changeBy === -1) s.pasteleiro.hold = null;
+  tacho.changeBy = 0;
   emit(s, 'oleo_trocado');
 }
 
@@ -150,7 +177,7 @@ export function updateFryers(s: DayState, dt: number): void {
   for (const tacho of s.tachos) {
     if (isChanging(tacho)) {
       tacho.changeProgress += dt;
-      if (tacho.changeProgress >= HOLD_OIL_MANUAL - EPS) finishOilChange(s, tacho);
+      if (tacho.changeProgress >= tacho.changeTotal - EPS) finishOilChange(s, tacho);
       continue; // tacho parado durante a troca
     }
     for (const b of tacho.baskets) {

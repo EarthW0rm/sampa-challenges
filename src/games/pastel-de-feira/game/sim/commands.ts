@@ -1,5 +1,6 @@
 import type { Command } from '../types';
 import { tapStation } from './pasteleiro';
+import { sendToRest } from './staff';
 import { addIngredient, clearTray, closeAssembly, selectAssembled } from './stations/bench';
 import { startMill, stopMill } from './stations/cane';
 import { collectCoins, deliver, takeOrder } from './stations/counter';
@@ -39,6 +40,8 @@ export function applyCommand(s: DayState, cmd: Command): boolean {
       stopMill(s);
       s.pasteleiro.hold = null;
       return true;
+    case 'sendRest':
+      return sendToRest(s, cmd.staffId);
     case 'deliver':
       return deliver(s, cmd.item, cmd.customerId);
     default:

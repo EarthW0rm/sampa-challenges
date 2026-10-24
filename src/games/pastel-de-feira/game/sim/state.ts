@@ -1,7 +1,8 @@
 import type { ConsumableId, IngredientId } from '../data/catalog';
 import type { ItemId } from '../data/recipes';
 import { Rng } from '../rng';
-import type { Command, DayConfig, HoldAction, Profile, SimEvent, StationId, StockLot } from '../types';
+import type { CourseId, PositionId, StaffKind, TraitId } from '../data/staff';
+import type { Command, DayConfig, HoldAction, ItemRef, Profile, SimEvent, StationId, StockLot } from '../types';
 
 export interface OrderLine {
   /** Item desejado. Muda só na troca automática (RN-35). */
@@ -40,6 +41,8 @@ export interface Coin {
 export interface Assembled {
   id: number;
   item: ItemId;
+  /** Bônus de nota de quem montou (Caprichoso, RN-114). */
+  bonus?: number;
 }
 
 /** Pastel dentro de um cesto do tacho. */
@@ -52,6 +55,7 @@ export interface Frying {
   /** Alarmes já disparados (uma vez por pastel). */
   pontoAlerted: boolean;
   burnAlerted: boolean;
+  bonus?: number;
 }
 
 export interface Basket {
@@ -67,6 +71,9 @@ export interface Tacho {
   dirt: number;
   /** Troca de óleo em andamento: progresso em segundos de 0 a HOLD_OIL_MANUAL. */
   changeProgress: number;
+  /** Quanto dura a troca em andamento (s) e quem a faz: -1 o pasteleiro, id do funcionário, 0 ninguém. */
+  changeTotal: number;
+  changeBy: number;
   thermostat: boolean;
   alarm: boolean;
   timer: boolean;
@@ -98,6 +105,41 @@ export interface Pasteleiro {
   hold: { action: HoldAction; station: StationId; item?: ItemId } | null;
 }
 
+export type TaskKind = 'anotar' | 'cobrar' | 'entregar' | 'montar' | 'colocar' | 'caldo' | 'trocar';
+
+export interface WorkerTask {
+  kind: TaskKind;
+  total: number;
+  left: number;
+  customerId?: number;
+  ref?: ItemRef;
+  item?: ItemId;
+  tacho?: number;
+}
+
+/** Funcionário em ação no dia (RN-40, RN-43–45, RN-115). */
+export interface Worker {
+  id: number;
+  name: string;
+  kind: StaffKind;
+  traits: TraitId[];
+  courses: CourseId[];
+  mode: 'fixo' | 'auto';
+  /** Posição que o fixo prefere. */
+  fixedPosition: PositionId | null;
+  /** Posição em que trabalha agora (null: ocioso, descansando ou cedeu o lugar ao pasteleiro). */
+  position: PositionId | null;
+  energy: number;
+  task: WorkerTask | null;
+  /** Descansando: na área de descanso ou parado onde está (RN-116). */
+  resting: 'area' | 'lugar' | null;
+  /** O jogador mandou descansar (fixo, RN-116). */
+  ordered: boolean;
+  idleSeconds: number;
+  restSeconds: number;
+  minEnergy: number;
+}
+
 export interface Reputation {
   successes: number;
   charm: number;
@@ -127,7 +169,7 @@ export interface DayState {
   over: boolean;
   paused: boolean;
   speed: 1 | 2;
-  rng: { customers: Rng; quality: Rng };
+  rng: { customers: Rng; quality: Rng; staff: Rng };
   nextId: number;
   commands: Command[];
   seenGestures: Set<number>;
@@ -143,6 +185,7 @@ export interface DayState {
   assembled: Assembled[];
   selectedAssembled: number | null;
   tachos: Tacho[];
+  workers: Worker[];
   ready: Ready[];
   cups: Cup[];
   mill: { progress: number; item: ItemId | null };
@@ -153,7 +196,7 @@ export interface DayState {
 
 export function createState(config: DayConfig, seed: number): DayState {
   const root = new Rng(seed);
-  const rng = { customers: root.fork('clientes'), quality: root.fork('qualidade') };
+  const rng = { customers: root.fork('clientes'), quality: root.fork('qualidade'), staff: root.fork('equipe') };
   return {
     config,
     seed: root.seed,
@@ -180,9 +223,16 @@ export function createState(config: DayConfig, seed: number): DayState {
       oil: t.oil,
       dirt: 0,
       changeProgress: 0,
+      changeTotal: 0,
+      changeBy: 0,
       thermostat: t.thermostat,
       alarm: t.alarm,
       timer: t.timer,
+    })),
+    workers: config.staff.map((w) => ({
+      id: w.id, name: w.name, kind: w.kind, traits: [...w.traits], courses: [...w.courses], mode: w.mode,
+      fixedPosition: w.position, position: null, energy: 100, task: null, resting: null, ordered: false,
+      idleSeconds: 0, restSeconds: 0, minEnergy: 100,
     })),
     ready: [],
     cups: [],
