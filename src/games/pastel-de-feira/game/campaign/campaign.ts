@@ -181,6 +181,7 @@ export function toDayConfig(c: Campaign): DayConfig {
     delivery: { on: c.owned.delivery && c.deliveryOn, auto: c.autoAccept, partner: c.owned.equip.includes('conta-parceira') },
     tables: c.owned.tables,
     restSlots: c.owned.rest,
+    tutorial: c.tutorial && c.day === 1,
     coolers: c.owned.coolers,
   };
 }

@@ -3,7 +3,8 @@ import { H, MAX_FRAME_DT, MAX_STEPS_PER_FRAME, STEP, W, hourAt } from '../game/c
 import { pointerDown, pointerUp, syncUi, toLogical, type InputEnv } from '../game/input';
 import { buildLayout } from '../game/layout';
 import { SCALE } from '../game/hires';
-import { drawAlerts } from '../game/render/alerts';
+import { Tutorial } from '../game/tutorial';
+import { drawAlerts, drawHighlight } from '../game/render/alerts';
 import { drawPanel } from '../game/render/panel';
 import { buildStaticLayer, renderScene } from '../game/render/scene';
 import { DaySim } from '../game/sim/day';
@@ -18,11 +19,14 @@ interface Props {
   onExit: () => void;
 }
 
+type TutorialStation = import('../game/types').StationId | null;
+
 interface Hud {
   clock: string;
   cash: string;
   queue: number;
   paused: boolean;
+  tip: string;
 }
 
 const money = (n: number) => `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -38,7 +42,7 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const envRef = useRef<InputEnv | null>(null);
   const simRef = useRef<DaySim | null>(null);
-  const [hud, setHud] = useState<Hud>({ clock: '07:00', cash: money(0), queue: 0, paused: false });
+  const [hud, setHud] = useState<Hud>({ clock: '07:00', cash: money(0), queue: 0, paused: false, tip: '' });
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
 
@@ -57,11 +61,21 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
     let acc = 0;
     let hudAt = 0;
     let finished = false;
+    const tutorial = config.tutorial ? new Tutorial() : null;
+    let tip = '';
+    let highlight: TutorialStation = null;
 
     const pause = () => sim.dispatch({ type: 'pause' });
     const loop = (nowMs: number) => {
       const dt = Math.max(0, Math.min((nowMs - last) / 1000, MAX_FRAME_DT));
       last = nowMs;
+      if (tutorial && !sim.isOver()) {
+        const v = tutorial.observe(sim.state);
+        sim.setHold(v.hold);
+        if (sim.state.speed !== 1) sim.dispatch({ type: 'setSpeed', speed: 1 }); // RN-173: sem 2× nos passos guiados
+        tip = v.text;
+        highlight = v.station;
+      }
       if (!sim.state.paused && !sim.isOver()) {
         acc += dt * sim.state.speed;
         let steps = 0;
@@ -76,14 +90,15 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
       renderScene(ctx, sim.state, layout, env.ui, statics);
       drawPanel(ctx, sim.state, env.ui);
       drawAlerts(ctx, sim.state, env.ui);
+      drawHighlight(ctx, layout, highlight, env.ui);
       sim.drainEvents();
 
       if (nowMs - hudAt > 100) {
         hudAt = nowMs;
         const t = sim.state.tick * STEP;
         setHud((h) => {
-          const next = { clock: clockText(t), cash: money(sim.state.stats.revenue), queue: sim.state.customers.length, paused: sim.state.paused };
-          return h.clock === next.clock && h.cash === next.cash && h.queue === next.queue && h.paused === next.paused ? h : next;
+          const next = { clock: clockText(t), cash: money(sim.state.stats.revenue), queue: sim.state.customers.length, paused: sim.state.paused, tip };
+          return h.clock === next.clock && h.cash === next.cash && h.queue === next.queue && h.paused === next.paused && h.tip === next.tip ? h : next;
         });
       }
       if (sim.isOver() && !finished) {
@@ -150,6 +165,11 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
           Pausa
         </button>
       </div>
+      {hud.tip && (
+        <p className="tutorial-tip" role="status">
+          {hud.tip}
+        </p>
+      )}
       <canvas
         ref={canvasRef}
         width={W * SCALE}

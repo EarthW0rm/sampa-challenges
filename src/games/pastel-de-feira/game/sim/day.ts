@@ -93,11 +93,20 @@ export class DaySim {
     }
   }
 
+  /** Controle de sessão do tutorial (RN-170): congela o relógio sem bloquear a interação. */
+  setHold(on: boolean): void {
+    this.state.hold = on;
+  }
+
   step(dt: number = STEP): void {
     if (Math.abs(dt - STEP) > 1e-9) throw new Error(`DaySim.step exige dt = ${STEP}, recebeu ${dt}`);
     const s = this.state;
     if (s.over || s.paused) return;
     this.applyCommands();
+    if (s.hold) {
+      updatePasteleiro(s, STEP);
+      return;
+    }
     s.tick++;
     updatePasteleiro(s, STEP);
     updateStaff(s, STEP);

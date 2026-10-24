@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { loadSeen, pendingUnlock, saveSeen } from '../../game/unlocks';
 import { canOpen, minReputation, profitGoal } from '../../game/campaign/campaign';
 import { respondClaim } from '../../game/campaign/events';
 import { seasonOf } from '../../game/campaign/season';
@@ -37,11 +38,27 @@ function visibleTabs(c: Campaign): { id: TabId; label: string }[] {
   return tabs;
 }
 
+function safeStorage(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
 export function PrepScreen({ campaign: c, onChange, onOpen, onExit, onHandover }: Props) {
   const [tab, setTab] = useState<TabId>('insumos');
   const [themeDismissed, setThemeDismissed] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
   const tabs = visibleTabs(c);
+  const [seen, setSeen] = useState<string[]>(() => loadSeen(safeStorage()));
+  const unlock = pendingUnlock(c.day, seen);
+  const dismissUnlock = () => {
+    if (!unlock) return;
+    const next = [...seen, unlock.id];
+    setSeen(next);
+    saveSeen(safeStorage(), next);
+  };
   return (
     <main className="prep">
       <header className="prep-head">
@@ -89,6 +106,16 @@ export function PrepScreen({ campaign: c, onChange, onOpen, onExit, onHandover }
         <button type="button" onClick={onHandover}>
           Passar o ponto
         </button>
+      )}
+      {unlock && (
+        <aside className="unlock" role="status" aria-label={`Novidade: ${unlock.title}`}>
+          <p>
+            <strong>{unlock.title}.</strong> {unlock.text}
+          </p>
+          <button type="button" onClick={dismissUnlock}>
+            Entendi
+          </button>
+        </aside>
       )}
       <nav className="tabs" role="tablist">
         {tabs.map((t) => (

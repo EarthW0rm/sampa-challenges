@@ -163,6 +163,8 @@ export interface DayConfig {
   tables: number;
   /** Vagas da área de descanso, 0 sem área (RN-117). */
   restSlots: number;
+  /** Dia 1 guiado (RN-170): o tutorial observa o estado e pausa o relógio a cada passo. */
+  tutorial?: boolean;
   /** Caixas térmicas compradas (zona no layout). */
   coolers: number;
 }

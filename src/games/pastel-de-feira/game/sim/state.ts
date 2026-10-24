@@ -274,6 +274,8 @@ export interface DayState {
   tick: number;
   over: boolean;
   paused: boolean;
+  /** Pausa do tutorial: o relógio e o resto do mundo param; comandos e deslocamento do pasteleiro continuam. */
+  hold: boolean;
   speed: 1 | 2;
   rng: { customers: Rng; quality: Rng; staff: Rng; app: Rng; events: Rng };
   nextId: number;
@@ -330,6 +332,7 @@ export function createState(config: DayConfig, seed: number): DayState {
     tick: 0,
     over: false,
     paused: false,
+    hold: false,
     speed: 1,
     rng,
     nextId: 1,
