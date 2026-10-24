@@ -1,4 +1,4 @@
-import { STOCK_CAPACITY } from '../constants';
+import { STOCK_CAPACITY, THEME_DIRT_LIMIT_POPULAR } from '../constants';
 import { INGREDIENTS, DOUGH_SHELF_DAYS, CONSUMABLE_IDS } from '../data/catalog';
 import { ITEMS, type ItemId } from '../data/recipes';
 import { SPACE } from '../data/equipment';
@@ -51,6 +51,7 @@ export function newCampaign(opts: NewCampaignOptions): Campaign {
     },
     menu: { salgados: ['carne', 'queijo'], doces: [], bebidas: ['caldo-puro'] },
     prices,
+    promo: { brindeN: 0, chorinho: 0, xepa: false, xepaDiscount: 0.3 },
     deliveryOn: true,
     autoAccept: false,
     staff: [],
@@ -155,6 +156,9 @@ export function toDayConfig(c: Campaign): DayConfig {
     equipment: equipmentFlags(c),
     staff: c.staff.map((w) => ({ id: w.id, name: w.name, kind: w.kind, traits: [...w.traits], courses: [...w.courses], mode: w.mode, position: w.position })),
     positions: positionsAvailable(c),
+    promo: { ...c.promo },
+    theme: c.theme,
+    dirtLimit: c.theme === 'popular' ? THEME_DIRT_LIMIT_POPULAR : undefined,
     delivery: { on: c.owned.delivery && c.deliveryOn, auto: c.autoAccept, partner: c.owned.equip.includes('conta-parceira') },
     tables: c.owned.tables,
     restSlots: c.owned.rest,

@@ -115,6 +115,9 @@ export function isCampaign(v: unknown): v is Campaign {
   for (const [k, p] of Object.entries(v.prices)) {
     if (!owned.has(k) || !isNum(p) || clampPrice(k, p) !== p) return false;
   }
+  const pr = v.promo;
+  if (!isRec(pr) || !(pr.brindeN === 0 || isInt(pr.brindeN, 2, 6)) || !isInt(pr.chorinho, 0, 3) || !isBool(pr.xepa)) return false;
+  if (!isNum(pr.xepaDiscount) || ![0.1, 0.2, 0.3, 0.4, 0.5].some((d) => Math.abs(d - (pr.xepaDiscount as number)) < 1e-9)) return false;
   if (!isBool(v.deliveryOn) || !isBool(v.autoAccept)) return false;
   if (!isInt(v.nextStaffId, 1) || !Array.isArray(v.hiredToday) || !v.hiredToday.every(isStr)) return false;
   if (!Array.isArray(v.staff) || v.staff.length > 11 || !v.staff.every(isStaff)) return false;

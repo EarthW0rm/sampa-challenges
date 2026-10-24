@@ -1,9 +1,10 @@
-import { DIRT_FAIL_LIMIT, DIRT_FAIL_WEIGHT, DIRT_PER_ORDER, EAT_SECONDS, HYGIENE_DIRT_FACTOR, FAIL_WEIGHT, NO_BAG_PENALTY, PROFILE_MIN_QUALITY, TABLE_PREMIUM } from '../../constants';
+import { DIRT_FAIL_LIMIT, DIRT_FAIL_WEIGHT, DIRT_PER_ORDER, EAT_SECONDS, HYGIENE_DIRT_FACTOR, FAIL_WEIGHT, NO_BAG_PENALTY, CHARM_GIFT, CHARM_CHORINHO } from '../../constants';
 import { addDirt } from '../dirt';
 import { PATIENCE_COURSE_BONUS } from '../../data/staff';
 import { ITEMS, type ItemId } from '../../data/recipes';
 import type { ItemRef } from '../../types';
-import { failOrder, menuEntry, removeCustomer } from '../customers';
+import { failOrder, itemCost, minQuality, removeCustomer, salePrice, tablePremium } from '../customers';
+import { addCharm } from '../reputation';
 import { isAt } from '../pasteleiro';
 import { currentQuality, drinkValue, pastryValue, roundCents } from '../quality';
 import { recordFailure, recordSuccess } from '../reputation';
@@ -87,18 +88,24 @@ export function deliverItem(s: DayState, ref: ItemRef, customerId: number, by?: 
     return true;
   }
 
-  const price = menuEntry(s, itemId)?.price ?? ITEMS[itemId].reference;
+  const price = salePrice(s, itemId);
   let value: number;
   if (pastry) {
     let nota = currentQuality(pastry, now(s));
     if (s.consumables.saquinho > 0) s.consumables.saquinho--;
     else nota = Math.max(0, nota - NO_BAG_PENALTY); // sem saquinho (RN-28)
-    if (nota < PROFILE_MIN_QUALITY[line.profile ?? c.profile]) c.lowQuality = true; // paga, mas falha (RN-15)
-    value = pastryValue(price, nota, s.config.reputation, c.group ? TABLE_PREMIUM : 1);
+    if (nota < minQuality(s, line.profile ?? c.profile) && !line.gift) c.lowQuality = true; // paga, mas falha (RN-15)
+    value = pastryValue(price, nota, s.config.reputation, c.group ? tablePremium(s) : 1);
     s.ready.splice(s.ready.indexOf(pastry), 1);
   } else {
     value = drinkValue(price, s.config.reputation);
+    addCharm(s, CHARM_CHORINHO * s.config.promo.chorinho); // chorinho dá encanto por nível (RN-123)
     s.cups.splice(s.cups.indexOf(cup!), 1);
+  }
+  if (line.gift) {
+    value = 0; // brinde não paga: dá encanto e custa insumo (RN-122)
+    addCharm(s, CHARM_GIFT);
+    s.stats.giftCost += itemCost(itemId);
   }
   c.owed += value;
   line.delivered = itemId;

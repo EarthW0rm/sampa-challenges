@@ -1,10 +1,11 @@
 import {
   APP_CAP_BASE, APP_CAP_HIGH, APP_CAP_MID, APP_CAP_PARTNER, APP_FEE, APP_MOTO_MAX_ORDERS, APP_MOTO_WAIT, APP_MOTO_WAIT_LOW_REP,
   APP_OFFER_INTERVAL, APP_OFFER_SECONDS, APP_ORDER_MAX, APP_ORDER_MIN, APP_PICKUP_DELAY, APP_TRANSPORT_LOSS, APP_LOW_QUALITY,
-  FAIL_WEIGHT, LOW_REPUTATION_LIMIT,
+  CHARM_GIFT, FAIL_WEIGHT, LOW_REPUTATION_LIMIT,
 } from '../constants';
 import { ITEMS, type ItemId } from '../data/recipes';
-import { menuEntry } from './customers';
+import { giftFor, itemCost, menuEntry } from './customers';
+import { addCharm } from './reputation';
 import { currentQuality, qualityFactor, reputationPremium, roundCents } from './quality';
 import { recordFailure, recordSuccess } from './reputation';
 import { warmReady, warmedCount, warmerCapacity } from './stations/warmer';
@@ -38,7 +39,14 @@ export function acceptOffer(s: DayState, offerId: number): boolean {
   const [offer] = s.offers.splice(i, 1);
   s.consumables.embalagem--;
   s.acceptedToday++;
-  s.comandas.push({ id: offer.id, items: offer.items, packed: offer.items.map(() => null), pickupAt: now(s) + APP_PICKUP_DELAY, motoboy: null });
+  const items = [...offer.items];
+  const gifts = items.map(() => false);
+  const gift = giftFor(s, items); // o brinde vale no app, sem mudar o tamanho da oferta (RN-120, RN-121)
+  if (gift) {
+    items.push(gift);
+    gifts.push(true);
+  }
+  s.comandas.push({ id: offer.id, items, packed: items.map(() => null), gifts, pickupAt: now(s) + APP_PICKUP_DELAY, motoboy: null });
   emit(s, 'oferta_aceita', offer.id);
   return true;
 }
@@ -78,6 +86,12 @@ function pickup(s: DayState, c: Comanda): void {
     if (!r) return;
     const nota = Math.max(0, currentQuality(r, now(s)) - loss);
     if (nota < APP_LOW_QUALITY) low = true;
+    if (c.gifts[k]) {
+      addCharm(s, CHARM_GIFT);
+      s.stats.giftCost += itemCost(c.items[k]);
+      s.ready.splice(s.ready.indexOf(r), 1);
+      return;
+    }
     const price = menuEntry(s, c.items[k])?.price ?? ITEMS[c.items[k]].reference;
     revenue += price * (1 - APP_FEE) * qualityFactor(nota) * reputationPremium(s.config.reputation);
     s.ready.splice(s.ready.indexOf(r), 1);

@@ -69,6 +69,16 @@ export interface Candidate {
   traits: TraitId[];
 }
 
+export interface Promo {
+  /** 0 = desligado; de 2 a 6: a cada N pastéis, 1 de brinde (RN-120). */
+  brindeN: number;
+  /** Nível do chorinho, 0 a 3 (RN-123). */
+  chorinho: number;
+  xepa: boolean;
+  /** Desconto da xepa, de 0,1 a 0,5 (RN-124). */
+  xepaDiscount: number;
+}
+
 export interface MenuChoice {
   salgados: ItemId[];
   doces: ItemId[];
@@ -106,6 +116,8 @@ export interface Campaign {
   owned: Owned;
   menu: MenuChoice;
   prices: Record<ItemId, number>;
+  /** Promoções do dia (RN-120, RN-123, RN-124). */
+  promo: Promo;
   /** Delivery ligado hoje e aceite automático (RN-90, RN-95). */
   deliveryOn: boolean;
   autoAccept: boolean;
@@ -165,6 +177,8 @@ export interface Balance {
   spoiledUnits: number;
   burnedUnits: number;
   leftoverUnits: number;
+  /** Custo dos brindes entregues (já está nos insumos usados). */
+  giftCost: number;
   wastePercent: number;
   bonus: number;
   bankrupt: boolean;

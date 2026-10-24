@@ -9,6 +9,8 @@ export interface OrderLine {
   item: ItemId;
   /** Perfil de quem pediu este item (grupos têm perfis diferentes, spec seção 4). */
   profile?: Profile;
+  /** Pastel de brinde: não paga, dá encanto na entrega (RN-120, RN-122). */
+  gift?: boolean;
   /** Item entregue, quando já foi. */
   delivered: ItemId | null;
 }
@@ -177,6 +179,8 @@ export interface Comanda {
   items: ItemId[];
   /** Pastel pronto reservado para cada item, ou null. */
   packed: (number | null)[];
+  /** Itens que são brinde (RN-120). */
+  gifts: boolean[];
   /** Instante do dia (s) da retirada (RN-91). */
   pickupAt: number;
   motoboy: number | null;
@@ -207,6 +211,7 @@ export interface Stats {
   revenue: number;
   oilCost: number;
   tableRevenue: number;
+  giftCost: number;
   appRevenue: number;
   appPicked: number;
   appCancelled: number;
@@ -319,7 +324,7 @@ export function createState(config: DayConfig, seed: number): DayState {
     rep: { successes: 0, charm: 0, failures: 0 },
     stats: {
       arrived: 0, served: 0, lostPatience: 0, wrong: 0, queueFull: 0, lostPrice: 0, noStock: 0,
-      burned: 0, revenue: 0, oilCost: 0, tableRevenue: 0, appRevenue: 0, appPicked: 0, appCancelled: 0, lostDirt: 0, payFail: 0,
+      burned: 0, revenue: 0, oilCost: 0, tableRevenue: 0, giftCost: 0, appRevenue: 0, appPicked: 0, appCancelled: 0, lostDirt: 0, payFail: 0,
     },
   };
 }

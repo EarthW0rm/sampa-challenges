@@ -71,3 +71,10 @@ export const CONSUMABLES: Readonly<Record<ConsumableId, Consumable>> = Object.fr
 });
 
 export const CONSUMABLE_IDS: readonly ConsumableId[] = ['copo', 'saquinho', 'embalagem'];
+
+/** Custo dos insumos de uma lista (massa, recheio, tempero) em R$. */
+export const ingredientsCost = (needs: Iterable<[IngredientId, number]>): number => {
+  let v = 0;
+  for (const [id, n] of needs) v += (INGREDIENTS[id]?.cost ?? 0) * n;
+  return v;
+};

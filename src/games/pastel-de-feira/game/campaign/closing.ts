@@ -1,3 +1,4 @@
+import { XEPA_LEFTOVER_VALUE, THEME_REPUTATION_BONUS } from '../constants';
 import { CONSUMABLES, CONSUMABLE_IDS, INGREDIENTS } from '../data/catalog';
 import type { DayResult } from '../types';
 import { payroll } from './actions/staff';
@@ -53,11 +54,17 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   }
   let spoiledUnits = 0;
   let spoiledCost = 0;
+  let leftoverSale = 0;
   for (const lot of expiring) {
-    spoiledUnits += lot.qty;
-    spoiledCost += lot.qty * lot.unitCost;
+    if (campaign.promo.xepa && INGREDIENTS[lot.ingredient].kind !== 'massa') {
+      leftoverSale += lot.qty * lot.unitCost * XEPA_LEFTOVER_VALUE; // sobras vendidas na xepa (RN-125)
+    } else {
+      spoiledUnits += lot.qty;
+      spoiledCost += lot.qty * lot.unitCost;
+    }
     lot.qty = 0;
   }
+  leftoverSale = round2(leftoverSale);
   c.inventory = [...c.inventory.filter((l) => l.qty > 0), ...extra];
 
   // 4. Desperdício e bônus de aproveitamento (RN-37, PA-04, PA-05)
@@ -71,6 +78,7 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   lines.push({ id: 'receita', label: 'Vendas', amount: round2(revenue) });
   lines.push({ id: 'insumos', label: 'Insumos usados', amount: -round2(usedCost) });
   lines.push({ id: 'estragados', label: 'Insumos estragados', amount: -round2(spoiledCost) });
+  if (leftoverSale > 0) lines.push({ id: 'xepa', label: 'Sobras vendidas na xepa', amount: leftoverSale });
   lines.push({ id: 'consumiveis', label: 'Copos e saquinhos', amount: -round2(consumablesCost) });
   lines.push({ id: 'oleo', label: 'Troca de óleo', amount: -round2(clampMoney(result.costs.oil)) });
   const rent = dailySpaceFee(campaign);
@@ -82,12 +90,13 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   const profit = round2(lines.reduce((n, l) => n + l.amount, 0));
 
   // 5. Caixa: compras já saíram no Preparo. Entram vendas e bônus; saem óleo e custos fixos.
-  const cashIn = revenue + bonus - clampMoney(result.costs.oil) - rent - wages;
+  const cashIn = revenue + bonus + leftoverSale - clampMoney(result.costs.oil) - rent - wages;
   c.cash = round2(c.cash + cashIn);
 
   // 6. Reputação (RN-62)
   const reputationBefore = campaign.reputation;
-  c.reputation = Math.max(1, Math.min(5, round2(reputationBefore + result.reputation.change)));
+  const change = result.reputation.change > 0 && campaign.theme === 'tradicional' ? result.reputation.change * THEME_REPUTATION_BONUS : result.reputation.change;
+  c.reputation = Math.max(1, Math.min(5, round2(reputationBefore + change)));
 
   // 7. Meta (RN-50, RN-54)
   const goal = campaign.freeMode ? null : profitGoal(campaign.day);
@@ -139,6 +148,7 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
     spoiledUnits,
     burnedUnits,
     leftoverUnits,
+    giftCost: result.giftCost,
     wastePercent,
     bonus,
     bankrupt: c.cash < 0,

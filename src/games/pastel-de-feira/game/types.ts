@@ -120,6 +120,10 @@ export interface DayConfig {
   dirtLimit?: number;
   /** Delivery do app: ligado hoje, aceite automático e Conta Parceira (RN-90, RN-95). */
   delivery: { on: boolean; auto: boolean; partner: boolean };
+  /** Promoções do dia (RN-120, RN-123, RN-124). */
+  promo: { brindeN: number; chorinho: number; xepa: boolean; xepaDiscount: number };
+  /** Tema da barraca (RN-17). */
+  theme: 'popular' | 'tradicional' | 'gourmet' | null;
   /** Mesas compradas, 0 a 4 (RN-80). */
   tables: number;
   /** Vagas da área de descanso, 0 sem área (RN-117). */
@@ -197,6 +201,8 @@ export interface DayResult {
   reputation: { successes: number; charm: number; weightedFailures: number; rate: number; change: number };
   stockLeft: StockLot[];
   consumables: Record<ConsumableId, number>;
+  /** Custo dos insumos dos brindes entregues (já incluído nos insumos usados). */
+  giftCost: number;
   /** Resumo de cada funcionário no dia (energia, ociosidade). */
   staff: StaffDayResult[];
 }

@@ -4,8 +4,10 @@ import {
   DIRT_PATIENCE_FACTOR, DIRT_PATIENCE_LIMIT, FAIL_WEIGHT, LOW_REPUTATION_ARRIVAL, LOW_REPUTATION_LIMIT, ORDER_DESSERT_CHANCE, ORDER_DESSERT_CHANCE_LATE, ORDER_DESSERT_LATE_HOUR, ORDER_DRINK_CHANCE, ORDER_PASTRIES_MAX,
   ORDER_PASTRIES_MIN, PATIENCE, PEAK_END_HOUR, PEAK_FACTOR, PEAK_START_HOUR, PROFILE_CEILING,
   PROFILE_MIX_BASE, PROFILE_MIX_EXPENSIVE, PROFILE_MIX_PRICE_INDEX, QUEUE_MAX, REPUTATION_CEILING_BONUS, TABLE_CHOICE, TABLE_PATIENCE_FACTOR, hourAt,
+  BRINDE_BUMP_HIGH, BRINDE_BUMP_LOW, THEME_MIX_SHIFT, THEME_QUALITY_BONUS, TABLE_PREMIUM, THEME_TABLE_PREMIUM_BONUS, PROFILE_MIN_QUALITY, XEPA_ECONOMIC_BOOST, XEPA_START_HOUR,
 } from '../constants';
-import { ITEMS, type ItemId } from '../data/recipes';
+import { ITEMS, itemIngredients, type ItemId } from '../data/recipes';
+import { ingredientsCost } from '../data/catalog';
 import type { DayConfig, MenuEntry, Profile } from '../types';
 import { recordFailure } from './reputation';
 import { drawGroupSize, findTable, occupySeats, releaseSeats, waiterPresent } from './stations/tables';
@@ -36,11 +38,24 @@ export function priceIndex(config: DayConfig): number {
 }
 
 /** Mistura de perfis para o dia, a hora e o índice de preço (RN-12, RN-19). Soma 1. */
-export function profileShares(day: number, hour: number, index: number): Record<Profile, number> {
+export function profileShares(day: number, hour: number, index: number, theme: 'popular' | 'tradicional' | 'gourmet' | null = null): Record<Profile, number> {
   const t = clamp01((index - 1) / (PROFILE_MIX_PRICE_INDEX - 1));
   let eco = lerp(PROFILE_MIX_BASE.economico, PROFILE_MIX_EXPENSIVE.economico, t);
   let pad = lerp(PROFILE_MIX_BASE.padrao, PROFILE_MIX_EXPENSIVE.padrao, t);
   let exi = lerp(PROFILE_MIX_BASE.exigente, PROFILE_MIX_EXPENSIVE.exigente, t);
+  if (theme === 'popular' || theme === 'gourmet') {
+    // o tema desloca a mistura: o que um perfil ganha sai do Padrão e, se faltar, do outro (RN-17)
+    const shift = Math.min(THEME_MIX_SHIFT, pad + (theme === 'popular' ? exi : eco));
+    const fromPad = Math.min(pad, shift);
+    pad -= fromPad;
+    if (theme === 'popular') {
+      eco += shift;
+      exi -= shift - fromPad;
+    } else {
+      exi += shift;
+      eco -= shift - fromPad;
+    }
+  }
   if (day >= EXIGENTE_RAMP_FIRST_DAY) {
     const bonus =
       EXIGENTE_RAMP_MAX_BONUS * clamp01((day - EXIGENTE_RAMP_FIRST_DAY) / (EXIGENTE_RAMP_LAST_DAY - EXIGENTE_RAMP_FIRST_DAY));
@@ -63,13 +78,48 @@ export function arrivalInterval(s: DayState): number {
   const hour = hourAt(now(s));
   if (hour >= PEAK_START_HOUR && hour < PEAK_END_HOUR) interval /= PEAK_FACTOR;
   if (s.config.reputation < LOW_REPUTATION_LIMIT) interval /= LOW_REPUTATION_ARRIVAL;
+  if (xepaActive(s)) {
+    // na xepa a chegada de Econômicos sobe 30%: o fluxo total cresce na proporção da fatia deles (RN-124)
+    const eco = profileShares(s.config.day, hour, priceIndex(s.config), s.config.theme).economico;
+    interval /= 1 + (XEPA_ECONOMIC_BOOST - 1) * eco;
+  }
   return interval;
 }
 
 const nextArrival = (s: DayState): number => arrivalInterval(s) * (0.5 + s.rng.customers.next());
 
 /** O item cabe no teto do cliente? (RN-13) */
-const affordable = (m: MenuEntry, ceiling: number): boolean => m.price <= ceiling * ITEMS[m.item].reference + EPS;
+/** A xepa vale das 13h às 14h, quando ligada (RN-124). */
+export const xepaActive = (s: DayState): boolean => s.config.promo.xepa && hourAt(now(s)) >= XEPA_START_HOUR;
+
+/** Preço de venda no balcão e na mesa: com o desconto da xepa quando ela vale. O app não tem xepa (RN-93). */
+export const salePrice = (s: DayState, item: ItemId): number => {
+  const base = menuEntry(s, item)?.price ?? ITEMS[item].reference;
+  return xepaActive(s) ? Math.round(base * (1 - s.config.promo.xepaDiscount) * 100) / 100 : base;
+};
+
+const affordableAt = (s: DayState, m: MenuEntry, ceiling: number): boolean => salePrice(s, m.item) <= ceiling * ITEMS[m.item].reference + EPS;
+
+/** Exigência de nota do perfil; o tema Gourmet soma 10 (RN-11, RN-17). */
+export const minQuality = (s: DayState, profile: Profile): number =>
+  PROFILE_MIN_QUALITY[profile] + (s.config.theme === 'gourmet' ? THEME_QUALITY_BONUS : 0);
+
+/** Prêmio de mesa de 15%, +10% no tema Gourmet (RN-82, RN-17). */
+export const tablePremium = (s: DayState): number => TABLE_PREMIUM + (s.config.theme === 'gourmet' ? THEME_TABLE_PREMIUM_BONUS : 0);
+
+/** Pastel de brinde de um pedido: o de menor preço entre os pagos; sem insumo, um Tradicional de 1 etapa (RN-120, spec 4). */
+export function giftFor(s: DayState, items: readonly ItemId[]): ItemId | null {
+  const n = s.config.promo.brindeN;
+  const paid = items.filter((i) => ITEMS[i].kind === 'salgado');
+  if (n <= 0 || paid.length < n) return null;
+  const cheapest = [...paid].sort((a, b) => salePrice(s, a) - salePrice(s, b))[0];
+  if (canMake(s, ITEMS[cheapest])) return cheapest;
+  const fallback = s.config.menu.map((m) => m.item).find((id) => ITEMS[id].category === 'tradicional' && ITEMS[id].steps === 1 && canMake(s, ITEMS[id]));
+  return fallback ?? null;
+}
+
+/** Custo dos insumos de um item (para o custo dos brindes). */
+export const itemCost = (id: ItemId): number => ingredientsCost(itemIngredients(ITEMS[id]));
 
 /** Cria o cliente na fila (usado pela chegada e pelos cenários). */
 export function addCustomer(s: DayState, profile: Profile, items: readonly ItemId[]): Customer {
@@ -121,14 +171,16 @@ function drawOrder(s: DayState, profile: Profile): Drawn {
   const rng = s.rng.customers;
   const ceiling = ceilingFor(profile, s.config.reputation);
   const available = s.config.menu.filter((m) => canMake(s, ITEMS[m.item]));
-  const pastries = available.filter((m) => ITEMS[m.item].kind === 'salgado' && affordable(m, ceiling));
-  const desserts = available.filter((m) => ITEMS[m.item].kind === 'doce' && affordable(m, ceiling));
-  const drinks = available.filter((m) => ITEMS[m.item].kind === 'bebida' && affordable(m, ceiling));
+  const pastries = available.filter((m) => ITEMS[m.item].kind === 'salgado' && affordableAt(s, m, ceiling));
+  const desserts = available.filter((m) => ITEMS[m.item].kind === 'doce' && affordableAt(s, m, ceiling));
+  const drinks = available.filter((m) => ITEMS[m.item].kind === 'bebida' && affordableAt(s, m, ceiling));
   if (pastries.length === 0) {
     return { items: [], lost: available.some((m) => ITEMS[m.item].kind === 'salgado') ? 'price' : 'stock' };
   }
   const items: ItemId[] = [];
-  const n = rng.int(ORDER_PASTRIES_MIN, ORDER_PASTRIES_MAX);
+  let n = rng.int(ORDER_PASTRIES_MIN, ORDER_PASTRIES_MAX);
+  const promoN = s.config.promo.brindeN;
+  if (promoN > 0 && n < promoN && rng.chance(promoN <= 3 ? BRINDE_BUMP_LOW : BRINDE_BUMP_HIGH)) n = promoN; // RN-121
   for (let i = 0; i < n; i++) items.push(rng.weighted(pastries, (m) => m.weight ?? 1)!.item);
   const dessertChance = hourAt(now(s)) >= ORDER_DESSERT_LATE_HOUR ? ORDER_DESSERT_CHANCE_LATE : ORDER_DESSERT_CHANCE;
   if (desserts.length > 0 && rng.chance(dessertChance)) items.push(rng.weighted(desserts, (m) => m.weight ?? 1)!.item);
@@ -161,12 +213,14 @@ function spawnIndividual(s: DayState, profile: Profile): void {
   const order = drawOrder(s, profile);
   if (order.lost) return loseCustomer(s, order.lost);
   const c = addCustomer(s, profile, order.items);
+  const gift = giftFor(s, order.items);
+  if (gift) c.lines.push({ item: gift, delivered: null, gift: true });
   emit(s, 'cliente_chegou', c.id);
 }
 
 /** Membros extras de um grupo: só Padrão e Exigentes escolhem mesa (RN-81). */
 function groupProfiles(s: DayState, leader: Profile, size: number): Profile[] {
-  const shares = profileShares(s.config.day, hourAt(now(s)), priceIndex(s.config));
+  const shares = profileShares(s.config.day, hourAt(now(s)), priceIndex(s.config), s.config.theme);
   const out: Profile[] = [leader];
   while (out.length < size) out.push(s.rng.customers.weighted(['padrao', 'exigente'] as const, (p) => shares[p]) ?? 'padrao');
   return out;
@@ -197,6 +251,8 @@ function seatGroup(s: DayState, profiles: Profile[]): boolean {
   }
   const c = addCustomer(s, profiles[0], lines.map((l) => l.item));
   c.lines.forEach((l, i) => (l.profile = lines[i].profile));
+  const gift = giftFor(s, lines.map((l) => l.item));
+  if (gift) c.lines.push({ item: gift, delivered: null, gift: true, profile: profiles[0] });
   const base = Math.min(...profiles.map((p) => PATIENCE[p])) * TABLE_PATIENCE_FACTOR;
   c.patience = base;
   c.patienceMax = base;
@@ -211,8 +267,9 @@ function seatGroup(s: DayState, profiles: Profile[]): boolean {
 export function spawnCustomer(s: DayState, forced?: Profile): void {
   const rng = s.rng.customers;
   s.stats.arrived++;
-  const shares = profileShares(s.config.day, hourAt(now(s)), priceIndex(s.config));
-  const profile = forced ?? rng.weighted(PROFILES, (p) => shares[p]) ?? 'padrao';
+  const shares = profileShares(s.config.day, hourAt(now(s)), priceIndex(s.config), s.config.theme);
+  const boost = xepaActive(s) ? XEPA_ECONOMIC_BOOST : 1; // na xepa chegam 30% mais Econômicos (RN-124)
+  const profile = forced ?? rng.weighted(PROFILES, (p) => shares[p] * (p === 'economico' ? boost : 1)) ?? 'padrao';
   if (profile === 'exigente' && s.dirt >= dirtLimit(s)) {
     s.stats.lostDirt++; // Exigente não entra numa barraca suja (RN-16)
     return;
@@ -241,19 +298,19 @@ function supplyOf(s: DayState, id: ItemId): number {
 function chooseSubstitute(s: DayState, profile: Profile, wanted: ItemId): ItemId | null {
   const ceiling = ceilingFor(profile, s.config.reputation);
   const x = ITEMS[wanted];
-  const xPrice = menuEntry(s, wanted)?.price ?? Infinity;
+  const xPrice = salePrice(s, wanted);
   const options = s.config.menu.filter((m) => {
     const it = ITEMS[m.item];
     return m.item !== wanted && it.category === x.category && canMake(s, it);
   });
   if (profile === 'economico') {
-    const ok = options.filter((m) => affordable(m, ceiling));
-    ok.sort((a, b) => unitsMakeable(s, ITEMS[b.item]) - unitsMakeable(s, ITEMS[a.item]) || a.price - b.price || (a.item < b.item ? -1 : 1));
+    const ok = options.filter((m) => affordableAt(s, m, ceiling));
+    ok.sort((a, b) => unitsMakeable(s, ITEMS[b.item]) - unitsMakeable(s, ITEMS[a.item]) || salePrice(s, a.item) - salePrice(s, b.item) || (a.item < b.item ? -1 : 1));
     return ok[0]?.item ?? null;
   }
   if (profile === 'padrao') {
-    const ok = options.filter((m) => m.price <= xPrice + EPS);
-    ok.sort((a, b) => b.price - a.price || unitsMakeable(s, ITEMS[b.item]) - unitsMakeable(s, ITEMS[a.item]) || (a.item < b.item ? -1 : 1));
+    const ok = options.filter((m) => salePrice(s, m.item) <= xPrice + EPS);
+    ok.sort((a, b) => salePrice(s, b.item) - salePrice(s, a.item) || unitsMakeable(s, ITEMS[b.item]) - unitsMakeable(s, ITEMS[a.item]) || (a.item < b.item ? -1 : 1));
     return ok[0]?.item ?? null;
   }
   return null;

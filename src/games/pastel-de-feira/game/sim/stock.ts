@@ -1,3 +1,4 @@
+import { CHORINHO_DOSE } from '../constants';
 import { itemIngredients, ITEMS, type Item, type ItemId } from '../data/recipes';
 import type { IngredientId } from '../data/catalog';
 import type { DayState } from './state';
@@ -10,9 +11,16 @@ export function stockQty(s: DayState, ing: IngredientId): number {
 }
 
 /** Quantas unidades do item dá para fazer com o estoque (e o copo, no caso do caldo). */
+/** Insumos de uma unidade: o chorinho soma 0,1 dose de cana por nível ao caldo (RN-123). */
+export function needs(s: DayState, item: Item): Map<IngredientId, number> {
+  const m = itemIngredients(item);
+  if (item.kind === 'bebida') m.set('cana', Math.round(((m.get('cana') ?? 1) + CHORINHO_DOSE * s.config.promo.chorinho) * 100) / 100);
+  return m;
+}
+
 export function unitsMakeable(s: DayState, item: Item): number {
   let min = Infinity;
-  for (const [ing, need] of itemIngredients(item)) min = Math.min(min, Math.floor(stockQty(s, ing) / need));
+  for (const [ing, need] of needs(s, item)) min = Math.min(min, Math.floor(stockQty(s, ing) / need + 1e-9));
   if (item.kind === 'bebida') min = Math.min(min, s.consumables.copo);
   return Number.isFinite(min) ? min : 0;
 }

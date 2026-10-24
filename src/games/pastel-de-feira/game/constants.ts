@@ -184,3 +184,23 @@ export const APP_CAP_BASE = 3;
 export const APP_CAP_MID = 6;
 export const APP_CAP_HIGH = 10;
 export const APP_CAP_PARTNER = 4;
+
+// RN-17, RN-120..125: promoções, xepa e tema
+export const BRINDE_BUMP_LOW = 0.4;
+export const BRINDE_BUMP_HIGH = 0.2;
+export const BRINDE_MIN_N = 2;
+export const BRINDE_MAX_N = 6;
+export const CHORINHO_MAX = 3;
+export const CHORINHO_DOSE = 0.1;
+export const CHORINHO_SECONDS = 0.3;
+export const XEPA_START_HOUR = 13;
+export const XEPA_ECONOMIC_BOOST = 1.3;
+export const XEPA_LEFTOVER_VALUE = 0.3;
+export const XEPA_DISCOUNTS: readonly number[] = [0.1, 0.2, 0.3, 0.4, 0.5];
+export const THEME_MIN_DAY = 5;
+export const THEME_CHANGE_COST = 500;
+export const THEME_MIX_SHIFT = 0.15;
+export const THEME_DIRT_LIMIT_POPULAR = 75;
+export const THEME_REPUTATION_BONUS = 1.1;
+export const THEME_TABLE_PREMIUM_BONUS = 0.1;
+export const THEME_QUALITY_BONUS = 10;

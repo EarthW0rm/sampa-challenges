@@ -25,7 +25,7 @@ export function expectedCustomers(c: Campaign): number {
 /** Fração dos clientes que consegue comprar algum pastel pelo preço do cardápio (RN-11, RN-13). */
 function buyingShare(c: Campaign): number {
   const entries = menuEntries(c).filter((m) => ITEMS[m.item].kind !== 'bebida');
-  const shares = profileShares(c.day, 11, 1);
+  const shares = profileShares(c.day, 11, 1, c.theme);
   let share = 0;
   for (const p of ['economico', 'padrao', 'exigente'] as const) {
     const ceiling = ceilingFor(p, c.reputation);

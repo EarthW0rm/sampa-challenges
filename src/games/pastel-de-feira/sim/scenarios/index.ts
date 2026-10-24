@@ -14,7 +14,9 @@ import { moenda } from './moenda';
 import { posicoes } from './posicoes';
 import { preparo } from './preparo';
 import { pagamento } from './pagamento';
+import { promocoes } from './promocoes';
 import { relogio } from './relogio';
+import { xepaTema } from './xepa-tema';
 import { reputacao } from './reputacao';
 import { save } from './save';
 import { sujeira } from './sujeira';
@@ -35,6 +37,8 @@ export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   energia,
   mesas,
   delivery,
+  promocoes,
+  'xepa-tema': xepaTema,
   pagamento,
   sujeira,
   save,

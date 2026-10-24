@@ -1,16 +1,17 @@
-import { HOLD_MILL_MANUAL } from '../../constants';
+import { CHORINHO_SECONDS, HOLD_MILL_MANUAL } from '../../constants';
 import { MILL_MOTOR_SECONDS } from '../../data/equipment';
-import { itemIngredients, ITEMS, type ItemId } from '../../data/recipes';
+import { ITEMS, type ItemId } from '../../data/recipes';
 import { menuEntry, swapDemand } from '../customers';
 import { isAt } from '../pasteleiro';
 import { emit, newId, type DayState } from '../state';
-import { canMake, consumeIngredient } from '../stock';
+import { canMake, consumeIngredient, needs } from '../stock';
 
 const EPS = 1e-9;
 const DEFAULT_DRINK: ItemId = 'caldo-puro';
 
 /** Segundos para extrair um caldo: 6 s na moenda manual, 2,5 s na motorizada (RN-42). */
-export const millSeconds = (s: DayState): number => (s.config.equipment.mill === 'motorizada' ? MILL_MOTOR_SECONDS : HOLD_MILL_MANUAL);
+export const millSeconds = (s: DayState): number =>
+  (s.config.equipment.mill === 'motorizada' ? MILL_MOTOR_SECONDS : HOLD_MILL_MANUAL) + CHORINHO_SECONDS * s.config.promo.chorinho;
 
 /** Começa a extrair o caldo segurando a moenda (RN-42). Trocar de bebida zera o progresso. */
 export function startMill(s: DayState, item: ItemId = DEFAULT_DRINK): boolean {
@@ -36,7 +37,7 @@ export function stopMill(s: DayState): void {
 export function makeCup(s: DayState, id: ItemId): boolean {
   const item = ITEMS[id];
   if (!item || !canMake(s, item)) return false;
-  for (const [ing, need] of itemIngredients(item)) consumeIngredient(s, ing, need);
+  for (const [ing, need] of needs(s, item)) consumeIngredient(s, ing, need);
   s.consumables.copo--;
   const cup = { id: newId(s), item: item.id };
   s.cups.push(cup);
