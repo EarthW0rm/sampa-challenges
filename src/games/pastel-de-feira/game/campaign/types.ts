@@ -1,5 +1,6 @@
 import type { ConsumableId, IngredientId } from '../data/catalog';
 import type { EquipId } from '../data/equipment';
+import type { CourseId, PositionId, StaffKind, TraitId } from '../data/staff';
 import type { ItemId } from '../data/recipes';
 import type { TachoConfig } from '../types';
 
@@ -35,8 +36,37 @@ export interface Owned {
   extraM2: number;
   /** Equipamentos globais comprados (RN-73). */
   equip: EquipId[];
+  /** Mesas compradas (US-114), 0 a 4. */
+  tables: number;
+  /** Área de delivery comprada (US-115). */
+  delivery: boolean;
+  /** Escritório comprado (US-117). */
+  office: boolean;
+  /** Vagas da área de descanso: 0 = sem área (RN-117). */
+  rest: number;
   /** Dinheiro gasto em equipamentos, espaço, mesas e estruturas (base do valor do ponto, RN-57). */
   spent: number;
+}
+
+/** Funcionário contratado (RN-47–49). `position` vale só no modo fixo. */
+export interface Staff {
+  id: number;
+  name: string;
+  kind: StaffKind;
+  traits: TraitId[];
+  courses: CourseId[];
+  mode: 'fixo' | 'auto';
+  position: PositionId | null;
+  /** Já fez um curso hoje (no máximo 1 por dia, RN-118). */
+  trainedToday: boolean;
+}
+
+/** Candidato do dia (não é salvo: sai da semente e do calendário). */
+export interface Candidate {
+  id: string;
+  name: string;
+  kind: StaffKind;
+  traits: TraitId[];
 }
 
 export interface MenuChoice {
@@ -76,6 +106,10 @@ export interface Campaign {
   owned: Owned;
   menu: MenuChoice;
   prices: Record<ItemId, number>;
+  staff: Staff[];
+  nextStaffId: number;
+  /** Candidatos já contratados hoje (somem da lista do dia). */
+  hiredToday: string[];
   /** Dias seguidos no cardápio por receita base (RN-30c). */
   fatigue: Record<string, number>;
   /** Unidades de insumo compradas no Preparo de hoje (base do % de desperdício, RN-37). */

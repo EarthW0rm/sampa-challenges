@@ -1,5 +1,6 @@
 import { CONSUMABLE_IDS, INGREDIENTS } from '../data/catalog';
 import { EQUIP_IDS } from '../data/equipment';
+import { COURSE_IDS, POSITION_LABEL, TRAIT_IDS } from '../data/staff';
 import { ITEMS } from '../data/recipes';
 import { HISTORY_MAX } from './closing';
 import { clampPrice } from './pricing';
@@ -65,6 +66,16 @@ function isHistory(v: unknown): v is DayHistory {
   );
 }
 
+function isStaff(v: unknown): boolean {
+  if (!isRec(v) || !isInt(v.id, 1) || !isStr(v.name) || v.name.length > 40) return false;
+  if (v.kind !== 'fritador' && v.kind !== 'geral') return false;
+  const uniqueOf = (list: unknown, ids: readonly string[]) => Array.isArray(list) && list.every((x) => isStr(x) && ids.includes(x)) && new Set(list).size === list.length;
+  if (!uniqueOf(v.traits, TRAIT_IDS) || !uniqueOf(v.courses, COURSE_IDS) || (v.traits as unknown[]).length > 2) return false;
+  if (v.mode !== 'fixo' && v.mode !== 'auto') return false;
+  if (v.mode === 'auto' ? v.position !== null : !(isStr(v.position) && v.position in POSITION_LABEL)) return false;
+  return isBool(v.trainedToday);
+}
+
 const knownItems = (list: unknown): list is string[] => Array.isArray(list) && list.every((i) => isStr(i) && ITEMS[i] !== undefined);
 
 /** Valida a campanha inteira: tipos, faixas, enums e referências ao catálogo. Sem conserto parcial. */
@@ -89,7 +100,9 @@ export function isCampaign(v: unknown): v is Campaign {
     if (!isRec(t) || (t.baskets !== 2 && t.baskets !== 4) || (t.oil !== 'comum' && t.oil !== 'algodao')) return false;
     if (!isBool(t.thermostat) || !isBool(t.alarm) || !isBool(t.timer)) return false;
   }
-  if ((o.tachos.length - 1) * 2 + o.coolers > o.extraM2) return false; // espaço usado nunca passa do comprado
+  if (!isInt(o.tables, 0, 4) || !isBool(o.delivery) || !isBool(o.office) || !isInt(o.rest, 0, 4) || o.rest === 1) return false;
+  const used = (o.tachos.length - 1) * 2 + o.coolers + o.tables * 2 + (o.delivery ? 3 : 0) + (o.office ? 4 : 0) + (o.rest > 0 ? 1 : 0);
+  if (used > o.extraM2) return false; // espaço usado nunca passa do comprado
 
   const m = v.menu;
   if (!isRec(m) || !knownItems(m.salgados) || !knownItems(m.doces) || !knownItems(m.bebidas)) return false;
@@ -102,6 +115,9 @@ export function isCampaign(v: unknown): v is Campaign {
   for (const [k, p] of Object.entries(v.prices)) {
     if (!owned.has(k) || !isNum(p) || clampPrice(k, p) !== p) return false;
   }
+  if (!isInt(v.nextStaffId, 1) || !Array.isArray(v.hiredToday) || !v.hiredToday.every(isStr)) return false;
+  if (!Array.isArray(v.staff) || v.staff.length > 11 || !v.staff.every(isStaff)) return false;
+  if (new Set(v.staff.map((s) => (s as Rec).id)).size !== v.staff.length) return false;
   if (!isRec(v.fatigue) || !Object.entries(v.fatigue).every(([k, n]) => isStr(k) && isInt(n, 0, 10000))) return false;
   if (!Array.isArray(v.history) || v.history.length > HISTORY_MAX || !v.history.every(isHistory)) return false;
   return true;

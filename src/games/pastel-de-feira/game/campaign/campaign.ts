@@ -42,10 +42,17 @@ export function newCampaign(opts: NewCampaignOptions): Campaign {
       coolers: 0,
       extraM2: 0,
       equip: [],
+      tables: 0,
+      delivery: false,
+      office: false,
+      rest: 0,
       spent: 0,
     },
     menu: { salgados: ['carne', 'queijo'], doces: [], bebidas: ['caldo-puro'] },
     prices,
+    staff: [],
+    nextStaffId: 1,
+    hiredToday: [],
     fatigue: {},
     boughtToday: 0,
     resumes: 0,
@@ -99,6 +106,10 @@ export function stationsOf(c: Campaign): StationId[] {
   c.owned.tachos.forEach((_t, i) => list.push(`tacho${i + 1}` as StationId));
   if (c.owned.equip.includes('estufa')) list.push('estufa');
   list.push('moenda');
+  if (c.owned.tables > 0) list.push('mesas');
+  if (c.owned.delivery) list.push('expedicao');
+  if (c.owned.office) list.push('escritorio');
+  if (c.owned.rest > 0) list.push('descanso');
   return orderStations(list);
 }
 
@@ -107,7 +118,7 @@ export const totalM2 = (c: Campaign): number => SPACE.base + c.owned.extraM2;
 
 /** Metros quadrados ocupados pelas estruturas opcionais (RN-72). A barraca inicial já usa os 6 m² base. */
 export function usedM2(c: Campaign): number {
-  return (c.owned.tachos.length - 1) * 2 + c.owned.coolers;
+  return (c.owned.tachos.length - 1) * 2 + c.owned.coolers + c.owned.tables * 2 + (c.owned.delivery ? 3 : 0) + (c.owned.office ? 4 : 0) + (c.owned.rest > 0 ? 1 : 0);
 }
 
 export const freeM2 = (c: Campaign): number => c.owned.extraM2 - usedM2(c);

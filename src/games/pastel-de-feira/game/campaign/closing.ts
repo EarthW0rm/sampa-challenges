@@ -1,5 +1,6 @@
 import { CONSUMABLES, CONSUMABLE_IDS, INGREDIENTS } from '../data/catalog';
 import type { DayResult } from '../types';
+import { payroll } from './actions/staff';
 import { advanceFatigue } from './fatigue';
 import { CAMPAIGN_DAYS, COOLER_CAPACITY, cloneCampaign, dailySpaceFee, minReputation, profitGoal, round2 } from './campaign';
 import type { Balance, BalanceLine, Campaign, InvLot } from './types';
@@ -74,12 +75,14 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   lines.push({ id: 'oleo', label: 'Troca de óleo', amount: -round2(clampMoney(result.costs.oil)) });
   const rent = dailySpaceFee(campaign);
   if (rent > 0) lines.push({ id: 'espaco', label: 'Taxa de espaço', amount: -rent });
+  const wages = payroll(campaign);
+  if (wages > 0) lines.push({ id: 'salarios', label: 'Salários', amount: -wages });
   if (bonus > 0) lines.push({ id: 'bonus', label: 'Bônus de aproveitamento', amount: bonus });
 
   const profit = round2(lines.reduce((n, l) => n + l.amount, 0));
 
   // 5. Caixa: compras já saíram no Preparo. Entram vendas e bônus; saem óleo e custos fixos.
-  const cashIn = revenue + bonus - clampMoney(result.costs.oil) - rent;
+  const cashIn = revenue + bonus - clampMoney(result.costs.oil) - rent - wages;
   c.cash = round2(c.cash + cashIn);
 
   // 6. Reputação (RN-62)
@@ -106,6 +109,8 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   c.calendar = campaign.calendar + 1;
   c.boughtToday = 0;
   c.resumes = 0;
+  c.hiredToday = [];
+  for (const w of c.staff) w.trainedToday = false;
   c.history = [
     ...c.history,
     {

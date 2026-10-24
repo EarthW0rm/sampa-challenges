@@ -3,6 +3,7 @@ import { balcao } from './balcao';
 import { catalogo } from './catalogo';
 import { clientes } from './clientes';
 import { equipamentos } from './equipamentos';
+import { equipe } from './equipe';
 import { fechamento } from './fechamento';
 import { layout } from './layout';
 import { melhorias } from './melhorias';
@@ -23,6 +24,7 @@ export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   fechamento,
   melhorias,
   equipamentos,
+  equipe,
   save,
   reputacao,
   moenda,
