@@ -26,3 +26,11 @@ export function setPrice(c: Campaign, item: ItemId, price: number): ActionResult
   next.prices[item] = clampPrice(item, price);
   return { ok: true, campaign: next };
 }
+
+/** Opções do dia do delivery: ligar/desligar e aceite automático (RN-90, RN-95). Sempre válidas. */
+export function setDelivery(c: Campaign, opts: { on?: boolean; auto?: boolean }): Campaign {
+  const next = cloneCampaign(c);
+  if (opts.on !== undefined) next.deliveryOn = opts.on;
+  if (opts.auto !== undefined) next.autoAccept = opts.auto;
+  return next;
+}

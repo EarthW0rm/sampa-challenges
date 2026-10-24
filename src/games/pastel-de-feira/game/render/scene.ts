@@ -167,6 +167,24 @@ function drawTables(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): void 
   }
 }
 
+function drawDispatch(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): void {
+  st.comandas.slice(0, 4).forEach((c, i) => {
+    const x = z.x + 8 + i * 24;
+    const y = z.y + 26;
+    const done = c.packed.filter((p) => p !== null).length;
+    box(ctx, { x, y, w: 20, h: 28 }, c.motoboy !== null ? PAL.green : PAL.tile, PAL.woodDark);
+    bar(ctx, x, y + 32, 20, 4, done / c.items.length, PAL.gold);
+    const left = c.pickupAt - now(st);
+    if (left > 0) textCenter(ctx, String(Math.ceil(left)), x + 10, y + 8, PAL.text, 1);
+  });
+  st.motoboys.slice(0, 2).forEach((m, i) => {
+    const x = z.x + z.w - 22 - i * 34;
+    const y = z.y + z.h - 10;
+    dog(ctx, x, y, furOf(m.id * 5), { flip: true, hat: PAL.green });
+    bar(ctx, x - 12, y - 44, 24, 4, m.waitLeft / 25, m.waitLeft > 8 ? PAL.green : PAL.red);
+  });
+}
+
 function drawPayQueue(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): void {
   st.payQueue.forEach((c, i) => {
     const x = z.x + z.w - 16 - i * 34;
@@ -249,6 +267,8 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   const me = layout.byId.get('mesas');
   if (me) drawTables(ctx, st, me);
   if (bal && st.tables.length > 0) drawPayQueue(ctx, st, bal);
+  const ex = layout.byId.get('expedicao');
+  if (ex) drawDispatch(ctx, st, ex);
   const fila = layout.byId.get('fila');
   if (fila) {
     bar(ctx, fila.x + 6, fila.y + fila.h - 8, 90, 5, st.dirt / 100, st.dirt >= 80 ? PAL.red : st.dirt >= 60 ? PAL.orange : PAL.muted);

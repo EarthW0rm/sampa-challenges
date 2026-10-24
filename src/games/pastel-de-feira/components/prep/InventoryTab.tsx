@@ -71,7 +71,7 @@ export function InventoryTab({ campaign: c, onChange }: Props) {
       if (!r.ok) return refuse(`${INGREDIENTS[ing].name}: ${REFUSAL_TEXT[r.motivo]}`);
       cur = r.campaign;
     }
-    for (const id of ['copo', 'saquinho'] as const) {
+    for (const id of ['copo', 'saquinho', 'embalagem'] as const) {
       const n = qty[id] ?? 0;
       if (n <= 0) continue;
       const r = buyConsumable(cur, id, n);
@@ -137,7 +137,7 @@ export function InventoryTab({ campaign: c, onChange }: Props) {
           ];
         })}
         <li className="group">Embalagens</li>
-        {(['copo', 'saquinho'] as const).map((id) => (
+        {(c.owned.delivery ? (['copo', 'saquinho', 'embalagem'] as const) : (['copo', 'saquinho'] as const)).map((id) => (
           <li className="item" key={id}>
             <div className="item-main">
               <strong>{CONSUMABLES[id].name}</strong>

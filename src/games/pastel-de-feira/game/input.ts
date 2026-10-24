@@ -1,5 +1,5 @@
 import { H, W } from './constants';
-import { hitTest, inside, PANEL, type Layout } from './layout';
+import { ALERT_BAND, hitTest, inside, PANEL, type Layout } from './layout';
 import { controlAt, panelControls } from './render/panel';
 import { customerAt, workerAt } from './render/scene';
 import type { DayState } from './sim/state';
@@ -46,6 +46,7 @@ export function pointerDown(env: InputEnv, x: number, y: number): Command[] {
     return stamp(ui, cmds);
   }
 
+  if (inside(ALERT_BAND, x, y) && state.offers.length > 0) return stamp(ui, [{ type: 'acceptOffer', offerId: state.offers[0].id }]);
   const worker = workerAt(layout, state, x, y);
   if (worker !== null) {
     const w = state.workers.find((o) => o.id === worker);

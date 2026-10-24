@@ -7,10 +7,11 @@ interface Props {
   /** Resumo do `DayResult` (pedidos). */
   served: number;
   lost: number;
+  appCancelled?: number;
   onNext: () => void;
 }
 
-export function ClosingScreen({ balance: b, campaign: c, served, lost, onNext }: Props) {
+export function ClosingScreen({ balance: b, campaign: c, served, lost, appCancelled = 0, onNext }: Props) {
   return (
     <main className="screen closing">
       <h1>Fim da feira</h1>
@@ -52,6 +53,7 @@ export function ClosingScreen({ balance: b, campaign: c, served, lost, onNext }:
           <tr><th>Caixa</th><td>{money(c.cash)}</td></tr>
         </tbody>
       </table>
+      {appCancelled > 0 && <p className="warn">App: {appCancelled} cancelados</p>}
       {b.bankrupt ? (
         <p className="warn">Caixa negativo: a barraca faliu.</p>
       ) : b.freeModeStarted ? (

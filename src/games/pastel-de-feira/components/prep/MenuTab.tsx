@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { setPrice, toggleMenuItem } from '../../game/campaign/actions/menu';
+import { setDelivery, setPrice, toggleMenuItem } from '../../game/campaign/actions/menu';
 import { fatigueFactor } from '../../game/campaign/fatigue';
 import { defaultPrice } from '../../game/campaign/pricing';
 import { REFUSAL_TEXT, type Campaign } from '../../game/campaign/types';
@@ -39,6 +39,29 @@ export function MenuTab({ campaign: c, onChange }: Props) {
         Preço de venda: cada perfil só compra até um teto sobre a referência (Econômico 0,9×, Padrão 1,2×, Exigente 1,6×).
       </p>
       {msg && <p className="warn" role="status">{msg}</p>}
+      {c.owned.delivery && (
+        <div className="item">
+          <label className="check">
+            <input type="checkbox" checked={c.deliveryOn} onChange={(e) => onChange(setDelivery(c, { on: e.target.checked }))} />
+            <span className="item-main">
+              <strong>Receber pedidos do app hoje</strong>
+              <span>Ligado sem equipe, o delivery derruba a reputação (comanda atrasada pesa 3,0).</span>
+            </span>
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={c.autoAccept}
+              disabled={!c.staff.length}
+              onChange={(e) => onChange(setDelivery(c, { auto: e.target.checked }))}
+            />
+            <span className="item-main">
+              <strong>Aceite automático</strong>
+              <span>Precisa de um funcionário na Expedição; aceita toda oferta até o teto.</span>
+            </span>
+          </label>
+        </div>
+      )}
       {groups.map((g) =>
         g.items.length === 0 ? null : (
           <div key={g.title}>
