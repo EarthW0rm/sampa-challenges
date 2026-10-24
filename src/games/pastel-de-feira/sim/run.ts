@@ -1,10 +1,12 @@
 /**
  * Executor de cenários sem tela (plan 5.3). Uso:
  *   npx esbuild src/games/pastel-de-feira/sim/run.ts --bundle --platform=node --format=esm --outfile=<tmp>/pf-sim.mjs
- *   node <tmp>/pf-sim.mjs --scenario <grupo|all> [--seed N] | --list
+ *   node <tmp>/pf-sim.mjs --scenario <grupo|all> [--seed N] | --list | --replay <arquivo.json>
  * Sai com 0 se tudo passar, 1 se algum cenário falhar, 2 se o grupo não existir.
  */
 import { GROUPS } from './scenarios';
+import { readFileSync } from 'node:fs';
+import { parseReplay, runReplay } from './replay';
 
 declare const process: { argv: string[]; exit(code?: number): never };
 
@@ -18,6 +20,19 @@ const names = Object.keys(GROUPS);
 if (process.argv.includes('--list')) {
   for (const g of names) console.log(`${g} (${GROUPS[g].length} cenários)`);
   process.exit(0);
+}
+
+const replayFile = arg('--replay');
+if (replayFile) {
+  try {
+    const r = parseReplay(JSON.parse(readFileSync(replayFile, 'utf8')));
+    const h = runReplay(r);
+    console.log(`hash ${h} (esperado ${r.hash}) ${h === r.hash ? 'IGUAL' : 'DIFERENTE'}`);
+    process.exit(h === r.hash ? 0 : 1);
+  } catch (e) {
+    console.error(e instanceof Error ? e.message : String(e));
+    process.exit(2);
+  }
 }
 
 const wanted = arg('--scenario') ?? 'all';

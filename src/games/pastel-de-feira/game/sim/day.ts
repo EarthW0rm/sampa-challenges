@@ -64,6 +64,10 @@ export class DaySim {
   readonly state: DayState;
   private readonly view: DaySnapshot;
   private cached: DayResult | null = null;
+  /** Registro de comandos de jogo (depuração e replay); null = desligado. */
+  private log: { passo: number; cmd: Command }[] | null = null;
+  /** Passos executados (não conta quadros parados): é o índice dos comandos no replay. */
+  private steps = 0;
 
   constructor(config: DayConfig, seed: number) {
     this.state = createState(config, seed);
@@ -89,8 +93,21 @@ export class DaySim {
         s.speed = cmd.speed;
         break;
       default:
-        if (!s.over) s.commands.push(cmd);
+        if (!s.over) {
+          s.commands.push(cmd);
+          this.log?.push({ passo: this.steps, cmd: JSON.parse(JSON.stringify(cmd)) as Command });
+        }
     }
+  }
+
+  /** Liga o registro de comandos (replay, RN determinismo). Chamar antes do primeiro passo. */
+  startLog(): void {
+    this.log = [];
+  }
+
+  /** Comandos registrados, cada um com o índice do passo em que foi enviado. */
+  commandLog(): readonly { passo: number; cmd: Command }[] {
+    return this.log ?? [];
   }
 
   /** Controle de sessão do tutorial (RN-170): congela o relógio sem bloquear a interação. */
@@ -102,6 +119,7 @@ export class DaySim {
     if (Math.abs(dt - STEP) > 1e-9) throw new Error(`DaySim.step exige dt = ${STEP}, recebeu ${dt}`);
     const s = this.state;
     if (s.over || s.paused) return;
+    this.steps++;
     this.applyCommands();
     if (s.hold) {
       updatePasteleiro(s, STEP);

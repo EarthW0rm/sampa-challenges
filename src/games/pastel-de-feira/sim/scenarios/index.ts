@@ -30,6 +30,7 @@ import { reputacao } from './reputacao';
 import { save } from './save';
 import { sujeira } from './sujeira';
 import { tacho } from './tacho';
+import { replay } from './replay';
 import { tutorial } from './tutorial';
 import { velocidade } from './velocidade';
 
@@ -66,6 +67,7 @@ export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   moenda,
   layout,
   tacho,
+  replay,
   tutorial,
   velocidade,
 };
