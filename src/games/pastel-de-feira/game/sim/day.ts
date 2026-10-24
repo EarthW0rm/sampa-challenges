@@ -1,5 +1,6 @@
 import { DAY_TICKS, STEP, hourAt } from '../constants';
 import type { Command, DayConfig, DayResult, SimEvent } from '../types';
+import { updateCustomers } from './customers';
 import { createState, emit, type DayState } from './state';
 
 /** Visão só de leitura do dia, reaproveitada entre quadros (os arrays são os do próprio estado). */
@@ -81,6 +82,7 @@ export class DaySim {
     if (s.over || s.paused) return;
     this.applyCommands();
     s.tick++;
+    updateCustomers(s, STEP);
     if (s.tick >= DAY_TICKS) this.close();
   }
 
@@ -130,13 +132,21 @@ export class DaySim {
   private close(): void {
     const s = this.state;
     s.over = true;
+    s.customers.length = 0; // quem estava na fila vai embora sem pagar e sem falha
     emit(s, 'corte_seco');
     this.cached = {
       day: s.config.day,
       ticks: s.tick,
       revenue: { counter: 0, total: 0 },
       costs: { oil: 0 },
-      orders: { served: 0, lostPatience: 0, wrong: 0, queueFull: 0, lostPrice: 0, noStock: 0 },
+      orders: {
+        served: s.stats.served,
+        lostPatience: s.stats.lostPatience,
+        wrong: s.stats.wrong,
+        queueFull: s.stats.queueFull,
+        lostPrice: s.stats.lostPrice,
+        noStock: s.stats.noStock,
+      },
       waste: { burned: 0, leftover: 0 },
       reputation: { successes: 0, charm: 0, weightedFailures: 0, rate: 0, change: 0 },
       stockLeft: s.stock.map((l) => ({ ...l })),
