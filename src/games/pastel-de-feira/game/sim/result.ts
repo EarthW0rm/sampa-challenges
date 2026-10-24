@@ -53,7 +53,7 @@ export function buildResult(s: DayState): DayResult {
     reputation: { successes, charm, weightedFailures: failures, rate, change },
     stockLeft: s.stock.map((l) => ({ ...l })),
     consumables: { ...s.consumables },
-    counters: { drinks: s.stats.drinks, especial: s.stats.especial, inspection: s.stats.inspection },
+    counters: { drinks: s.stats.drinks, especial: s.stats.especial, inspection: s.stats.inspection, annulled: s.stats.annulled },
     giftCost: Math.round(s.stats.giftCost * 100) / 100,
     staff: s.workers.map((w) => ({ id: w.id, idleSeconds: w.idleSeconds, restSeconds: w.restSeconds, endEnergy: w.energy, minEnergy: w.minEnergy })),
   };

@@ -10,6 +10,8 @@ import { ITEMS, itemIngredients, type ItemId } from '../data/recipes';
 import { ingredientsCost } from '../data/catalog';
 import type { DayConfig, MenuEntry, Profile } from '../types';
 import { recordFailure } from './reputation';
+import { drinkFactor, isRaining, seasonFx, tablesBlocked } from './world';
+import { FORECAST } from '../data/events';
 import { drawGroupSize, findTable, occupySeats, releaseSeats, waiterPresent } from './stations/tables';
 import { canMake, unitsMakeable } from './stock';
 import { emit, newId, now, type Customer, type DayState } from './state';
@@ -78,6 +80,7 @@ export function arrivalInterval(s: DayState): number {
   const hour = hourAt(now(s));
   if (hour >= PEAK_START_HOUR && hour < PEAK_END_HOUR) interval /= PEAK_FACTOR;
   if (s.config.reputation < LOW_REPUTATION_LIMIT) interval /= LOW_REPUTATION_ARRIVAL;
+  if (isRaining(s)) interval /= FORECAST.rainArrival; // chuva: chegada no balcão −40% (RN-151)
   if (xepaActive(s)) {
     // na xepa a chegada de Econômicos sobe 30%: o fluxo total cresce na proporção da fatia deles (RN-124)
     const eco = profileShares(s.config.day, hour, priceIndex(s.config), s.config.theme).economico;
@@ -178,13 +181,13 @@ function drawOrder(s: DayState, profile: Profile): Drawn {
     return { items: [], lost: available.some((m) => ITEMS[m.item].kind === 'salgado') ? 'price' : 'stock' };
   }
   const items: ItemId[] = [];
-  let n = rng.int(ORDER_PASTRIES_MIN, ORDER_PASTRIES_MAX);
+  let n = rng.chance(Math.min(1, 0.5 * seasonFx(s).twoPastries)) ? ORDER_PASTRIES_MAX : ORDER_PASTRIES_MIN; // inverno: mais pedidos de 2 (RN-141)
   const promoN = s.config.promo.brindeN;
   if (promoN > 0 && n < promoN && rng.chance(promoN <= 3 ? BRINDE_BUMP_LOW : BRINDE_BUMP_HIGH)) n = promoN; // RN-121
   for (let i = 0; i < n; i++) items.push(rng.weighted(pastries, (m) => m.weight ?? 1)!.item);
   const dessertChance = hourAt(now(s)) >= ORDER_DESSERT_LATE_HOUR ? ORDER_DESSERT_CHANCE_LATE : ORDER_DESSERT_CHANCE;
   if (desserts.length > 0 && rng.chance(dessertChance)) items.push(rng.weighted(desserts, (m) => m.weight ?? 1)!.item);
-  if (drinks.length > 0 && rng.chance(ORDER_DRINK_CHANCE)) items.push(rng.weighted(drinks, (m) => m.weight ?? 1)!.item);
+  if (drinks.length > 0 && rng.chance(Math.min(1, ORDER_DRINK_CHANCE * drinkFactor(s)))) items.push(rng.weighted(drinks, (m) => m.weight ?? 1)!.item);
   return { items, lost: null };
 }
 
@@ -274,7 +277,8 @@ export function spawnCustomer(s: DayState, forced?: Profile): void {
     s.stats.lostDirt++; // Exigente não entra numa barraca suja (RN-16)
     return;
   }
-  if (s.tables.length > 0 && profile !== 'economico' && rng.chance(TABLE_CHOICE)) {
+  const tableChance = TABLE_CHOICE * (isRaining(s) ? FORECAST.rainTables : 1); // chuva: mesas com metade da procura (RN-151)
+  if (s.tables.length > 0 && !tablesBlocked(s) && profile !== 'economico' && rng.chance(tableChance)) {
     const size = drawGroupSize(rng);
     const profiles = groupProfiles(s, profile, size);
     if (seatGroup(s, profiles)) return;

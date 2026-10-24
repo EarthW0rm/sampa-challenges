@@ -4,7 +4,9 @@ import {
   CHARM_GIFT, FAIL_WEIGHT, LOW_REPUTATION_LIMIT,
 } from '../constants';
 import { ITEMS, type ItemId } from '../data/recipes';
+import { FORECAST } from '../data/events';
 import { giftFor, itemCost, menuEntry } from './customers';
+import { isRaining } from './world';
 import { addCharm } from './reputation';
 import { currentQuality, qualityFactor, reputationPremium, roundCents } from './quality';
 import { recordFailure, recordSuccess } from './reputation';
@@ -130,7 +132,7 @@ export function updateDelivery(s: DayState, dt: number): void {
   s.offerLeft -= dt;
   if (s.offerLeft <= 0) {
     if (s.acceptedToday < dailyCap(s)) makeOffer(s);
-    s.offerLeft = APP_OFFER_INTERVAL * (0.5 + s.rng.app.next());
+    s.offerLeft = (APP_OFFER_INTERVAL * (0.5 + s.rng.app.next())) / (isRaining(s) ? FORECAST.rainApp : 1); // chuva: comandas +50% (RN-151)
   }
   if (s.config.delivery.auto && s.workers.some((w) => w.position === 'expedicao')) {
     for (const o of [...s.offers]) acceptOffer(s, o.id);

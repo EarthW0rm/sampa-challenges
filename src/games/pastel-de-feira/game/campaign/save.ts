@@ -131,6 +131,9 @@ export function isCampaign(v: unknown): v is Campaign {
   if (!Array.isArray(v.roles) || v.roles.length > OFFICE.roleSlots || new Set(v.roles).size !== v.roles.length || !v.roles.every((r) => isStr(r) && (ROLE_IDS as readonly string[]).includes(r))) return false;
   if (v.roles.length > 0 && !(o as Rec).office) return false;
   if (!Array.isArray(v.orders) || v.orders.length > 3 || !v.orders.every((x) => isOrder(x, v.owned as Rec))) return false;
+  if (!(v.forecast === null || v.forecast === 'chuva' || v.forecast === 'calor' || v.forecast === 'subprefeitura')) return false;
+  if (!(v.claim === null || v.claim === 'pendente' || v.claim === 'pausa' || v.claim === 'aumento' || v.claim === 'recusada')) return false;
+  if (!isInt(v.raiseUntil, 0) || !isNum(v.lastAnnul)) return false;
   if (!Array.isArray(v.challenges) || v.challenges.length > 3 || !v.challenges.every(isChallenge)) return false;
   const pr = v.promo;
   if (!isRec(pr) || !(pr.brindeN === 0 || isInt(pr.brindeN, 2, 6)) || !isInt(pr.chorinho, 0, 3) || !isBool(pr.xepa)) return false;

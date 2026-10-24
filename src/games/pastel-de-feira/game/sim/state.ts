@@ -231,6 +231,7 @@ export interface Stats {
   drinks: number;
   especial: number;
   inspection: 'none' | 'passed' | 'failed';
+  annulled: boolean;
   orderRevenue: number;
   fines: number;
   encDone: number;
@@ -349,7 +350,7 @@ export function createState(config: DayConfig, seed: number): DayState {
     rep: { successes: 0, charm: 0, failures: 0 },
     stats: {
       arrived: 0, served: 0, lostPatience: 0, wrong: 0, queueFull: 0, lostPrice: 0, noStock: 0,
-      burned: 0, revenue: 0, oilCost: 0, tableRevenue: 0, giftCost: 0, drinks: 0, especial: 0, inspection: 'none', orderRevenue: 0, fines: 0, encDone: 0, encFailed: 0, appRevenue: 0, appPicked: 0, appCancelled: 0, lostDirt: 0, payFail: 0,
+      burned: 0, revenue: 0, oilCost: 0, tableRevenue: 0, giftCost: 0, drinks: 0, especial: 0, inspection: 'none', annulled: false, orderRevenue: 0, fines: 0, encDone: 0, encFailed: 0, appRevenue: 0, appPicked: 0, appCancelled: 0, lostDirt: 0, payFail: 0,
     },
   };
 }

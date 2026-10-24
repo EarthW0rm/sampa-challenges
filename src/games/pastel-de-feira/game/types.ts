@@ -1,4 +1,5 @@
 import type { ConsumableId, IngredientId } from './data/catalog';
+import type { Forecast, Season } from './data/events';
 import type { OfficeRole } from './data/office';
 import type { CourseId, PositionId, StaffKind, TraitId } from './data/staff';
 import type { ItemId } from './data/recipes';
@@ -131,6 +132,17 @@ export interface DayConfig {
   positions: PositionId[];
   /** Sujeira a partir da qual Exigentes não entram e a paciência cai (60; o tema Popular sobe para 75, RN-17). */
   dirtLimit?: number;
+  /** Estação do ano (RN-140) e evento previsto do dia (RN-151). */
+  season: Season;
+  forecast: Forecast | null;
+  /** Eventos ligados na campanha e a partir do dia 4 (RN-150). */
+  eventsOn: boolean;
+  /** O Despachante anula a multa de fiscalização deste dia (RN-103). */
+  annulFine: boolean;
+  /** Equipe recusada na reivindicação: −15% de velocidade no dia (RN-151). */
+  claimRefused: boolean;
+  /** Para testes e depuração: força um evento surpresa. */
+  forceEvent?: string;
   /** Encomendas aceitas para hoje (RN-102). */
   orders: OrderConfig[];
   /** Cargos de gestão contratados (RN-103). */
@@ -224,7 +236,7 @@ export interface DayResult {
   stockLeft: StockLot[];
   consumables: Record<ConsumableId, number>;
   /** Contadores do dia usados pelos desafios (RN-136). */
-  counters: { drinks: number; especial: number; inspection: 'none' | 'passed' | 'failed' };
+  counters: { drinks: number; especial: number; inspection: 'none' | 'passed' | 'failed'; annulled: boolean };
   /** Custo dos insumos dos brindes entregues (já incluído nos insumos usados). */
   giftCost: number;
   /** Resumo de cada funcionário no dia (energia, ociosidade). */

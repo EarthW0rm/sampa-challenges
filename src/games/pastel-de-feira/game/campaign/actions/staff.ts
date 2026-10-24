@@ -1,4 +1,5 @@
 import { COURSES, FRYER_ONLY, SALARY, STAFF_NAMES, TRAITS, TRAIT_COUNT_WEIGHTS, TRAIT_IDS, CANDIDATES_PER_KIND, type CourseId, type PositionId, type StaffKind, type TraitId } from '../../data/staff';
+import { FORECAST } from '../../data/events';
 import { ROLES } from '../../data/office';
 import { Rng } from '../../rng';
 import { cloneCampaign, round2 } from '../campaign';
@@ -18,7 +19,7 @@ export const salaryOf = (c: Campaign, s: Staff): number => salaryFor(c, s.kind, 
 
 /** Soma dos salários do dia, debitada no fechamento (RN-47). */
 export const payroll = (c: Campaign): number =>
-  round2(c.staff.reduce((n, s) => n + salaryOf(c, s), 0) + c.roles.reduce((n, r) => n + ROLES[r].salary * profileSalaryFactor(c), 0));
+  round2((c.calendar <= c.raiseUntil ? FORECAST.claimRaise : 1) * (c.staff.reduce((n, s) => n + salaryOf(c, s), 0) + c.roles.reduce((n, r) => n + ROLES[r].salary * profileSalaryFactor(c), 0)));
 
 /** Candidatos do dia: até 3 de cada tipo, 0 a 2 traços, sorteados pela semente e pelo calendário (RN-113). */
 export function rollCandidates(c: Campaign): Candidate[] {

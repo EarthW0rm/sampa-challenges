@@ -7,6 +7,8 @@ import { encomendas } from './encomendas';
 import { desafios } from './desafios';
 import { energia } from './energia';
 import { equipamentos } from './equipamentos';
+import { estacoes } from './estacoes';
+import { eventosPrevistos } from './eventos-previstos';
 import { escritorio } from './escritorio';
 import { equipe } from './equipe';
 import { fechamento } from './fechamento';
@@ -43,6 +45,8 @@ export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   escritorio,
   encomendas,
   desafios,
+  estacoes,
+  'eventos-previstos': eventosPrevistos,
   promocoes,
   'xepa-tema': xepaTema,
   pagamento,

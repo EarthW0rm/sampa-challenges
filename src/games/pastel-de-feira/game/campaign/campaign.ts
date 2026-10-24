@@ -4,6 +4,8 @@ import { ITEMS, type ItemId } from '../data/recipes';
 import { SPACE } from '../data/equipment';
 import { orderStations } from '../layout';
 import { positionsAvailable } from './positions';
+import { seasonOf } from './season';
+import { EVENTS_FIRST_DAY, SURPRISE } from '../data/events';
 import type { DayConfig, EquipmentFlags, MenuEntry, StationId } from '../types';
 import type { Campaign, NewCampaignOptions } from './types';
 import { fatigueFactor } from './fatigue';
@@ -51,6 +53,10 @@ export function newCampaign(opts: NewCampaignOptions): Campaign {
     },
     menu: { salgados: ['carne', 'queijo'], doces: [], bebidas: ['caldo-puro'] },
     prices,
+    forecast: null,
+    claim: null,
+    raiseUntil: 0,
+    lastAnnul: -99,
     challenges: [],
     orders: [],
     roles: [],
@@ -159,6 +165,11 @@ export function toDayConfig(c: Campaign): DayConfig {
     equipment: equipmentFlags(c),
     staff: c.staff.map((w) => ({ id: w.id, name: w.name, kind: w.kind, traits: [...w.traits], courses: [...w.courses], mode: w.mode, position: w.position })),
     positions: positionsAvailable(c),
+    season: seasonOf(c.day),
+    forecast: c.forecast,
+    eventsOn: c.eventsOn && c.day >= EVENTS_FIRST_DAY,
+    annulFine: c.roles.includes('despachante') && c.calendar - c.lastAnnul >= SURPRISE.annulEveryDays,
+    claimRefused: c.claim === 'recusada',
     orders: c.orders.map((o) => ({ id: o.dayId, item: o.item, qty: o.qty, pickupAt: Math.round((o.hour - 7) * (240 / 7) * 100) / 100, pay: o.pay, fine: o.fine })),
     roles: [...c.roles],
     promo: { ...c.promo },
@@ -172,4 +183,4 @@ export function toDayConfig(c: Campaign): DayConfig {
 }
 
 /** Pode abrir a feira? Precisa de ao menos um salgado no cardápio. */
-export const canOpen = (c: Campaign): boolean => c.menu.salgados.length > 0;
+export const canOpen = (c: Campaign): boolean => c.menu.salgados.length > 0 && c.claim !== 'pendente';

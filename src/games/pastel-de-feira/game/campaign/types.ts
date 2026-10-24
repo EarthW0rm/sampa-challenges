@@ -1,5 +1,6 @@
 import type { ConsumableId, IngredientId } from '../data/catalog';
 import type { EquipId } from '../data/equipment';
+import type { Forecast } from '../data/events';
 import type { OfficeRole } from '../data/office';
 import type { CourseId, PositionId, StaffKind, TraitId } from '../data/staff';
 import type { ItemId } from '../data/recipes';
@@ -140,6 +141,14 @@ export interface Campaign {
   owned: Owned;
   menu: MenuChoice;
   prices: Record<ItemId, number>;
+  /** Evento previsto do dia, sorteado no fechamento anterior (RN-150, RN-151). */
+  forecast: Forecast | null;
+  /** Reivindicação da equipe: pendente de resposta ou a escolha do dia (RN-151). */
+  claim: 'pendente' | 'pausa' | 'aumento' | 'recusada' | null;
+  /** O aumento de 10% vale até este dia do calendário. */
+  raiseUntil: number;
+  /** Dia do calendário da última multa anulada pelo Despachante. */
+  lastAnnul: number;
   /** Desafios aceitos (RN-135). */
   challenges: ActiveChallenge[];
   /** Encomendas aceitas para o próximo Dia de Feira (RN-102). */

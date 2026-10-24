@@ -1,6 +1,8 @@
 import { XEPA_LEFTOVER_VALUE, THEME_REPUTATION_BONUS } from '../constants';
 import { CONSUMABLES, CONSUMABLE_IDS, INGREDIENTS } from '../data/catalog';
 import type { DayResult } from '../types';
+import { SURPRISE } from '../data/events';
+import { rollClaim, rollForecast } from './events';
 import { challengeById } from '../data/challenges';
 import { payroll } from './actions/staff';
 import { advanceFatigue } from './fatigue';
@@ -137,6 +139,7 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   c.calendar = campaign.calendar + 1;
   c.boughtToday = 0;
   c.resumes = 0;
+  c.claim = null; // a reivindicação vale só para o dia em que foi respondida
   c.hiredToday = [];
   c.orders = []; // as encomendas valem só para o dia
   for (const w of c.staff) w.trainedToday = false;
@@ -154,6 +157,14 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
       wasteUnits: discarded,
     },
   ].slice(-HISTORY_MAX);
+
+  // 9. Eventos do dia seguinte: reivindicação ou evento previsto (no máximo 1 previsto, RN-150)
+  if (rollClaim({ ...c, calendar: c.calendar }, result)) c.claim = 'pendente';
+  c.forecast = c.claim === 'pendente' ? null : rollForecast(c);
+  if (result.counters.inspection === 'failed') {
+    if (result.counters.annulled) c.lastAnnul = campaign.calendar; // o Despachante anula a multa e a perda de reputação
+    else c.reputation = Math.max(1, round2(c.reputation - SURPRISE.repPenalty));
+  }
 
   const balance: Balance = {
     lines,
