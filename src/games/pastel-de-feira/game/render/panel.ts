@@ -65,6 +65,19 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
     if (st.tables.length > 0) {
       out.push({ rect: next(), label: 'PAGAR', sub: `${st.payQueue.length}/4`, fill: PAL.orange, run: () => tap('balcao', { k: 'pagar' }) });
     }
+    const open = st.bigOrders.filter((o) => o.boxed.length < o.qty);
+    if (open.length > 0) {
+      const left = open.reduce((n, o) => n + o.qty - o.boxed.length, 0);
+      out.push({
+        rect: next(), label: 'CAIXA', sub: `FALTAM ${left}`, fill: PAL.gold,
+        run: () => {
+          const sel = ui.selected;
+          if (sel?.kind !== 'pastel') return [];
+          ui.selected = null;
+          return tap('balcao', { k: 'encomenda', id: sel.id }); // guarda o pastel selecionado na caixa da encomenda (RN-104)
+        },
+      });
+    }
     out.push({
       rect: next(), label: 'VASSOURA', sub: `${Math.round(st.dirt)}%`, fill: st.dirt >= 80 ? PAL.red : st.dirt >= 60 ? PAL.orange : PAL.tile,
       bar: { frac: st.pasteleiro.hold?.action === 'limpar' ? st.cleaning.progress / HOLD_BROOM : 0, color: PAL.green },
@@ -175,6 +188,12 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
     }
     for (const c of st.cups.slice(0, 4)) {
       out.push({ rect: next(), label: 'CALDO', sub: shortName(c.item), fill: itemColor(c.item), run: () => deliverTo(c.item, { kind: 'copo', id: c.id }) });
+    }
+  } else if (station === 'escritorio') {
+    out.push({ rect: next(2), label: 'GESTAO', sub: st.config.roles.includes('gerente') ? '+15% +10%' : '+15%', fill: PAL.green, run: () => [] });
+    out.push({ rect: next(), label: 'CARGOS', sub: String(st.config.roles.length), fill: PAL.tile, run: () => [] });
+    for (const o of st.bigOrders.slice(0, 3)) {
+      out.push({ rect: next(), label: 'ENCOMENDA', sub: `${o.boxed.length}/${o.qty}`, fill: PAL.gold, bar: { frac: o.boxed.length / o.qty, color: PAL.green }, run: () => [] });
     }
   } else if (station === 'expedicao') {
     out.push({ rect: next(), label: 'COMANDAS', sub: String(st.comandas.length), fill: PAL.blue, run: () => [] });

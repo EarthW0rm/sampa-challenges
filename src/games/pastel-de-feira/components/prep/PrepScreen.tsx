@@ -3,7 +3,9 @@ import { canOpen, minReputation, profitGoal } from '../../game/campaign/campaign
 import type { Campaign } from '../../game/campaign/types';
 import { money, rep1, stars } from '../format';
 import { InventoryTab } from './InventoryTab';
+import { AssociationTab } from './AssociationTab';
 import { MenuTab } from './MenuTab';
+import { OfficeTab } from './OfficeTab';
 import { StaffTab } from './StaffTab';
 import { ThemeDialog } from './ThemeDialog';
 import { UpgradesTab } from './UpgradesTab';
@@ -15,7 +17,7 @@ interface Props {
   onExit: () => void;
 }
 
-type TabId = 'insumos' | 'cardapio' | 'melhorias' | 'equipe';
+type TabId = 'insumos' | 'cardapio' | 'melhorias' | 'equipe' | 'escritorio' | 'associacao';
 
 /** Abas só aparecem quando desbloqueadas (RN-171). Melhorias, Equipe, Escritório e Associação entram nas US seguintes. */
 function visibleTabs(c: Campaign): { id: TabId; label: string }[] {
@@ -25,6 +27,8 @@ function visibleTabs(c: Campaign): { id: TabId; label: string }[] {
     { id: 'melhorias', label: 'Melhorias' },
   ];
   if (c.day >= 2 || c.staff.length > 0) tabs.push({ id: 'equipe', label: 'Equipe' });
+  if (c.owned.office) tabs.push({ id: 'escritorio', label: 'Escritório' });
+  if (c.day >= 3 || c.challenges.length > 0) tabs.push({ id: 'associacao', label: 'Associação' });
   return tabs;
 }
 
@@ -67,6 +71,8 @@ export function PrepScreen({ campaign: c, onChange, onOpen, onExit }: Props) {
       {tab === 'cardapio' && <MenuTab campaign={c} onChange={onChange} />}
       {tab === 'melhorias' && <UpgradesTab campaign={c} onChange={onChange} />}
       {tab === 'equipe' && <StaffTab campaign={c} onChange={onChange} />}
+      {tab === 'escritorio' && c.owned.office && <OfficeTab campaign={c} onChange={onChange} />}
+      {tab === 'associacao' && <AssociationTab campaign={c} onChange={onChange} />}
       <footer className="prep-foot">
         <button type="button" onClick={onExit}>
           Sair

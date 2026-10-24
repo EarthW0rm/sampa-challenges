@@ -271,6 +271,15 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   const me = layout.byId.get('mesas');
   if (me) drawTables(ctx, st, me);
   if (bal && st.tables.length > 0) drawPayQueue(ctx, st, bal);
+  const off = layout.byId.get('escritorio');
+  if (off) {
+    box(ctx, { x: off.x + 8, y: off.y + 26, w: off.w - 16, h: 22 }, '#3a4a6a', PAL.woodDark); // mesa de trabalho
+    st.bigOrders.slice(0, 3).forEach((o, i) => {
+      const x = off.x + 10 + i * 30;
+      box(ctx, { x, y: off.y + 60, w: 26, h: 20 }, o.state === 'espera' ? PAL.green : PAL.wood, PAL.woodDark); // caixa de encomenda
+      bar(ctx, x, off.y + 84, 26, 4, o.boxed.length / o.qty, PAL.gold);
+    });
+  }
   const ex = layout.byId.get('expedicao');
   if (ex) drawDispatch(ctx, st, ex);
   const fila = layout.byId.get('fila');

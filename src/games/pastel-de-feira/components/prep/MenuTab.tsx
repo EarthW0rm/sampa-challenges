@@ -3,7 +3,8 @@ import { setDelivery, setPrice, setPromo, toggleMenuItem } from '../../game/camp
 import { fatigueFactor } from '../../game/campaign/fatigue';
 import { defaultPrice } from '../../game/campaign/pricing';
 import { REFUSAL_TEXT, type Campaign } from '../../game/campaign/types';
-import { ITEMS, type Item } from '../../game/data/recipes';
+import { ingredientsCost } from '../../game/data/catalog';
+import { ITEMS, itemIngredients, type Item } from '../../game/data/recipes';
 import { BRINDE_MAX_N, BRINDE_MIN_N, CHORINHO_MAX, PRICE_STEP, XEPA_DISCOUNTS } from '../../game/constants';
 import { money } from '../format';
 
@@ -124,6 +125,7 @@ export function MenuTab({ campaign: c, onChange }: Props) {
                         <strong>{it.name}</strong>
                         <span>
                           ref. {money(it.reference)}
+                          {c.roles.includes('contador') && ` · custo ${money(ingredientsCost(itemIngredients(it)))} · margem ${money(p - ingredientsCost(itemIngredients(it)))}`}
                           {fat < 1 && ` · procura −${Math.round((1 - fat) * 100)}%`}
                         </span>
                       </span>
