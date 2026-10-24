@@ -3,6 +3,7 @@ import type { Command, DayConfig, DayResult, SimEvent } from '../types';
 import { applyCommand } from './commands';
 import { updateCustomers } from './customers';
 import { updatePasteleiro } from './pasteleiro';
+import { updateFryers } from './stations/fryer';
 import { createState, emit, type DayState } from './state';
 
 /** Visão só de leitura do dia, reaproveitada entre quadros (os arrays são os do próprio estado). */
@@ -85,6 +86,7 @@ export class DaySim {
     this.applyCommands();
     s.tick++;
     updatePasteleiro(s, STEP);
+    updateFryers(s, STEP);
     updateCustomers(s, STEP);
     if (s.tick >= DAY_TICKS) this.close();
   }

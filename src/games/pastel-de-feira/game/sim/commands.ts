@@ -2,6 +2,7 @@ import type { Command } from '../types';
 import { tapStation } from './pasteleiro';
 import { addIngredient, clearTray, closeAssembly, selectAssembled } from './stations/bench';
 import { collectCoins, deliver, takeOrder } from './stations/counter';
+import { cancelOilChange, startOilChange, tapBasket } from './stations/fryer';
 import type { DayState } from './state';
 
 /** Aplica um comando do jogador. Devolve false se ele não vale no estado atual (vira `rejected`). */
@@ -22,8 +23,17 @@ export function applyCommand(s: DayState, cmd: Command): boolean {
         if (slot.k === 'limpar') return clearTray(s);
         if (slot.k === 'montado') return selectAssembled(s, slot.id);
       }
+      if (cmd.station.startsWith('tacho') && slot.k === 'cesto') return tapBasket(s, cmd.station, slot.index);
       return false;
     }
+    case 'holdStart':
+      if (cmd.action === 'oleo' && cmd.station.startsWith('tacho')) return startOilChange(s, cmd.station);
+      return false;
+    case 'holdEnd':
+      if (s.pasteleiro.hold === null) return false;
+      cancelOilChange(s);
+      s.pasteleiro.hold = null;
+      return true;
     case 'deliver':
       return deliver(s, cmd.item, cmd.customerId);
     default:

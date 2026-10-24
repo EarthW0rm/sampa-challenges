@@ -46,8 +46,8 @@ export interface Assembled {
 export interface Frying {
   id: number;
   item: ItemId;
-  /** Segundos de fritura. */
-  t: number;
+  /** Passos de fritura (inteiro: o ponto e a queima não acumulam erro de ponto flutuante). */
+  ticks: number;
   burned: boolean;
 }
 

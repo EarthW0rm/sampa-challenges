@@ -85,7 +85,8 @@ export const QUALITY_RAW = 40;
 export const QUALITY_PONTO = 80;
 export const QUALITY_OVERDONE = 55;
 export const OIL_DIRTY_QUALITY_PENALTY = 15;
-export const OIL_DIRTY_THRESHOLD = 70;
+/** Sujeira do óleo a partir da qual ele conta como sujo (fração de 0 a 1). */
+export const OIL_DIRTY_THRESHOLD = 0.7;
 export const DECAY_DELAY = 10;
 export const DECAY_PER_SECOND = 2;
 export const NO_BAG_PENALTY = 10;

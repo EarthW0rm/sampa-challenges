@@ -21,6 +21,7 @@ export const isAt = (s: DayState, station: StationId): boolean => s.pasteleiro.t
 export function tapStation(s: DayState, station: StationId): boolean {
   if (!s.config.stations.includes(station)) return false;
   const p = s.pasteleiro;
+  if (p.hold?.action === 'oleo') for (const t of s.tachos) t.changeProgress = 0; // sair da estação cancela a troca
   p.hold = null;
   if (station === p.at) {
     p.to = null;
