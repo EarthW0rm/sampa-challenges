@@ -55,6 +55,8 @@ Sempre rode `npm run typecheck` depois de mudar código. Não há suíte de test
    `game/hires.ts`). O Cachorro Loko, o Xadrez Paulistano e a Sinuca de Bar têm lógica em 320×200 e o Capacete Voador em 640×400 (o Pinball Paulista é vertical: 240×400 lógico, canvas 480×800); todos
    usam `setTransform(SCALE, …)` + `blit()` no `render()`; leia a seção "Visual em alta" do `CLAUDE.md` do jogo antes
    de desenhar algo novo. O `_modelo` já nasce nesse padrão (seção "Resolução" do `CLAUDE.md` dele).
+   **Exceção: o Pastel de Feira** tem lógica em 640×480 e canvas de 1280×960 (`SCALE` = 2), porque a barraca cheia e o
+   painel retrátil não cabem em 320×200 (seção "Visual em alta e resolução" do `CLAUDE.md` dele).
 8. **Pixel art:** desenhe em coordenadas inteiras (`Math.round`) e mantenha
    `imageSmoothingEnabled = false`. Para espelhar um sprite, use `ctx.translate` + `ctx.scale(-1, 1)`.
 9. **Texto da interface em pt-BR**, curto e direto.
