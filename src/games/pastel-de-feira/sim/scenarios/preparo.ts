@@ -4,6 +4,7 @@ import { setPrice, toggleMenuItem } from '../../game/campaign/actions/menu';
 import { capacityFree, capacityUsed, cloneCampaign, daySeed, newCampaign, toDayConfig } from '../../game/campaign/campaign';
 import { fatigueFactor } from '../../game/campaign/fatigue';
 import { clampPrice, defaultPrice } from '../../game/campaign/pricing';
+import { openWarning } from '../../game/campaign/warnings';
 import { expectedCustomers, suggestPurchase } from '../../game/campaign/suggest';
 import type { ActionResult, Campaign } from '../../game/campaign/types';
 import { check, checkEq, checkNear, type Scenario } from '../harness';
@@ -192,6 +193,36 @@ export const preparo: Scenario[] = [
       const apertado = must(buyIngredient(c, 'massa', STOCK_CAPACITY - 10));
       const s3 = suggestPurchase(apertado);
       check(Object.values(s3.ingredients).reduce((n, v) => n + v, 0) <= 10, 'sugestão limitada à capacidade livre');
+    },
+  },
+  {
+    id: 'aviso-antes-de-abrir-sem-insumos',
+    rules: 'JA-01',
+    run() {
+      const c = fresh();
+      const w = openWarning(c);
+      check(w !== null && w.severe, 'sem nenhum insumo: aviso grave');
+      check(w!.lines[0].includes('nenhum insumo'), 'texto claro');
+      // compra a sugestão: pode abrir sem aviso
+      const sug = suggestPurchase(c);
+      let x = c;
+      for (const [ing, q] of Object.entries(sug.ingredients)) {
+        const r = buyIngredient(x, ing, q);
+        if (r.ok) x = r.campaign;
+      }
+      for (const [id, q] of Object.entries(sug.consumables)) {
+        if (q <= 0) continue;
+        const r = buyConsumable(x, id as 'copo', q);
+        if (r.ok) x = r.campaign;
+      }
+      checkEq(openWarning(x), null, 'com a compra sugerida não há aviso');
+      // falta um insumo do cardápio: aviso não grave dizendo qual item
+      const semCarne = { ...x, inventory: x.inventory.filter((l) => l.ingredient !== 'carne') };
+      const w2 = openWarning(semCarne);
+      check(w2 !== null && !w2.severe && w2.lines.some((l) => l.includes('Carne')), 'falta carne: avisa só o item');
+      // sem saquinho
+      const semSaco = { ...x, consumables: { ...x.consumables, saquinho: 0 } };
+      check(openWarning(semSaco)?.lines.some((l) => l.includes('saquinho')) === true, 'sem saquinhos avisa');
     },
   },
 ];

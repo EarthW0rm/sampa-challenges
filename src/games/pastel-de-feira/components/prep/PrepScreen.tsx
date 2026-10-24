@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { loadSeen, pendingUnlock, saveSeen } from '../../game/unlocks';
+import { openWarning } from '../../game/campaign/warnings';
 import { canOpen, minReputation, profitGoal } from '../../game/campaign/campaign';
 import { respondClaim } from '../../game/campaign/events';
 import { seasonOf } from '../../game/campaign/season';
@@ -50,6 +51,7 @@ export function PrepScreen({ campaign: c, onChange, onOpen, onExit, onHandover }
   const [tab, setTab] = useState<TabId>('insumos');
   const [themeDismissed, setThemeDismissed] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const tabs = visibleTabs(c);
   const [seen, setSeen] = useState<string[]>(() => loadSeen(safeStorage()));
   const unlock = pendingUnlock(c.day, seen);
@@ -138,11 +140,29 @@ export function PrepScreen({ campaign: c, onChange, onOpen, onExit, onHandover }
       {tab === 'equipe' && <StaffTab campaign={c} onChange={onChange} />}
       {tab === 'escritorio' && c.owned.office && <OfficeTab campaign={c} onChange={onChange} />}
       {tab === 'associacao' && <AssociationTab campaign={c} onChange={onChange} />}
+      {confirmOpen && (
+        <div className="overlay" role="dialog" aria-label="Aviso antes de abrir a feira">
+          <div className="menu">
+            <h2>Antes de abrir</h2>
+            {openWarning(c)?.lines.map((l) => (
+              <p key={l} className="warn">
+                {l}
+              </p>
+            ))}
+            <button type="button" className="primary" onClick={() => setConfirmOpen(false)}>
+              Voltar e comprar
+            </button>
+            <button type="button" onClick={onOpen}>
+              Abrir mesmo assim
+            </button>
+          </div>
+        </div>
+      )}
       <footer className="prep-foot">
         <button type="button" onClick={onExit}>
           Sair
         </button>
-        <button type="button" className="primary" onClick={onOpen} disabled={!canOpen(c)}>
+        <button type="button" className="primary" onClick={() => (openWarning(c) ? setConfirmOpen(true) : onOpen())} disabled={!canOpen(c)}>
           Abrir a feira
         </button>
       </footer>
