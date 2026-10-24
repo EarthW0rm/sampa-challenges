@@ -1,5 +1,5 @@
-import { HOLD_OIL_MANUAL, STEP } from '../constants';
-import { ITEMS } from '../data/recipes';
+import { HOLD_BROOM, HOLD_CLEAN_TABLE, HOLD_OIL_MANUAL, STEP } from '../constants';
+import { ITEMS, type ItemId } from '../data/recipes';
 import { INGREDIENTS } from '../data/catalog';
 import { inside, MIN_TARGET, PANEL, stationLabel, type Rect } from '../layout';
 import { drawPixelText } from '../pixelFont';
@@ -61,6 +61,15 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
     out.push({
       rect: next(), label: 'COBRAR', sub: total > 0 ? `R$${total.toFixed(0)}` : '-', fill: PAL.gold,
       run: () => tap('balcao', { k: 'moedas' }),
+    });
+    if (st.tables.length > 0) {
+      out.push({ rect: next(), label: 'PAGAR', sub: `${st.payQueue.length}/4`, fill: PAL.orange, run: () => tap('balcao', { k: 'pagar' }) });
+    }
+    out.push({
+      rect: next(), label: 'VASSOURA', sub: `${Math.round(st.dirt)}%`, fill: st.dirt >= 80 ? PAL.red : st.dirt >= 60 ? PAL.orange : PAL.tile,
+      bar: { frac: st.pasteleiro.hold?.action === 'limpar' ? st.cleaning.progress / HOLD_BROOM : 0, color: PAL.green },
+      run: () => [{ type: 'holdStart', station: 'balcao', action: 'limpar' }],
+      release: () => [{ type: 'holdEnd' }],
     });
     for (const r of st.ready.slice(0, 7)) {
       const q = Math.round(currentQuality(r, now(st)));
@@ -142,6 +151,30 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
         run: () => [{ type: 'holdStart', station, action: 'oleo' }],
         release: () => [{ type: 'holdEnd' }],
       });
+    }
+  } else if (station === 'mesas') {
+    const waiting = st.customers.filter((c) => c.place === 'mesa' && c.state === 'aguardando').length;
+    out.push({ rect: next(), label: 'ANOTAR', sub: String(waiting), fill: PAL.blue, run: () => tap('mesas', { k: 'anotar' }) });
+    out.push({
+      rect: next(), label: 'LIMPAR', sub: st.tables.some((t) => t.seats.includes('sujo')) ? 'SUJA' : '-', fill: PAL.green,
+      bar: { frac: st.pasteleiro.hold?.action === 'limpar' ? st.cleaning.progress / HOLD_CLEAN_TABLE : 0, color: PAL.gold },
+      run: () => [{ type: 'holdStart', station: 'mesas', action: 'limpar' }],
+      release: () => [{ type: 'holdEnd' }],
+    });
+    // entregar na mesa: o item vai para o primeiro grupo anotado que o aceita
+    const wants = st.customers.filter((c) => c.place === 'mesa' && c.state === 'anotado');
+    const deliverTo = (item: ItemId, ref: { kind: 'pastel' | 'copo'; id: number }): Command[] => {
+      const g = wants.find((c) => c.lines.some((l) => l.delivered === null && ITEMS[l.item].base === ITEMS[item].base));
+      return g ? [{ type: 'deliver', item: ref, customerId: g.id }] : [];
+    };
+    for (const r of st.ready.slice(0, 7)) {
+      out.push({
+        rect: next(), label: shortName(r.item), sub: String(Math.round(currentQuality(r, now(st)))), fill: itemColor(r.item),
+        run: () => deliverTo(r.item, { kind: 'pastel', id: r.id }),
+      });
+    }
+    for (const c of st.cups.slice(0, 4)) {
+      out.push({ rect: next(), label: 'CALDO', sub: shortName(c.item), fill: itemColor(c.item), run: () => deliverTo(c.item, { kind: 'copo', id: c.id }) });
     }
   } else if (station === 'estufa') {
     out.push({ rect: next(), label: 'ESTUFA', sub: `${warmedCount(st)}/${warmerCapacity(st)}`, fill: PAL.blue, run: () => [] });

@@ -63,3 +63,6 @@ export const QUALITY_BONUS = { cotton: 10, drainer: 10 } as const;
 
 /** Tempo de extração da moenda motorizada (RN-42). */
 export const MILL_MOTOR_SECONDS = 2.5;
+
+/** Mesas (RN-72, RN-80): R$ 150, 4 lugares, 2 m², no máximo 4. */
+export const TABLE = { price: 150, space: 2, max: 4 } as const;

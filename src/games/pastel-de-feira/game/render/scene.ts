@@ -130,6 +130,52 @@ function drawTacho(ctx: CanvasRenderingContext2D, st: DayState, ui: UiState, z: 
   if (isLocked(t)) textCenter(ctx, 'TRAVADO', z.x + z.w / 2, z.y + z.h - 14, PAL.red, 1);
 }
 
+/** Posição do lugar `seat` da mesa `table` na zona das mesas (2×2 mesas de 4 lugares). */
+export function seatSpot(z: Zone, table: number, seat: number): { x: number; y: number } {
+  const tx = z.x + 12 + (table % 2) * 146;
+  const ty = z.y + 26 + Math.floor(table / 2) * 68;
+  return { x: tx + 14 + (seat % 2) * 56, y: ty + (seat < 2 ? 18 : 62) };
+}
+
+function drawTables(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): void {
+  st.tables.forEach((t, i) => {
+    const tx = z.x + 12 + (i % 2) * 146;
+    const ty = z.y + 26 + Math.floor(i / 2) * 68;
+    box(ctx, { x: tx + 14, y: ty + 22, w: 90, h: 22 }, PAL.wood, PAL.woodDark);
+    t.seats.forEach((seat, j) => {
+      const p = seatSpot(z, i, j);
+      if (seat === 'sujo') {
+        ctx.fillStyle = '#6b4a2a';
+        ctx.fillRect(p.x - 8, p.y - 6, 16, 6);
+      } else if (seat === 'livre') {
+        ctx.fillStyle = '#3a2f4a';
+        ctx.fillRect(p.x - 6, p.y - 4, 12, 4);
+      }
+    });
+  });
+  const groups = [...st.customers, ...st.eating, ...st.payQueue].filter((c) => c.group && c.place !== 'pagamento');
+  for (const c of groups) {
+    const g = c.group!;
+    g.seats.forEach((seatIdx, j) => {
+      const p = seatSpot(z, g.table, seatIdx);
+      if (c.place === 'fila') return; // reservado: o grupo está na fila do balcão
+      dog(ctx, p.x, p.y, furOf(c.id + j * 3), { flip: seatIdx % 2 === 1, ribbon: PROFILE_COLOR[g.profiles[j] ?? c.profile] });
+    });
+    const first = seatSpot(z, g.table, g.seats[0]);
+    if (c.place === 'comendo') bar(ctx, first.x - 10, first.y - 46, 40, 4, 1 - c.timer / 25, PAL.gold);
+    else if (c.place === 'mesa') drawBalloon(ctx, c, first.x + 14, first.y - 30);
+  }
+}
+
+function drawPayQueue(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): void {
+  st.payQueue.forEach((c, i) => {
+    const x = z.x + z.w - 16 - i * 34;
+    const y = z.y + z.h - 12;
+    dog(ctx, x, y, furOf(c.id), { flip: true, ribbon: PAL.gold });
+    bar(ctx, x - 12, y - 44, 24, 4, c.timer / 20, c.timer > 6 ? PAL.green : PAL.red);
+  });
+}
+
 function drawWarmer(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): void {
   const cap = st.config.equipment.warmer;
   box(ctx, { x: z.x + 6, y: z.y + 26, w: z.w - 12, h: z.h - 40 }, '#2f4a52', PAL.woodDark);
@@ -198,6 +244,16 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
     const z = layout.byId.get(`tacho${i + 1}` as 'tacho1');
     if (z) drawTacho(ctx, st, ui, z, i);
   });
+
+  // mesas, fila de pagamento e sujeira
+  const me = layout.byId.get('mesas');
+  if (me) drawTables(ctx, st, me);
+  if (bal && st.tables.length > 0) drawPayQueue(ctx, st, bal);
+  const fila = layout.byId.get('fila');
+  if (fila) {
+    bar(ctx, fila.x + 6, fila.y + fila.h - 8, 90, 5, st.dirt / 100, st.dirt >= 80 ? PAL.red : st.dirt >= 60 ? PAL.orange : PAL.muted);
+    drawPixelText(ctx, 'SUJEIRA', fila.x + 100, fila.y + fila.h - 10, st.dirt >= 60 ? PAL.orange : PAL.muted, 1);
+  }
 
   // estufa, caixas térmicas e moenda
   const es = layout.byId.get('estufa');

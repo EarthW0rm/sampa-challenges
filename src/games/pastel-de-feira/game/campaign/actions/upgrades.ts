@@ -1,4 +1,4 @@
-import { COOLER, EQUIPMENT, MENU_BOARDS, SPACE, TACHO, type EquipId } from '../../data/equipment';
+import { COOLER, EQUIPMENT, MENU_BOARDS, SPACE, TABLE, TACHO, type EquipId } from '../../data/equipment';
 import { REST_AREA } from '../../data/staff';
 import { BASE_RECIPES, ITEMS, UPGRADES, itemId, type ItemId } from '../../data/recipes';
 import { cloneCampaign, freeM2, round2, totalM2 } from '../campaign';
@@ -169,5 +169,16 @@ export function buyRestSlot(c: Campaign): ActionResult {
   const next = cloneCampaign(c);
   charge(next, REST_AREA.slotPrice, true);
   next.owned.rest++;
+  return { ok: true, campaign: next };
+}
+
+/** Mesa com 4 lugares (RN-80): R$ 150, 2 m² livres, máximo 4. */
+export function buyTable(c: Campaign): ActionResult {
+  if (c.owned.tables >= TABLE.max) return no('limite');
+  if (freeM2(c) < TABLE.space) return no('semEspaco');
+  if (!canPay(c, TABLE.price)) return no('semCaixa');
+  const next = cloneCampaign(c);
+  charge(next, TABLE.price, true);
+  next.owned.tables++;
   return { ok: true, campaign: next };
 }
