@@ -5,7 +5,7 @@ import type { ActionResult, Campaign } from '../../game/campaign/types';
 import type { DayResult } from '../../game/types';
 import { check, checkEq, checkNear, runDay, type Scenario } from '../harness';
 
-const fresh = (): Campaign => newCampaign({ profile: 'negociante', eventsOn: false, tutorial: false, seed: 11 });
+const fresh = (): Campaign => newCampaign({ profile: 'gestor', eventsOn: false, tutorial: false, seed: 11 });
 
 function must(r: ActionResult): Campaign {
   check(r.ok, 'ação recusada');

@@ -21,6 +21,7 @@ import { moenda } from './moenda';
 import { posicoes } from './posicoes';
 import { preparo } from './preparo';
 import { pagamento } from './pagamento';
+import { perfis } from './perfis';
 import { promocoes } from './promocoes';
 import { relogio } from './relogio';
 import { xepaTema } from './xepa-tema';
@@ -49,6 +50,7 @@ export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   desafios,
   estacoes,
   automacao,
+  perfis,
   'eventos-previstos': eventosPrevistos,
   'eventos-surpresa': eventosSurpresa,
   promocoes,

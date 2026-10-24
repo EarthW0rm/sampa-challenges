@@ -126,7 +126,7 @@ export const itemCost = (id: ItemId): number => ingredientsCost(itemIngredients(
 
 /** Cria o cliente na fila (usado pela chegada e pelos cenários). */
 export function addCustomer(s: DayState, profile: Profile, items: readonly ItemId[]): Customer {
-  const patience = PATIENCE[profile];
+  const patience = PATIENCE[profile] * (s.config.profile === 'boa-praca' ? 1.15 : 1); // Boa-praça: +15% de paciência (RN-110)
   const c: Customer = {
     id: newId(s),
     profile,
@@ -256,7 +256,7 @@ function seatGroup(s: DayState, profiles: Profile[]): boolean {
   c.lines.forEach((l, i) => (l.profile = lines[i].profile));
   const gift = giftFor(s, lines.map((l) => l.item));
   if (gift) c.lines.push({ item: gift, delivered: null, gift: true, profile: profiles[0] });
-  const base = Math.min(...profiles.map((p) => PATIENCE[p])) * TABLE_PATIENCE_FACTOR;
+  const base = Math.min(...profiles.map((p) => PATIENCE[p])) * TABLE_PATIENCE_FACTOR * (s.config.profile === 'boa-praca' ? 1.15 : 1);
   c.patience = base;
   c.patienceMax = base;
   c.service = byWaiter ? 'mesa' : 'balcao';

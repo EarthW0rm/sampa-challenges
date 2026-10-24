@@ -1,5 +1,6 @@
 import type { ConsumableId, IngredientId } from './data/catalog';
 import type { Forecast, Season } from './data/events';
+import type { PastryProfile } from './campaign/types';
 import type { OfficeRole } from './data/office';
 import type { CourseId, PositionId, StaffKind, TraitId } from './data/staff';
 import type { ItemId } from './data/recipes';
@@ -135,6 +136,8 @@ export interface DayConfig {
   positions: PositionId[];
   /** Sujeira a partir da qual Exigentes não entram e a paciência cai (60; o tema Popular sobe para 75, RN-17). */
   dirtLimit?: number;
+  /** Perfil do pasteleiro (RN-110): Chapeiro e Boa-praça mudam o dia. */
+  profile: PastryProfile;
   /** Estação do ano (RN-140) e evento previsto do dia (RN-151). */
   season: Season;
   forecast: Forecast | null;

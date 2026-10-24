@@ -5,7 +5,7 @@ import type { ActionResult, Campaign } from '../types';
 
 /** Desconto de compra do pasteleiro (Negociante, Comprador): gancho das US-117 e US-120. */
 export function purchaseFactor(c: Campaign): number {
-  return (c.roles.includes('comprador') ? BUYER_DISCOUNT : 1);
+  return (c.profile === 'negociante' ? 0.9 : 1) * (c.roles.includes('comprador') ? BUYER_DISCOUNT : 1); // RN-110, RN-103
 }
 
 /** Custo unitário de um insumo para esta campanha. */

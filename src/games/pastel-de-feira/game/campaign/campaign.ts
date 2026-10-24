@@ -167,6 +167,7 @@ export function toDayConfig(c: Campaign): DayConfig {
     equipment: equipmentFlags(c),
     staff: c.staff.map((w) => ({ id: w.id, name: w.name, kind: w.kind, traits: [...w.traits], courses: [...w.courses], mode: w.mode, position: w.position })),
     positions: positionsAvailable(c),
+    profile: c.profile,
     season: seasonOf(c.day),
     forecast: c.forecast,
     eventsOn: c.eventsOn && c.day >= EVENTS_FIRST_DAY,

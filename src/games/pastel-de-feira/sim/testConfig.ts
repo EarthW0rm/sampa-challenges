@@ -23,6 +23,7 @@ export function devConfig(overrides: Partial<DayConfig> = {}): DayConfig {
     equipment: { drainer: false, warmer: 0, mill: 'manual', thermalBag: false, autoMill: false, cardMachine: false },
     staff: [],
     positions: ['balcao', 'colocador1', 'fritador1', 'trocador', 'moenda'],
+    profile: 'tradicional',
     season: 'outono',
     forecast: null,
     eventsOn: false,

@@ -101,7 +101,7 @@ function release(tacho: Tacho, index: number): { frying: NonNullable<Tacho['bask
 }
 
 /** Tirar do óleo: o desfecho depende do tempo de fritura (RN-23). Queimado vira desperdício e libera o cesto. */
-export function takeBasket(s: DayState, tacho: Tacho, index: number, extra = 0): boolean {
+export function takeBasket(s: DayState, tacho: Tacho, index: number, extra = 0, byPlayer = false): boolean {
   const rel = release(tacho, index);
   if (!rel) return false;
   const f = rel.frying;
@@ -112,7 +112,10 @@ export function takeBasket(s: DayState, tacho: Tacho, index: number, extra = 0):
     swapDemand(s);
     return true;
   }
-  const outcome = fryOutcome(fryWindow(ITEMS[f.item], tacho), f.ticks * STEP);
+  const win = fryWindow(ITEMS[f.item], tacho);
+  // Chapeiro: a janela do ponto ganha 1 s nas ações do pasteleiro (RN-110); a queima não muda
+  const wide: FryWindow = byPlayer && s.config.profile === 'chapeiro' ? { ponto: [win.ponto[0], Math.min(win.burnAt - 0.01, win.ponto[1] + 1)], burnAt: win.burnAt } : win;
+  const outcome = fryOutcome(wide, f.ticks * STEP);
   s.ready.push({ id: f.id, item: f.item, quality: Math.min(100, outcomeQuality(s, tacho, outcome) + (f.bonus ?? 0) + extra), readyAt: now(s) });
   emit(s, outcome === 'ponto' ? 'tirou_no_ponto' : outcome === 'cru' ? 'tirou_cru' : 'tirou_passado', f.id);
   return true;
@@ -124,7 +127,7 @@ export function tapBasket(s: DayState, station: string, index: number): boolean 
   const tacho = s.tachos[tachoIndex(station)];
   const basket = tacho?.baskets[index];
   if (!basket) return false;
-  return basket.frying || basket.shadow !== null ? takeBasket(s, tacho, index) : placeBasket(s, tacho, index);
+  return basket.frying || basket.shadow !== null ? takeBasket(s, tacho, index, 0, true) : placeBasket(s, tacho, index);
 }
 
 /** Começa a trocar o óleo, segurando o tacho (RN-42). */

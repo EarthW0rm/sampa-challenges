@@ -9,7 +9,7 @@ import type { ActionResult, Campaign } from '../../game/campaign/types';
 import { check, checkEq, checkNear, type Scenario } from '../harness';
 
 const fresh = (extra: Partial<Campaign> = {}): Campaign => ({
-  ...newCampaign({ profile: 'negociante', eventsOn: false, tutorial: false, seed: 7 }),
+  ...newCampaign({ profile: 'gestor', eventsOn: false, tutorial: false, seed: 7 }),
   ...extra,
 });
 
