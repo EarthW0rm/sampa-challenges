@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { GameProps } from '../../hub/types';
 import capaUrl from './assets/capa.png';
 import { H, PLAYER_SIZE, PLAYER_SPEED, W } from './game/constants';
+import { exposeGame } from './game/e2eHook';
 import { blit, SCALE, scale2x } from './game/hires';
 import './styles.css';
 
@@ -29,6 +30,8 @@ export default function __COMPONENTE__({ onExit }: GameProps) {
     const up = (e: KeyboardEvent) => keys.delete(e.code);
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
+    // gancho dos testes de ponta a ponta (inerte para o jogador)
+    const disposeE2E = exposeGame(player);
 
     let raf = 0;
     let last = performance.now();
@@ -55,6 +58,7 @@ export default function __COMPONENTE__({ onExit }: GameProps) {
     };
     raf = requestAnimationFrame(loop);
     return () => {
+      disposeE2E();
       cancelAnimationFrame(raf);
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
