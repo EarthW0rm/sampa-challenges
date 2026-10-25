@@ -121,7 +121,8 @@
 | RN-03 | Reputação abaixo de 2 estrelas reduz a chegada de clientes em 30% **(P)** | Condicional |
 | RN-04 | A fila do balcão tem no máximo 6 clientes **(P)**. Cliente que chega com a fila cheia vai embora (pedido perdido, peso 0,5 na reputação) | Restritiva |
 | RN-05 | Cada cliente pede de 1 a 2 pastéis e de 0 a 1 caldo **(P)**, só entre os itens ativos do cardápio com insumo disponível. Estação (RN-140) e promoção do brinde (RN-121) modificam essas quantidades | Obrigatória |
-| RN-06 | Paciência base (do fim da fila ao recebimento do pedido completo): Econômico 45 s, Padrão 40 s, Exigente 35 s **(P)**. Esgotada a paciência, o cliente vai embora sem pagar (falha) | Obrigatória |
+| RN-06 | Paciência base (do fim da fila ao recebimento do pedido completo): Econômico 90 s, Padrão 80 s, Exigente 70 s **(P)**. Esgotada a paciência, o cliente vai embora sem pagar (falha) | Obrigatória |
+| RN-06b | **Calma por posição na fila:** a paciência de quem espera na fila do balcão gasta mais devagar a cada posição atrás do primeiro: ritmo = máx(0,3; 1 − 0,2 × posição), ou seja 1,0; 0,8; 0,6; 0,4; 0,3… **(P)**. Quem avança na fila passa a gastar no ritmo da nova posição. Vale só para a fila do balcão (mesa e fila de pagamento seguem o ritmo normal) | Obrigatória |
 | RN-07 | **Corte seco às 14h:** nenhum cliente novo chega. Quem está na fila, nas mesas ou na fila de pagamento vai embora sem pagar e **sem falha**. Pedidos em produção, pastéis prontos não entregues e comandas não retiradas são perdidos **sem falha**. Os pastéis prontos e montados contam como desperdício | Obrigatória |
 
 ### 3.2 Perfis de cliente e preço
@@ -148,7 +149,7 @@
 | RN-22 | Prêmio de reputação: 1,0 abaixo de 4 estrelas, 1,10 com 4 e 1,20 com 5 **(P)** | Condicional |
 | RN-23 | Nota na saída do óleo: **cru** (antes da janela) 40; **no ponto** 80; **passado** (depois da janela, antes de queimar) 55; **queimado** não pode ser vendido e os insumos são perdidos **(P)** | Obrigatória |
 | RN-24 | Modificadores na fritura: Óleo de Algodão +10, Escorredor Profissional +10, óleo sujo (≥ 70% de sujeira) −15, traço Caprichoso +5, curso de Fritura +5. Nota limitada a 0–100 **(P)** | Obrigatória |
-| RN-25 | Decaimento: um pastel pronto fora da estufa perde 2 pontos/s depois de 10 s de espera **(P)**. Pedido de app perde 20 pontos no transporte, perda anulada pela Embalagem Térmica **(P)** | Obrigatória |
+| RN-25 | Decaimento: um pastel pronto fora da estufa perde 1 ponto/s depois de 20 s de espera **(P)**. Pedido de app perde 20 pontos no transporte, perda anulada pela Embalagem Térmica **(P)** | Obrigatória |
 | RN-26 | Caldo de cana não tem nota de qualidade. É pago pelo preço de venda × prêmio de reputação | Obrigatória |
 | RN-27 | **Estufa de vidro:** guarda até 6 pastéis prontos **(P)**, ou 12 com a Estufa grande. Lá dentro a nota fica congelada por 60 s e depois cai 1 ponto/s **(P)**. Sem energia (evento) vale o decaimento normal. A estufa é **compartilhada** entre balcão, mesa e app (RN-96) | Condicional |
 | RN-28 | Pastel entregue sem saquinho de papel (consumível esgotado) perde 10 pontos de nota na entrega **(P)** | Condicional |
@@ -205,6 +206,7 @@
 | RN-34 | **1 massa = 1 pastel.** A massa vale 3 dias **(P)** e é consumida da mais antiga para a mais nova. Recheios, cana e complementos que sobram **estragam no fechamento**, exceto o que estiver na caixa térmica (RN-39) | Obrigatória |
 | RN-35 | Item cujo insumo acabou sai do cardápio do dia na hora. Quem já tinha pedido esse item reage pelo perfil (RN-18): o **Econômico** passa para o item da mesma categoria com mais unidades disponíveis no estoque, dentro do teto (empate: o de menor preço **(P)**); o **Padrão** passa para outro da mesma categoria de preço igual ou menor (empate: o de maior estoque **(P)**); o **Exigente** vai embora (falha, peso 0,5). Sem item possível, Econômico e Padrão também vão embora (falha, peso 0,5) | Condicional |
 | RN-36 | Dias 1 a 3 (ou qualquer dia, com Comprador contratado): o Preparo mostra a compra sugerida de cada insumo e consumível para a demanda esperada do dia | Condicional |
+| RN-36a | **Aviso antes de abrir:** ao tocar em "Abrir a feira" com falta de insumo, o jogo mostra um aviso com **Voltar e comprar** e **Abrir mesmo assim**. O aviso é grave quando não há nenhum insumo; nos demais casos lista os itens do cardápio sem insumo (ou "nenhum salgado" vendável), a falta de saquinhos (RN-28) e a falta de copos (RN-39a). Sem nenhuma dessas faltas, a feira abre direto, sem diálogo | Condicional |
 | RN-37 | **Bônus de aproveitamento:** se nenhum cliente foi embora por falta de insumo durante o dia (RN-35), bônus = receita × max(0; 15% − % de desperdício) **(P)**. % de desperdício = unidades descartadas (estragadas, vencidas e queimadas) ÷ unidades compradas no dia. Brindes não contam como desperdício. O bônus nunca é negativo | Condicional |
 | RN-38 | **Capacidade de estoque:** a barraca guarda até 120 unidades de alimento (massa + recheios + cana + complementos) **(P)**. A compra do Preparo não pode passar a capacidade livre. Consumíveis não ocupam capacidade | Restritiva |
 | RN-39 | **Caixa térmica** (R$ 200, 1 m², máximo 2 **(P)**): +80 unidades de capacidade cada. Recheios, cana e complementos guardados nela duram **+1 dia** e estragam no fechamento do dia seguinte. Ao fechar, o jogo põe primeiro na caixa os itens mais caros | Condicional |
@@ -229,7 +231,7 @@
 
 | # | Regra | Tipo |
 |---|---|---|
-| RN-50 | **Meta do dia N** = lucro líquido ≥ R$ 80 × 1,18^(N−1) e reputação ao fim do dia ≥ 2,0 (dias 1–5), 3,0 (dias 6–12) ou 3,5 (dias 13–20) **(P)**. Meta não cumprida = o **contador de dias não avança** (próximo dia repete a mesma meta), mas caixa, reputação, compras, insumos e salários pagos **persistem** | Obrigatória |
+| RN-50 | **Meta do dia N** = lucro líquido ≥ R$ 70 × 1,12^(N−1) e reputação ao fim do dia ≥ 2,0 (dias 1–5), 3,0 (dias 6–12) ou 3,5 (dias 13–20) **(P)**. Meta não cumprida = o **contador de dias não avança** (próximo dia repete a mesma meta), mas caixa, reputação, compras, insumos e salários pagos **persistem** | Obrigatória |
 | RN-51 | Caixa inicial R$ 200 e reputação inicial 3,0 **(P)**, mais o efeito do perfil do pasteleiro (RN-110) e de um ponto anterior (RN-57) | Obrigatória |
 | RN-52 | **Falência:** caixa negativo depois do fechamento (custos maiores que o caixa) encerra a campanha. A partir do dia 10 **(P)**, a falência oferece **passar o ponto com desconto** (RN-57) | Restritiva |
 | RN-53 | No Preparo nenhuma compra pode deixar o caixa negativo | Restritiva |
@@ -244,7 +246,7 @@
 |---|---|---|
 | RN-60 | Reputação de 1,0 a 5,0, mostrada em estrelas de meia em meia. Persiste entre dias | Obrigatória |
 | RN-61 | Cada pedido termina como **sucesso** (correto, no prazo, qualidade ≥ exigência) ou **falha**. Pesos da falha **(P)**: balcão/mesa 1,0; fila cheia ou sem insumo 0,5; **app atrasado ou cancelado 3,0**; app com qualidade abaixo de 40 1,0; encomenda atrasada 3,0; pedido entregue com sujeira ≥ 80 +0,25 | Obrigatória |
-| RN-62 | **Pontos de encanto (B):** brinde entregue +0,5; caldo com chorinho +0,1 por nível; fiscal aprovado +2,0 **(P)**. Taxa do dia = (sucessos + B) ÷ (sucessos + B + soma dos pesos das falhas). Variação no fechamento = (taxa − 0,75) × 4 quando a taxa passa de 0,75 e × 2 quando fica abaixo, limitada a ±1,0 estrela por dia **(P)** | Obrigatória |
+| RN-62 | **Pontos de encanto (B):** brinde entregue +1,5; caldo com chorinho +0,1 por nível; fiscal aprovado +2,0 **(P)**. Taxa do dia = (sucessos + B) ÷ (sucessos + B + soma dos pesos das falhas). Variação no fechamento = (taxa − 0,75) × 4 quando a taxa passa de 0,75 e × 2 quando fica abaixo, limitada a ±1,0 estrela por dia **(P)** | Obrigatória |
 | RN-63 | Entregar o item errado (fora do que o perfil aceita, RN-18): o cliente recusa, o item volta para a bancada e o pedido fica marcado como falha (uma vez só por pedido), mesmo que depois seja entregue certo | Obrigatória |
 | RN-64 | Dia sem nenhum pedido não altera a reputação | Condicional |
 
@@ -330,7 +332,7 @@
 |---|---|---|
 | RN-120 | **Promoção do brinde:** no Preparo o jogador escolhe "a cada N pastéis, 1 de brinde", com N de 2 a 6 ou desligado **(P)**. Pedido de balcão, mesa ou **comanda do app** com N ou mais pastéis pagos recebe 1 pastel a mais, do mesmo sabor de menor preço do pedido. Encomendas não recebem brinde | Obrigatória |
 | RN-121 | Com a promoção ligada, uma parte dos clientes aumenta o pedido até N: 40% com N ≤ 3 e 20% com N de 4 a 6 **(P)**, se o teto de preço permitir. Nas comandas do app o tamanho não muda (2 a 4 pastéis) | Condicional |
-| RN-122 | O brinde consome insumos, consumível e produção como qualquer pastel. O pedido só fica completo com o brinde entregue (o prazo e a paciência valem para ele). O brinde entregue dá +0,5 de encanto (RN-62). O custo do brinde aparece separado no fechamento | Obrigatória |
+| RN-122 | O brinde consome insumos, consumível e produção como qualquer pastel. O pedido só fica completo com o brinde entregue (o prazo e a paciência valem para ele). O brinde entregue dá +1,5 de encanto (RN-62). O custo do brinde aparece separado no fechamento | Obrigatória |
 | RN-123 | **Chorinho do caldo:** nível 0 a 3 escolhido no Preparo, com +10%, +20% ou +30% de cana por copo **(P)**. Cada nível consome 0,1 dose a mais e acrescenta 0,3 s na extração **(P)**. Cada caldo entregue com chorinho dá +0,1 de encanto por nível (RN-62) | Obrigatória |
 | RN-124 | **Hora da xepa:** se ligada no Preparo, das 13h às 14h todos os itens saem com o desconto escolhido (10% a 50%, passo de 10% **(P)**). A chegada de clientes Econômicos sobe 30% **(P)** e os tetos de perfil passam a ser calculados sobre o preço de xepa | Condicional |
 | RN-125 | Com xepa ligada, no fechamento os recheios e complementos que iam estragar (fora da caixa térmica) são vendidos a 30% do custo **(P)** e não contam como desperdício (RN-37) | Condicional |
@@ -410,7 +412,7 @@ parada em queda de energia.
 | # | Regra | Tipo |
 |---|---|---|
 | RN-165 | **Personagens são cachorros:** pasteleiro, funcionários, cargos, clientes e motoboys. Os clientes são sorteados com **raças, cores e portes variados** **(P)**. Os motoboys do app usam os cachorros da biblioteca de sprites do hub. O perfil de cliente (Econômico, Padrão, Exigente) e o tipo de funcionário (Fritador, Geral) têm um indicador visual fixo **(P)** | Obrigatória |
-| RN-170 | **Tutorial guiado** no dia 1 (opcional ao criar a campanha): conduz o primeiro pedido passo a passo (anotar → montar → colocar → tirar → caldo → entregar → cobrar). Durante cada passo guiado o relógio pausa. O dia 1 conta normalmente para a meta | Condicional |
+| RN-170 | **Tutorial guiado** no dia 1 (opcional ao criar a campanha): conduz o primeiro pedido passo a passo (anotar → montar → colocar → tirar → caldo → entregar → cobrar). Durante cada passo guiado o relógio pausa, mas os comandos, o deslocamento do pasteleiro, a moenda e a limpeza continuam funcionando (o jogador consegue concluir o passo, inclusive moer a cana). O dia 1 conta normalmente para a meta | Condicional |
 | RN-171 | **Desbloqueio progressivo:** abas, upgrades e sistemas só aparecem no Preparo quando ficam disponíveis (ex.: delivery no dia 5, tema no dia 5, Especial da Casa no dia 6, escritório no dia 10). Na primeira vez, cada um é apresentado com um balão curto | Obrigatória |
 | RN-172 | **Som e música:** efeitos (fritura, alarme do ponto, moedas, avisos) e música de feira, com controle de mudo separado para efeitos e música, guardado entre sessões | Obrigatória |
 | RN-173 | **Acelerar 2×:** botão (e tecla) que dobra a velocidade do Dia de Feira. Fica indisponível durante os passos guiados do tutorial. A pausa por perda de foco continua valendo | Obrigatória |
@@ -451,7 +453,7 @@ parada em queda de energia.
 | Encomenda aceita com receita sem insumo suficiente | O Preparo avisa a falta ao aceitar e ao iniciar o dia, mas permite seguir | Média |
 | Grupo de mesa na fila de pagamento às 14h | Vai embora sem pagar e sem falha (RN-07) | Baixa |
 | Tutorial pulado ou campanha nova após passar o ponto | O jogo não guia o dia 1, mas os balões de desbloqueio (RN-171) aparecem na primeira vez de cada sistema da campanha | Baixa |
-| Painel aberto cobrindo uma zona com aviso | Avisos ficam acima do painel (RN-75). Tocar a zona coberta recolhe o painel e desloca o pasteleiro | Média |
+| Painel aberto cobrindo uma zona com aviso | Avisos ficam acima do painel (RN-75). Tocar a zona coberta, ou uma área vazia do painel, recolhe o painel e o toque segue para o que estava embaixo (desloca o pasteleiro) | Média |
 | Acelerar 2× ligado ao abrir um evento surpresa | A velocidade continua 2×, e o aviso do evento aparece normalmente | Baixa |
 | Passar o ponto com save atual | Pede confirmação. A campanha atual é substituída de forma definitiva | Alta |
 | Tela estreita (≈ 390 px) ou toque | Todas as ações por toque. Os alvos de toque do painel da estação têm pelo menos 72×72 unidades lógicas (≈ 44 px CSS a 390 px de largura) **(P)**. Na visão geral, o toque numa zona seleciona a estação inteira. O Preparo é organizado em abas (Insumos, Cardápio, Melhorias, Equipe, Escritório, Associação) | Alta |

@@ -279,15 +279,16 @@ FimDeCampanha --> Titulo
 | `game/types.ts` | Tipos compartilhados (`Command`, `DayConfig`, `DaySnapshot`, `DayResult`, `Campaign`) | — |
 | `game/rng.ts` | PRNG com semente: `next()`, `int()`, `pick()`, `weighted()` | — |
 | `game/sim/day.ts` | `DaySim`: relógio, fila de comandos, `step`, `snapshot`, `result` | sim/* |
-| `game/sim/customers.ts` | Chegada, perfis, mistura por hora (RN-02/12/17/19), grupos, pedido, troca (RN-18/35) | rng, data |
+| `game/sim/customers.ts` | Chegada, perfis, mistura por hora (RN-02/12/17/19), grupos, pedido, troca (RN-18/35), calma por posição na fila (`queueCalm`, RN-06b) | rng, data |
 | `game/sim/stations/*.ts` | Balcão, bancada, tacho (cestos, ponto, queima, óleo), estufa, moenda, mesas, expedição, escritório | data |
 | `game/sim/staff.ts` | Posições, fixo/automático (RN-45), tipos (RN-49), energia e descanso, traços, cursos | data |
-| `game/sim/quality.ts`, `reputation.ts` | Nota e decaimento (RN-20–28), sucesso/falha/encanto (RN-61/62) | — |
+| `game/sim/quality.ts`, `reputation.ts`, `result.ts` | Nota e decaimento (RN-20–28), sucesso/falha/encanto (RN-61/62); variação de reputação com ganho ×4 acima da taxa-alvo e ×2 abaixo (`REPUTATION_RATE_GAIN_UP`) | — |
 | `game/sim/delivery.ts` | Ofertas, teto, aceite, motoboys, cancelamento (RN-90–96) | rng |
 | `game/sim/world.ts` | Sujeira, eventos do dia, estações do ano, corte seco | rng, data |
 | `game/campaign/campaign.ts` | Estado da campanha, ações do Preparo com validação, montagem do `DayConfig` | data, save |
 | `game/campaign/closing.ts` | Fechamento: dinheiro, estoque que sobra, meta, reputação, falência, recordes | data |
-| `game/campaign/save.ts` | Serialização, type guards, migrações, checkpoint | types |
+| `game/campaign/save.ts` | Serialização, type guards, migrações, checkpoint. Quantidade de lote e `wasteUnits` aceitam fração (cana com chorinho) | types |
+| `game/campaign/warnings.ts` | `openWarning(c)`: aviso antes de abrir a feira com falta de insumo, saquinho ou copo (RN-36a); exibido pelo `PrepScreen` | campaign |
 | `game/record.ts` | Recordes (maior dia, maior caixa, maior ponto) | — |
 | `game/layout.ts` | Zonas fixas do layout 640×480 por compra e hitboxes (RN-74/75) | data |
 | `game/render/*.ts` | Camada estática em canvas fora da tela, sprites, painel, avisos, fonte de pixels | hires, layout |
@@ -482,7 +483,7 @@ Os robôs (`sim/bots.ts`) usam a mesma API de `Command` que o jogador:
 
 Fluxo: `node` roda N sementes por robô e gera o relatório. Os valores de `constants.ts` e `data/*`
 são ajustados até todos os critérios passarem, com margem em pelo menos 80% das sementes **(P)**. Os
-valores finais vão para a tabela de parâmetros do `README.md` e do `CLAUDE.md` do jogo.
+valores finais vão para a tabela de parâmetros do `README.md` e do `CLAUDE.md` do jogo e para `calibracao.md` (valores (P) alterados e tabelas por dia). Na calibração entraram `PATIENCE`, `QUEUE_CALM_*`, `DECAY_*`, `GOAL_BASE`/`GOAL_GROWTH`, `CHARM_GIFT` e `REPUTATION_RATE_GAIN_UP`; nenhum número aleatório (RN) mudou.
 
 Comando previsto (sem script novo no `package.json`, como nos outros jogos):
 `npx esbuild src/games/pastel-de-feira/sim/run.ts --bundle --platform=node --format=esm --outfile=<scratch>/sim.mjs && node <scratch>/sim.mjs --bots all --seeds 50`.
