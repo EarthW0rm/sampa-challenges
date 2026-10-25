@@ -107,3 +107,16 @@ PNGs, ~190 MB, +35 s (2,4 → 3,0 min). Uma evidência que falha só gera aviso 
 - `PF_PILOT_DEBUG=1 npm run test:e2e:campanha` imprime o ritmo dos gestos e qualquer gesto lento.
 - No macOS rode com `caffeinate -dimsu` antes do comando: com a máquina ociosa o Chrome é suspenso e
   um dia de 12 s passa a levar minutos.
+
+## Hub (`hub/`)
+
+Regras do hub, com o comportamento atual (`src/hub/`). Cada uma tem teste em `e2e/hub/` com o número no nome.
+
+| Regra | Comportamento | Teste |
+|---|---|---|
+| HUB-RN-50 | A home lista um card por jogo (pastas de `src/games/` sem `_`), na ordem do `registry.ts` (`order`, depois o título), com título e capa; o rodapé conta os jogos. O card mostra "Recorde N" quando o jogo tem `getRecord` e o recorde é maior que 0 | `home.spec.ts` |
+| HUB-RN-51 | `#/jogos/<id>` abre o jogo, com a barra "← Sampa Challenges" e o título do jogo (e o título da aba `<Jogo> · Sampa Challenges`). Id no padrão mas inexistente: mensagem "Jogo “<id>” não encontrado." com o link "Voltar para os jogos". Rota fora do padrão (`[a-z0-9-]+`, maiúsculas, barra extra, outra rota): mostra a home. Voltar do navegador e a barra retornam à home | `rotas.spec.ts` |
+| HUB-RN-52 | Trocar de jogo desmonta o anterior: depois de voltar à home não sobra pedido de quadro (`requestAnimationFrame`) nem listener de teclado do jogo; abrir A, voltar e abrir B deixa só os laços de B | `troca.spec.ts` |
+| HUB-RN-53 | Estilo não vaza: `body`, a home e os cards têm os mesmos estilos computados antes e depois de abrir cada jogo, e a raiz de cada jogo é igual antes e depois de abrir os outros | `isolamento.spec.ts` |
+| HUB-RN-54 | Falha ao carregar o módulo do jogo ou erro de execução dele cai no error boundary do hub ("O jogo travou: <mensagem>" e o link "Voltar para os jogos"), com a barra de volta visível, sem tela branca | `erro.spec.ts` |
+| HUB-RN-55 | Em 390 px a home não rola para o lado, o toque no card abre o jogo e a barra de volta cabe na largura com qualquer jogo aberto | `responsivo.spec.ts` (projeto `celular`) |
