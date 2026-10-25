@@ -23,7 +23,7 @@ PF_EVIDENCIAS=marcos npm run test:e2e             # evidências só dos marcos (
 |---|---|---|
 | Config | `playwright.config.ts` | Vite em modo dev (StrictMode ligado); projetos `desktop` (1280×1000) e `celular` (390×844, só `responsivo.spec.ts`) |
 | Gancho do jogo | `src/games/pastel-de-feira/game/e2eHook.ts` | `window.__pf` com o `DaySim`, a UI e os alvos de toque (controles do painel, clientes, funcionários). Só existe quando a página define `window.__PF_E2E__` |
-| Relógio | `support/game.ts` | troca o `requestAnimationFrame` por uma fila manual: nada anda sozinho e `frames(n)` roda `n` quadros de 1/60 s (1 passo da simulação). Os tempos (deslocamento, fritura, moenda) são medidos em passos, sem depender da máquina |
+| Relógio | `support/game.ts` | troca o `requestAnimationFrame` por uma fila manual: nada anda sozinho e `frames(n)` roda `n` quadros de 1/60 s (1 passo da simulação). Quando o jogo começa um laço (pedido de quadro fora de um quadro), o relógio parte de agora + meio quadro, para o acumulador do jogo ficar no meio do passo (sem isso, sob carga, quadros rodavam 0 passos). Os tempos (deslocamento, fritura, moenda) são medidos em passos, sem depender da máquina |
 | Saves | `support/campaign.ts` | monta a campanha com as próprias ações do jogo (`newCampaign`, `buyIngredient`…) e injeta no `localStorage` antes de carregar; semente fixa |
 | Ações | `support/flow.ts` | anotar, montar, fritar, moer, entregar, cobrar, atender um cliente inteiro, tudo por toques |
 | Piloto | `support/pilot.ts`, `support/pilot.browser.ts` | joga um dia inteiro: o jogador automático de calibração (`sim/player.ts`) decide, e cada decisão vira toque, segurar ou soltar com o mouse real; gestos sem alvo são registrados e fazem o teste falhar |

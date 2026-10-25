@@ -75,7 +75,13 @@ export class GamePage {
         const queue = new Map<number, FrameRequestCallback>();
         let nextId = 1;
         let ts = -1;
+        let inFrame = false;
         window.requestAnimationFrame = (cb) => {
+          // Pedido fora de um quadro = laço novo (o dia abriu; o jogo marca `last` com o tempo real). O relógio
+          // parte de agora + meio quadro: o 1º quadro roda 1 passo e o acumulador do jogo fica no meio do passo.
+          // Sem isso, a demora do teste até o 1º `frames()` (sob carga, > MAX_FRAME_DT) deixava o acumulador
+          // na fronteira de um passo, e o arredondamento fazia quadros rodarem 0 passos (toque não processado).
+          if (!inFrame) ts = performance.now() + 1000 / 120;
           queue.set(nextId, cb);
           return nextId++;
         };
@@ -88,7 +94,12 @@ export class GamePage {
             ts += 1000 / 60;
             const cbs = [...queue.values()];
             queue.clear();
-            for (const cb of cbs) cb(ts);
+            inFrame = true;
+            try {
+              for (const cb of cbs) cb(ts);
+            } finally {
+              inFrame = false;
+            }
           }
         };
         // Salto do relógio sem quadros (aba em segundo plano): o próximo quadro chega com dt enorme.
