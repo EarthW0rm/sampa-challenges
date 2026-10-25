@@ -48,7 +48,8 @@ export const reputacao: Scenario[] = [
     rules: 'RN-62, RN-64',
     run() {
       checkNear(reputationChange(3, 0, 1).change, 0, 'taxa 0,75 → 0');
-      checkNear(reputationChange(5, 0, 0).change, 0.5, 'taxa 1 → +0,5');
+      checkNear(reputationChange(5, 0, 0).change, 1, 'taxa 1 → +1,0');
+      checkNear(reputationChange(7, 0, 1).change, 0.5, 'taxa 0,875 → +0,5');
       checkNear(reputationChange(0, 0, 4).change, -1, 'taxa 0 → −1,0 (limitado)');
       checkNear(reputationChange(1, 0, 3).change, -1, 'taxa 0,25 → −1,0');
       checkNear(reputationChange(3, 1, 1).rate, 0.8, 'encanto entra na taxa');

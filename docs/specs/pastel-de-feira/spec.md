@@ -244,7 +244,7 @@
 |---|---|---|
 | RN-60 | Reputação de 1,0 a 5,0, mostrada em estrelas de meia em meia. Persiste entre dias | Obrigatória |
 | RN-61 | Cada pedido termina como **sucesso** (correto, no prazo, qualidade ≥ exigência) ou **falha**. Pesos da falha **(P)**: balcão/mesa 1,0; fila cheia ou sem insumo 0,5; **app atrasado ou cancelado 3,0**; app com qualidade abaixo de 40 1,0; encomenda atrasada 3,0; pedido entregue com sujeira ≥ 80 +0,25 | Obrigatória |
-| RN-62 | **Pontos de encanto (B):** brinde entregue +0,5; caldo com chorinho +0,1 por nível; fiscal aprovado +2,0 **(P)**. Taxa do dia = (sucessos + B) ÷ (sucessos + B + soma dos pesos das falhas). Variação no fechamento = (taxa − 0,75) × 2, limitada a ±1,0 estrela por dia **(P)** | Obrigatória |
+| RN-62 | **Pontos de encanto (B):** brinde entregue +0,5; caldo com chorinho +0,1 por nível; fiscal aprovado +2,0 **(P)**. Taxa do dia = (sucessos + B) ÷ (sucessos + B + soma dos pesos das falhas). Variação no fechamento = (taxa − 0,75) × 4 quando a taxa passa de 0,75 e × 2 quando fica abaixo, limitada a ±1,0 estrela por dia **(P)** | Obrigatória |
 | RN-63 | Entregar o item errado (fora do que o perfil aceita, RN-18): o cliente recusa, o item volta para a bancada e o pedido fica marcado como falha (uma vez só por pedido), mesmo que depois seja entregue certo | Obrigatória |
 | RN-64 | Dia sem nenhum pedido não altera a reputação | Condicional |
 

@@ -1,4 +1,4 @@
-import { REPUTATION_MAX_DAILY_CHANGE, REPUTATION_RATE_GAIN, REPUTATION_TARGET_RATE } from '../constants';
+import { REPUTATION_MAX_DAILY_CHANGE, REPUTATION_RATE_GAIN, REPUTATION_RATE_GAIN_UP, REPUTATION_TARGET_RATE } from '../constants';
 import type { DayResult } from '../types';
 import type { DayState } from './state';
 
@@ -13,7 +13,7 @@ export function reputationChange(successes: number, charm: number, failures: num
   const total = successes + charm + failures;
   if (successes + failures <= 0 || total <= 0) return { rate: 0, change: 0 };
   const rate = (successes + charm) / total;
-  const change = clamp((rate - REPUTATION_TARGET_RATE) * REPUTATION_RATE_GAIN, -REPUTATION_MAX_DAILY_CHANGE, REPUTATION_MAX_DAILY_CHANGE);
+  const change = clamp((rate - REPUTATION_TARGET_RATE) * (rate >= REPUTATION_TARGET_RATE ? REPUTATION_RATE_GAIN_UP : REPUTATION_RATE_GAIN), -REPUTATION_MAX_DAILY_CHANGE, REPUTATION_MAX_DAILY_CHANGE);
   return { rate, change };
 }
 
