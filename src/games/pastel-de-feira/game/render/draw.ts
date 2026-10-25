@@ -5,11 +5,16 @@ import type { Profile } from '../types';
 import type { Rect } from '../layout';
 import { getAssets, LIB_PX, type Equipe, type Pose, type Aparencia } from '../assets';
 
-/** Paleta dos placeholders geométricos (a arte final troca isto na US-121). */
+/**
+ * Paleta da barraca aconchegante (pixel art 16 bits, paleta quente, contorno marrom-escuro).
+ * `text` é claro (sobre faixas vermelhas e o fogo); texto sobre pergaminho, placa e célula usa `ink`,
+ * e o "sub" das células, `ink2`.
+ */
 export const PAL = {
-  ground: '#2b2433', wood: '#8a5a33', woodDark: '#5d3b21', panel: '#1f1829', panelLine: '#4a3d5e', tile: '#3a2f4a',
-  tileHi: '#6a4f8f', text: '#f4efe2', muted: '#b9aecb', gold: '#ffd36b', red: '#d9503f', green: '#6fcf6f',
-  blue: '#5aa7e8', orange: '#e8a13a', oil: '#c98a1e', shadow: '#1b1220',
+  ground: '#e3dacb', wood: '#b47038', woodDark: '#7a4a22', panel: '#f6d9a0', panelLine: '#4a2a12', tile: '#ebc48a',
+  tileHi: '#ffe3a8', text: '#fbf6e8', muted: '#6b4a2a', gold: '#f2c14e', red: '#d9503f', green: '#7bc043',
+  blue: '#4f7bbf', orange: '#e0a23a', oil: '#d9961f', shadow: '#2e1c12',
+  ink: '#2e1c12', ink2: '#6b4a2a', paper: '#fbf6e8', barBg: '#5a4430', dirt: '#a88a4a', cane: '#9bbf4a',
 } as const;
 
 const FUR = ['#c9915a', '#8a5a33', '#e6d2a8', '#6b6b73', '#f0f0f0', '#3b2b22'];
@@ -48,14 +53,17 @@ export function box(ctx: CanvasRenderingContext2D, r: Rect, fill: string, line?:
 }
 
 export function bar(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, frac: number, color: string): void {
-  ctx.fillStyle = PAL.shadow;
+  ctx.fillStyle = PAL.ink;
   ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = PAL.barBg;
+  ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
   ctx.fillStyle = color;
   ctx.fillRect(x + 1, y + 1, Math.max(0, Math.round((w - 2) * Math.max(0, Math.min(1, frac)))), h - 2);
 }
 
-export function textCenter(ctx: CanvasRenderingContext2D, text: string, cx: number, y: number, color: string, k = 1): void {
-  drawPixelText(ctx, text, Math.round(cx - textWidth(text, k) / 2), y, color, k);
+/** Texto centrado em `cx`; texto escuro (`PAL.ink`, `PAL.ink2`) vai com `shadow = null`. */
+export function textCenter(ctx: CanvasRenderingContext2D, text: string, cx: number, y: number, color: string, k = 1, shadow?: string | null): void {
+  drawPixelText(ctx, text, Math.round(cx - textWidth(text, k) / 2), y, color, k, shadow);
 }
 
 /** Cachorro de lado (placeholder): corpo, cabeça, orelha e rabo; `flip` espelha. Âncora: pé central. */
@@ -155,4 +163,58 @@ export function drawArt(ctx: CanvasRenderingContext2D, name: string, x: number, 
   if (!img) return false;
   ctx.drawImage(img, Math.round(x), Math.round(y), w ?? img.width / LIB_PX, h ?? img.height / LIB_PX);
   return true;
+}
+
+/** Peça 3-slice `<nome>_esq|_meio|_dir` em `w` lógicos; o meio repete. */
+export function drawThree(ctx: CanvasRenderingContext2D, name: string, x: number, y: number, w: number): boolean {
+  const a = getAssets();
+  const l = a?.art(`${name}_esq`);
+  const m = a?.art(`${name}_meio`);
+  const r = a?.art(`${name}_dir`);
+  if (!l || !m || !r) return false;
+  const lw = l.width / LIB_PX;
+  const mw = m.width / LIB_PX;
+  const rw = r.width / LIB_PX;
+  const h = m.height / LIB_PX;
+  x = Math.round(x);
+  y = Math.round(y);
+  w = Math.round(w);
+  ctx.drawImage(l, x, y, lw, h);
+  for (let cx = x + lw; cx < x + w - rw; cx += mw) {
+    const cw = Math.min(mw, x + w - rw - cx);
+    ctx.drawImage(m, 0, 0, cw * LIB_PX, m.height, cx, y, cw, h);
+  }
+  ctx.drawImage(r, x + w - rw, y, rw, h);
+  return true;
+}
+
+/** 9-slice com cantos de `c` lógicos, esticado no retângulo. */
+export function drawNine(ctx: CanvasRenderingContext2D, name: string, r: Rect, c: number): boolean {
+  const img = getAssets()?.art(name);
+  if (!img) return false;
+  const k = LIB_PX;
+  const iw = img.width / k;
+  const ih = img.height / k;
+  const s = c * k;
+  const xs = [r.x, r.x + c, r.x + r.w - c];
+  const ws = [c, r.w - 2 * c, c];
+  const ys = [r.y, r.y + c, r.y + r.h - c];
+  const hs = [c, r.h - 2 * c, c];
+  const sx = [0, s, img.width - s];
+  const sw = [s, (iw - 2 * c) * k, s];
+  const sy = [0, s, img.height - s];
+  const sh = [s, (ih - 2 * c) * k, s];
+  for (let j = 0; j < 3; j++) {
+    for (let i = 0; i < 3; i++) {
+      if (ws[i] > 0 && hs[j] > 0) ctx.drawImage(img, sx[i], sy[j], sw[i], sh[j], xs[i], ys[j], ws[i], hs[j]);
+    }
+  }
+  return true;
+}
+
+/** Placa de madeira com o nome da zona (texto k=2 escuro). */
+export function drawPlaque(ctx: CanvasRenderingContext2D, label: string, x: number, y: number): void {
+  const w = textWidth(label, 2) + 8;
+  if (!drawThree(ctx, 'ui/placa', x, y, w)) box(ctx, { x, y, w, h: 15 }, '#e9a85a', PAL.ink);
+  drawPixelText(ctx, label, x + 4, y + 3, PAL.ink, 2, null);
 }

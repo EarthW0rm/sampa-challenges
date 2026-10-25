@@ -6,6 +6,7 @@ import { REFUSAL_TEXT, type Campaign } from '../../game/campaign/types';
 import { CONSUMABLES, INGREDIENTS, type ConsumableId, type IngredientId } from '../../game/data/catalog';
 import { ITEMS } from '../../game/data/recipes';
 import { money } from '../format';
+import { ingIcon } from '../icons';
 
 interface Props {
   campaign: Campaign;
@@ -123,6 +124,7 @@ export function InventoryTab({ campaign: c, onChange }: Props) {
           return [
             head,
             <li className="item" key={ing}>
+              {ingIcon(ing) && <img className="item-icon" src={ingIcon(ing)} alt="" aria-hidden="true" width={24} height={24} />}
               <div className="item-main">
                 <strong>{info.name}</strong>
                 <span>

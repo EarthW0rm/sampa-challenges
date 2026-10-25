@@ -24,7 +24,7 @@ export function TitleScreen({ save, warning, record, onContinue, onNew, onExit }
       <p>Frite, atenda e faça a barraca crescer. Dia a dia, meta a meta.</p>
       {warning && <p className="warn" role="status">{WARNING_TEXT[warning]}</p>}
       {record > 0 && <p>Recorde: dia {record}</p>}
-      <div className="menu">
+      <div className="menu moldura">
         {save && (
           <button type="button" className="primary" onClick={onContinue}>
             Continuar{day ? ` (dia ${day})` : ''}

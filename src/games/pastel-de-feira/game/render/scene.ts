@@ -1,6 +1,6 @@
 import { H, STEP, W } from '../constants';
 import { ITEMS } from '../data/recipes';
-import { center, type Layout, type Zone } from '../layout';
+import { center, coveredByPanel, type Layout, type Zone } from '../layout';
 import { drawPixelText } from '../pixelFont';
 import { currentQuality } from '../sim/quality';
 import { queueOf, xepaActive } from '../sim/customers';
@@ -11,9 +11,9 @@ import { homeStation } from '../sim/staff';
 import { now, type Customer, type DayState } from '../sim/state';
 import type { UiState } from '../ui';
 import { SCALE } from '../hires';
-import { aparenciaDe, getAssets, type Pose } from '../assets';
+import { aparenciaDe, type Pose } from '../assets';
 import { drawTachoFx } from './fx';
-import { bar, box, drawArt, drawCliente, drawEquipe, drawPastel, itemColor, PAL, PROFILE_COLOR, textCenter } from './draw';
+import { bar, box, drawArt, drawCliente, drawEquipe, drawNine, drawPastel, drawPlaque, drawThree, itemColor, PAL, PROFILE_COLOR, textCenter } from './draw';
 
 /** Posição do cliente `i` da fila (frente à direita, perto do balcão). */
 export function queueSpot(layout: Layout, i: number): { x: number; y: number } {
@@ -71,23 +71,40 @@ function anchor(z: Zone): { x: number; y: number } {
   return { x: c.x, y: z.y + z.h - 8 };
 }
 
-/** Piso da zona com o ladrilho da arte (madeira nas estações, roxo na fila, madeira clara nas mesas). */
-function tile(ctx: CanvasRenderingContext2D, z: Zone): void {
-  const name = z.id === 'fila' ? 'cenario/piso_fila' : z.id === 'mesas' ? 'cenario/piso_mesas' : z.id === 'caixa' ? 'cenario/piso_metal' : 'cenario/piso_madeira';
-  const img = getAssets()?.art(name);
-  if (!img) return;
-  const t = img.width / 2;
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(z.x + 1, z.y + 1, z.w - 2, z.h - 2);
-  ctx.clip();
-  for (let y = z.y + 1; y < z.y + z.h; y += t) for (let x = z.x + 1; x < z.x + z.w; x += t) ctx.drawImage(img, x, y, t, t);
-  ctx.fillStyle = 'rgba(27,18,32,0.35)'; // escurece o piso para o texto e os itens ficarem legíveis
-  ctx.fillRect(z.x, z.y, z.w, z.h);
-  ctx.restore();
+/** Móvel fixo da zona e seus enfeites (coordenadas relativas à zona). A moenda depende do equipamento: vai no `renderScene`. */
+function furniture(ctx: CanvasRenderingContext2D, z: Zone): void {
+  switch (z.id) {
+    case 'balcao':
+      drawThree(ctx, 'moveis/balcao', z.x + 4, z.y + 20, z.w - 8);
+      break;
+    case 'bancada':
+      drawThree(ctx, 'moveis/bancada', z.x + 4, z.y + 20, z.w - 8);
+      drawArt(ctx, 'decor/saco_farinha', z.x + 30, z.y + 86);
+      drawArt(ctx, 'decor/saco_farinha', z.x + 52, z.y + 88);
+      drawArt(ctx, 'decor/rolo', z.x + 10, z.y + 58);
+      if (z.w >= 120) drawArt(ctx, 'decor/potes', z.x + z.w - 34, z.y + 26);
+      break;
+    case 'tacho1':
+    case 'tacho2':
+    case 'tacho3':
+      drawThree(ctx, 'moveis/fogao', z.x + 4, z.y + 18, z.w - 8);
+      break;
+    case 'estufa':
+      drawThree(ctx, 'moveis/estufa', z.x + 4, z.y + 22, z.w - 8);
+      break;
+    case 'escritorio':
+      if (!drawThree(ctx, 'moveis/escrivaninha', z.x + 8, z.y + 26, z.w - 16)) box(ctx, { x: z.x + 8, y: z.y + 26, w: z.w - 16, h: 22 }, '#3a4a6a', PAL.woodDark);
+      break;
+    case 'descanso':
+      drawThree(ctx, 'moveis/banco', z.x + 8, z.y + z.h - 28, z.w - 16);
+      drawArt(ctx, 'decor/garrafa_cafe', z.x + z.w - 20, z.y + z.h - 46);
+      break;
+    default:
+      break; // mesas, expedição, caixa e fila: o que aparece é dinâmico
+  }
 }
 
-/** Camada estática: chão e zonas. Só redesenha quando o layout muda. */
+/** Camada estática: fundo, móveis e placas das zonas. Só redesenha quando o layout muda. */
 export function buildStaticLayer(layout: Layout): HTMLCanvasElement {
   const cv = document.createElement('canvas');
   cv.width = W * SCALE;
@@ -102,25 +119,39 @@ export function buildStaticLayer(layout: Layout): HTMLCanvasElement {
       ctx.fillStyle = (x / 32) % 2 === 0 ? '#c8402f' : '#f1e6d0'; // toldo listrado (sem arte)
       ctx.fillRect(x, 22, 32, 6);
     }
+    for (const z of layout.zones) box(ctx, z, PAL.tile, PAL.woodDark);
   }
   for (const z of layout.zones) {
-    box(ctx, z, z.id === 'fila' ? '#352c42' : '#4a3a2a', PAL.woodDark);
-    tile(ctx, z);
-    drawPixelText(ctx, z.label, z.x + 5, z.y + 5, PAL.muted, 2);
+    furniture(ctx, z);
+    drawPlaque(ctx, z.label, z.x + 4, z.y + 4);
+  }
+  // espaço livre no fim da fileira do meio: caixotes de cana e de limão
+  const mid = layout.zones.filter((z) => z.y > 150 && !coveredByPanel(z));
+  const end = Math.max(0, ...mid.map((z) => z.x + z.w));
+  if (end < W - 52) {
+    drawArt(ctx, 'decor/caixote_cana', W - 46, 250);
+    if (end < W - 52 - 44) drawArt(ctx, 'decor/caixote_limao', W - 88, 262);
   }
   return cv;
 }
 
+/** Onde as migalhas aparecem na calçada da fila (relativo à zona), na ordem em que surgem. */
+const CRUMBS: readonly (readonly [number, number])[] = [
+  [140, 102],
+  [60, 96],
+  [210, 108],
+];
+
 function drawBalloon(ctx: CanvasRenderingContext2D, c: Customer, x: number, y: number): void {
   const w = 12 * c.lines.length + 8;
   const bx = Math.round(x - w / 2);
-  box(ctx, { x: bx, y: y - 22, w, h: 20 }, '#f4efe2', PAL.shadow);
+  if (drawNine(ctx, 'ui/balao', { x: bx, y: y - 22, w, h: 20 }, 3)) drawArt(ctx, 'ui/balao_rabo', Math.round(x) - 3, y - 3);
+  else box(ctx, { x: bx, y: y - 22, w, h: 20 }, PAL.paper, PAL.ink);
   if (c.state === 'aguardando') {
-    textCenter(ctx, '?', x, y - 18, PAL.shadow, 2);
+    textCenter(ctx, '?', x, y - 18, PAL.ink, 2, null);
   } else {
     c.lines.forEach((l, i) => {
-      ctx.fillStyle = l.delivered ? PAL.muted : itemColor(l.item);
-      ctx.fillRect(bx + 4 + i * 12, y - 18, 9, 9);
+      box(ctx, { x: bx + 4 + i * 12, y: y - 17, w: 10, h: 10 }, l.delivered ? '#d9b27a' : itemColor(l.item), PAL.ink);
       if (l.gift) {
         ctx.fillStyle = PAL.gold; // brinde: estrela dourada no canto
         ctx.fillRect(bx + 10 + i * 12, y - 19, 3, 3);
@@ -135,6 +166,7 @@ function drawTacho(ctx: CanvasRenderingContext2D, st: DayState, ui: UiState, z: 
   if (!t) return;
   const n = t.baskets.length;
   const bw = Math.min(26, Math.floor((z.w - 12) / n) - 4);
+  if (!drawThree(ctx, isDirty(t) ? 'equip/tacho_sujo' : 'equip/tacho', z.x + 4, z.y + 22, z.w - 8)) box(ctx, { x: z.x + 4, y: z.y + 22, w: z.w - 8, h: 58 }, PAL.oil, PAL.ink);
   t.baskets.forEach((b, i) => {
     const x = z.x + 8 + i * (bw + 4);
     const y = z.y + 28;
@@ -143,7 +175,7 @@ function drawTacho(ctx: CanvasRenderingContext2D, st: DayState, ui: UiState, z: 
     const sec = f ? f.ticks * STEP : 0;
     const inPonto = !!f && !!win && !f.burned && sec >= win.ponto[0] && sec <= win.ponto[1];
     const alarmOn = t.alarm && !!f && !!win && !f.burned && (inPonto || sec >= win.burnAt - 1) && Math.floor(ui.clock * 6) % 2 === 0;
-    box(ctx, { x, y, w: bw, h: 44 }, alarmOn ? PAL.red : PAL.oil, alarmOn ? PAL.text : PAL.woodDark);
+    drawBasket(ctx, x, y, bw, 44, alarmOn);
     if (f && win) {
       const pst = f.burned ? 'queimado' : sec < win.ponto[0] ? 'cru' : sec <= win.ponto[1] ? 'ponto' : 'passado';
       if (!drawPastel(ctx, f.item, pst, x + 2, y + 6, bw - 4, b.shadow !== null ? 12 : 18)) {
@@ -156,11 +188,31 @@ function drawTacho(ctx: CanvasRenderingContext2D, st: DayState, ui: UiState, z: 
   });
   if (t.timer) {
     const on = hasPower(st);
-    box(ctx, { x: z.x + z.w - 22, y: z.y + 6, w: 16, h: 14 }, on ? PAL.green : PAL.red, PAL.shadow); // cesto com timer: verde ligado, vermelho sem energia
-    textCenter(ctx, 'T', z.x + z.w - 14, z.y + 9, PAL.shadow, 1);
+    box(ctx, { x: z.x + z.w - 22, y: z.y + 6, w: 16, h: 14 }, PAL.tile, on ? PAL.green : PAL.red); // cesto com timer: borda verde ligado, vermelha sem energia
+    textCenter(ctx, 'T', z.x + z.w - 14, z.y + 9, PAL.ink, 1, null);
   }
   bar(ctx, z.x + 8, z.y + z.h - 22, z.w - 16, 6, isChanging(t) ? 0 : t.dirt, isDirty(t) ? PAL.red : PAL.oil);
-  if (isLocked(t)) textCenter(ctx, 'TRAVADO', z.x + z.w / 2, z.y + z.h - 14, PAL.red, 1);
+  if (isLocked(t)) {
+    box(ctx, { x: z.x + z.w / 2 - 16, y: z.y + z.h - 15, w: 32, h: 9 }, PAL.tile);
+    textCenter(ctx, 'TRAVADO', z.x + z.w / 2, z.y + z.h - 14, PAL.ink, 1, null);
+  }
+}
+
+/** Cesto do tacho: grade repetida com contorno e alça; com o alarme piscando, contorno vermelho de 2 px. */
+function drawBasket(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, alarmOn: boolean): void {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  let tiled = true;
+  for (let gy = y; gy < y + h && tiled; gy += 8) for (let gx = x; gx < x + w && tiled; gx += 8) tiled = drawArt(ctx, 'equip/cesto_grade', gx, gy);
+  if (!tiled) box(ctx, { x, y, w, h }, PAL.oil);
+  ctx.restore();
+  drawArt(ctx, 'equip/cesto_alca', x + Math.round((w - 6) / 2), y - 8);
+  ctx.strokeStyle = alarmOn ? PAL.red : PAL.ink;
+  ctx.lineWidth = alarmOn ? 2 : 1;
+  const o = alarmOn ? 1 : 0.5;
+  ctx.strokeRect(x + o, y + o, w - 2 * o, h - 2 * o);
 }
 
 /** Posição do lugar `seat` da mesa `table` na zona das mesas (2×2 mesas de 4 lugares). */
@@ -174,15 +226,14 @@ function drawTables(ctx: CanvasRenderingContext2D, st: DayState, z: Zone, ui: Ui
   st.tables.forEach((t, i) => {
     const tx = z.x + 12 + (i % 2) * 146;
     const ty = z.y + 26 + Math.floor(i / 2) * 68;
-    box(ctx, { x: tx + 14, y: ty + 22, w: 90, h: 22 }, PAL.wood, PAL.woodDark);
+    if (!drawArt(ctx, 'equip/mesa', tx + 14, ty + 22)) box(ctx, { x: tx + 14, y: ty + 22, w: 90, h: 22 }, PAL.wood, PAL.woodDark);
     t.seats.forEach((seat, j) => {
       const p = seatSpot(z, i, j);
       if (seat === 'sujo') {
-        ctx.fillStyle = '#6b4a2a';
-        ctx.fillRect(p.x - 8, p.y - 6, 16, 6);
-      } else if (seat === 'livre') {
-        ctx.fillStyle = '#3a2f4a';
-        ctx.fillRect(p.x - 6, p.y - 4, 12, 4);
+        drawArt(ctx, 'decor/assento', p.x - 6, p.y - 4);
+        if (!drawArt(ctx, 'decor/migalhas', p.x - 8, p.y - 6)) box(ctx, { x: p.x - 8, y: p.y - 6, w: 16, h: 6 }, PAL.dirt);
+      } else if (seat === 'livre' && !drawArt(ctx, 'decor/assento', p.x - 6, p.y - 4)) {
+        box(ctx, { x: p.x - 6, y: p.y - 4, w: 12, h: 4 }, PAL.woodDark);
       }
     });
   });
@@ -205,10 +256,10 @@ function drawDispatch(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): voi
     const x = z.x + 8 + i * 24;
     const y = z.y + 26;
     const done = c.packed.filter((p) => p !== null).length;
-    box(ctx, { x, y, w: 20, h: 28 }, c.motoboy !== null ? PAL.green : PAL.tile, PAL.woodDark);
+    if (!drawArt(ctx, c.motoboy !== null ? 'equip/sacola_app_motoboy' : 'equip/sacola_app', x, y)) box(ctx, { x, y, w: 20, h: 28 }, c.motoboy !== null ? PAL.green : PAL.tile, PAL.woodDark);
     bar(ctx, x, y + 32, 20, 4, done / c.items.length, PAL.gold);
     const left = c.pickupAt - now(st);
-    if (left > 0) textCenter(ctx, String(Math.ceil(left)), x + 10, y + 8, PAL.text, 1);
+    if (left > 0) textCenter(ctx, String(Math.ceil(left)), x + 10, y + 8, PAL.ink, 1, null);
   });
   st.motoboys.slice(0, 2).forEach((m, i) => {
     const x = z.x + z.w - 22 - i * 34;
@@ -229,13 +280,12 @@ function drawPayQueue(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): voi
 
 function drawWarmer(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): void {
   const cap = st.config.equipment.warmer;
-  box(ctx, { x: z.x + 6, y: z.y + 26, w: z.w - 12, h: z.h - 40 }, '#2f4a52', PAL.woodDark);
   const warmed = st.ready.filter((r) => r.warmed);
   for (let i = 0; i < cap; i++) {
     const x = z.x + 10 + (i % 4) * 22;
     const y = z.y + 32 + Math.floor(i / 4) * 18;
     if (warmed[i] && drawPastel(ctx, warmed[i].item, 'ponto', x, y, 18, 12)) continue;
-    ctx.fillStyle = warmed[i] ? itemColor(warmed[i].item) : '#1b2c31';
+    ctx.fillStyle = warmed[i] ? itemColor(warmed[i].item) : '#24383e';
     ctx.fillRect(x, y, 18, 12);
   }
 }
@@ -259,7 +309,7 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
     st.ready.slice(0, 10).forEach((r, i) => {
       const q = currentQuality(r, now(st));
       const x = bal.x + 8 + (i % 5) * 28;
-      const y = bal.y + 30 + Math.floor(i / 5) * 30;
+      const y = bal.y + 26 + Math.floor(i / 5) * 22;
       if (!drawPastel(ctx, r.item, q >= 50 ? 'ponto' : 'passado', x, y, 22, 14)) {
         ctx.fillStyle = itemColor(r.item);
         ctx.fillRect(x, y, 22, 14);
@@ -271,14 +321,14 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
       }
     });
     st.cups.slice(0, 6).forEach((c, i) => {
-      if (drawPastel(ctx, c.item, 'ponto', bal.x + 8 + i * 14, bal.y + 94, 10, 14)) return;
+      if (drawPastel(ctx, c.item, 'ponto', bal.x + 150 + i * 12, bal.y + 28, 10, 14)) return;
       ctx.fillStyle = itemColor(c.item);
-      ctx.fillRect(bal.x + 8 + i * 14, bal.y + 94, 10, 14);
+      ctx.fillRect(bal.x + 150 + i * 12, bal.y + 28, 10, 14);
     });
     st.coins.slice(0, 6).forEach((_c, i) => {
-      if (drawArt(ctx, 'itens/moeda', bal.x + bal.w - 22 - i * 12, bal.y + 94)) return;
+      if (drawArt(ctx, 'itens/moeda', bal.x + bal.w - 22 - i * 12, bal.y + 52)) return;
       ctx.fillStyle = PAL.gold;
-      ctx.fillRect(bal.x + bal.w - 22 - i * 12, bal.y + 94, 10, 10);
+      ctx.fillRect(bal.x + bal.w - 22 - i * 12, bal.y + 52, 10, 10);
     });
   }
 
@@ -286,13 +336,16 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   const ban = layout.byId.get('bancada');
   if (ban) {
     st.tray.forEach((ing, i) => {
+      if (drawArt(ctx, 'itens/ing_' + ing, ban.x + 8 + i * 14, ban.y + 28)) return;
       ctx.fillStyle = itemColor(ing);
-      ctx.fillRect(ban.x + 8 + i * 14, ban.y + 30, 10, 10);
+      ctx.fillRect(ban.x + 8 + i * 14, ban.y + 28, 10, 10);
     });
     st.assembled.slice(0, 6).forEach((a, i) => {
-      if (drawPastel(ctx, a.item, 'cru', ban.x + 8 + (i % 4) * 28, ban.y + 56 + Math.floor(i / 4) * 22, 22, 14)) return;
+      const x = ban.x + 8 + (i % 4) * 28;
+      const y = ban.y + 44 + Math.floor(i / 4) * 18;
+      if (drawPastel(ctx, a.item, 'cru', x, y, 22, 14)) return;
       ctx.fillStyle = itemColor(a.item);
-      ctx.fillRect(ban.x + 8 + (i % 4) * 28, ban.y + 56 + Math.floor(i / 4) * 22, 22, 14);
+      ctx.fillRect(x, y, 22, 14);
     });
   }
 
@@ -311,10 +364,11 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   if (bal && st.tables.length > 0) drawPayQueue(ctx, st, bal);
   const off = layout.byId.get('escritorio');
   if (off) {
-    box(ctx, { x: off.x + 8, y: off.y + 26, w: off.w - 16, h: 22 }, '#3a4a6a', PAL.woodDark); // mesa de trabalho
     st.bigOrders.slice(0, 3).forEach((o, i) => {
       const x = off.x + 10 + i * 30;
-      box(ctx, { x, y: off.y + 60, w: 26, h: 20 }, o.state === 'espera' ? PAL.green : PAL.wood, PAL.woodDark); // caixa de encomenda
+      if (!drawArt(ctx, o.state === 'espera' ? 'equip/caixa_encomenda_pronta' : 'equip/caixa_encomenda', x, off.y + 60)) {
+        box(ctx, { x, y: off.y + 60, w: 26, h: 20 }, o.state === 'espera' ? PAL.green : PAL.wood, PAL.woodDark); // caixa de encomenda
+      }
       bar(ctx, x, off.y + 84, 26, 4, o.boxed.length / o.qty, PAL.gold);
     });
   }
@@ -322,8 +376,11 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   if (ex) drawDispatch(ctx, st, ex);
   const fila = layout.byId.get('fila');
   if (fila) {
-    bar(ctx, fila.x + 6, fila.y + fila.h - 8, 90, 5, st.dirt / 100, st.dirt >= 80 ? PAL.red : st.dirt >= 60 ? PAL.orange : PAL.muted);
-    drawPixelText(ctx, 'SUJEIRA', fila.x + 100, fila.y + fila.h - 10, st.dirt >= 60 ? PAL.orange : PAL.muted, 1);
+    // migalhas na calçada: 1 a partir de 30 de sujeira, mais 1 a cada 25 pontos
+    const crumbs = st.dirt >= 30 ? Math.min(3, 1 + Math.floor((st.dirt - 30) / 25)) : 0;
+    for (const [dx, dy] of CRUMBS.slice(0, crumbs)) drawArt(ctx, 'decor/migalhas', fila.x + dx, fila.y + dy);
+    bar(ctx, fila.x + 6, fila.y + fila.h - 8, 90, 5, st.dirt / 100, st.dirt >= 80 ? PAL.red : st.dirt >= 60 ? PAL.orange : PAL.dirt);
+    drawPixelText(ctx, 'SUJEIRA', fila.x + 100, fila.y + fila.h - 10, PAL.ink2, 1, null);
   }
 
   // estufa, caixas térmicas e moenda
@@ -332,22 +389,26 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   const cx = layout.byId.get('caixa');
   if (cx) {
     for (let i = 0; i < st.config.coolers; i++) {
-      box(ctx, { x: cx.x + 8, y: cx.y + 26 + i * 44, w: cx.w - 16, h: 38 }, '#3b6ea5', PAL.woodDark);
+      if (!drawArt(ctx, 'equip/caixa_termica', cx.x + 8, cx.y + 26 + i * 44)) box(ctx, { x: cx.x + 8, y: cx.y + 26 + i * 44, w: cx.w - 16, h: 38 }, '#3b6ea5', PAL.woodDark);
     }
   }
   const mo = layout.byId.get('moenda');
   if (mo) {
-    bar(ctx, mo.x + 8, mo.y + 40, mo.w - 16, 8, (st.config.equipment.autoMill ? st.autoMill > 0 ? 1 - st.autoMill / millSeconds(st) : 0 : st.mill.progress / millSeconds(st)), PAL.green);
-    if (st.config.equipment.autoMill) {
+    const eq = st.config.equipment;
+    const mx = mo.x + Math.round((mo.w - 72) / 2);
+    drawArt(ctx, 'equip/moenda_' + (eq.autoMill ? 'auto' : eq.mill === 'motorizada' ? 'motor' : 'manual'), mx, mo.y + 22);
+    bar(ctx, mo.x + 8, mo.y + mo.h - 22, mo.w - 16, 8, (eq.autoMill ? st.autoMill > 0 ? 1 - st.autoMill / millSeconds(st) : 0 : st.mill.progress / millSeconds(st)), PAL.cane);
+    if (eq.autoMill) {
       const a = Math.floor(ui.clock * (st.autoMill > 0 ? 8 : 0)) % 4; // moenda automática girando
       ctx.fillStyle = hasPower(st) ? PAL.gold : PAL.red;
-      ctx.fillRect(mo.x + 12 + a * 6, mo.y + 60, 5, 5);
-      textCenter(ctx, 'AUTO', mo.x + mo.w / 2, mo.y + 80, PAL.muted, 1);
+      ctx.fillRect(mx + 56 + a * 3, mo.y + 64, 5, 5);
+      textCenter(ctx, 'AUTO', mo.x + mo.w / 2, mo.y + mo.h - 14, PAL.ink, 1, null);
     }
   }
   if (bal && st.config.equipment.cardMachine) {
-    box(ctx, { x: bal.x + bal.w - 34, y: bal.y + 28, w: 24, h: 16 }, hasPower(st) ? PAL.blue : PAL.red, PAL.shadow); // maquininha
-    textCenter(ctx, 'CARD', bal.x + bal.w - 22, bal.y + 32, PAL.text, 1);
+    const mx = bal.x + bal.w - 34;
+    if (!drawArt(ctx, 'equip/maquininha', mx, bal.y + 26)) box(ctx, { x: mx, y: bal.y + 26, w: 12, h: 16 }, PAL.blue, PAL.ink); // maquininha
+    if (!hasPower(st)) box(ctx, { x: mx + 8, y: bal.y + 26, w: 4, h: 4 }, PAL.red); // sem energia
   }
 
   // efeitos de evento: sem cobrir as zonas com cor opaca (RN-75)
@@ -378,7 +439,7 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
 
   // placa da xepa às 13h (RN-124)
   if (xepaActive(st)) {
-    box(ctx, { x: 470, y: 120, w: 120, h: 24 }, PAL.red, PAL.text);
+    if (!drawArt(ctx, 'ui/placa_xepa', 470, 120)) box(ctx, { x: 470, y: 120, w: 120, h: 24 }, PAL.red, PAL.text);
     textCenter(ctx, `XEPA -${Math.round(st.config.promo.xepaDiscount * 100)}%`, 530, 127, PAL.text, 2);
   }
 
@@ -388,7 +449,7 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
     const pose: Pose = w.task && !w.resting ? (Math.floor(ui.clock * 4 + id) % 2 ? 'andando_1' : 'andando_0') : 'parado';
     drawEquipe(ctx, w.kind === 'fritador' ? 'func_fritador' : 'func_geral', aparenciaDe(st.seed, 200000 + id).cor, pose, spot.x, spot.y);
     bar(ctx, spot.x - 12, spot.y - 44, 24, 4, w.energy / 100, w.energy > 40 ? PAL.green : w.energy > 15 ? PAL.orange : PAL.red);
-    if (w.resting) textCenter(ctx, 'ZZ', spot.x, spot.y - 56, PAL.muted, 1);
+    if (w.resting) textCenter(ctx, 'ZZ', spot.x, spot.y - 56, PAL.ink2, 1, null);
   }
 
   // pasteleiro

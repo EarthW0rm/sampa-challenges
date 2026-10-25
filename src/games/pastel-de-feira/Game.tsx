@@ -15,6 +15,7 @@ import { browserStorage, clearSave, load, saveCampaign, type SavePhase } from '.
 import type { Balance, Campaign, NewCampaignOptions } from './game/campaign/types';
 import { loadRecord, saveCashRecord, saveDayRecord, savePointRecord } from './game/record';
 import type { DayConfig, DayResult } from './game/types';
+import { molduraVar } from './components/icons';
 import './styles.css';
 
 type Screen = 'title' | 'nova' | 'preparo' | 'dia' | 'fechamento' | 'fim';
@@ -115,7 +116,7 @@ export default function PastelDeFeira({ onExit }: GameProps) {
 
   if (art !== 'ok') {
     return (
-      <div className="pastel-de-feira">
+      <div className="pastel-de-feira" style={molduraVar}>
         <div className="menu" role="status">
           {art === 'carregando' ? (
             <p>Montando a barraca…</p>
@@ -132,7 +133,7 @@ export default function PastelDeFeira({ onExit }: GameProps) {
   }
 
   return (
-    <div className="pastel-de-feira">
+    <div className="pastel-de-feira" style={molduraVar}>
       {warnSave && <p className="warn banner" role="status">Não foi possível salvar o progresso. O jogo continua, mas ele pode se perder.</p>}
       {screen === 'title' && (
         <TitleScreen
