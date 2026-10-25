@@ -552,6 +552,33 @@ os cenários, o replay, os robôs e a reprodução de um dia jogado no navegador
 Chaves do `localStorage`: `pastel-de-feira:campanha` (save versionado), `:recorde`, `:recorde-caixa`,
 `:recorde-ponto`, `:som`, `:musica`, `:visto` (balões já mostrados). Tudo em `try/catch`.
 
+### 13.1 Visual e arte
+
+Barraca aconchegante em pixel art 16 bits: paleta quente, contorno marrom-escuro (`#2e1c12`), molduras de
+madeira com fundo de pergaminho. A fila fica na calçada de mosaico paulistano e cada estação é um objeto
+(balcão de madeira, bancada de inox, fogão com tacho, moenda verde). Só o visual: nenhuma regra, zona de
+toque ou fluxo de tela depende da arte (sem os PNGs, o jogo cai em retângulos de cor).
+
+Todos os sprites saem de `tools/pixelart/pastel_de_feira.py` (1×; o jogo aplica Scale2x). Os cachorros
+vêm da biblioteca compartilhada (`caes_pe`). Referência visual: `docs/specs/pastel-de-feira/arte-nova/`.
+
+| Sprites (`assets/…`) | O que representam |
+|---|---|
+| `cenario/fundo` | toldo, bandeirinhas, calçada de mosaico (fila) e assoalho da barraca, inteiro em 640×480 |
+| `moveis/{balcao,bancada,fogao,estufa,escrivaninha,banco}_{esq,meio,dir}` | móveis fixos das zonas, em 3 partes (o meio repete) |
+| `equip/tacho_*`, `equip/tacho_sujo_*`, `equip/cesto_{grade,alca}` | panela do tacho (limpa ou com óleo sujo) e cestos |
+| `equip/moenda_{manual,motor,auto}`, `caixa_termica`, `mesa`, `maquininha` | equipamentos comprados |
+| `equip/caixa_encomenda{,_pronta}`, `equip/sacola_app{,_motoboy}` | encomendas e comandas do app |
+| `decor/*` | enfeites: rolo, potes, sacos de farinha, caixotes de cana e limão, garrafa de café, migalhas, assento |
+| `itens/pastel_{salgado,doce,especial}_{cru,ponto,passado,queimado}`, `copo`, `moeda` | pastéis por estado, caldo e moedas |
+| `itens/ing_<insumo>` | um ícone por insumo (bancada, painel e Preparo) |
+| `icones/ctrl_*` | ícones dos controles do painel |
+| `icones/{fiscal,energia,excursao,fogo,queimado,chuva,calor}`, `icones/perfil_*` | eventos e perfis de cliente |
+| `ui/moldura`, `ui/aba`, `ui/slot_{normal,selecionado,desligado}`, `ui/balao*` | molduras 9-slice do painel, das telas e do balão de pedido |
+| `ui/faixa_{alerta,evento,oferta}`, `ui/placa_*`, `ui/placa_xepa` | faixa de avisos, placas com o nome das zonas e da xepa |
+| `ui/hud_*` | ícones do HUD (DOM): estação do dia, caixa, fila, reputação, som, música, 2×, pausa |
+| `capa.png` | card do hub |
+
 ---
 
 ## 14. Como contribuir

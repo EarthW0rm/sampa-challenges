@@ -15,7 +15,7 @@ export function HandoverDialog({ value, kind, onConfirm, onCancel }: Props) {
   const [done, setDone] = useState(false);
   return (
     <div className="overlay" role="dialog" aria-label="Passar o ponto">
-      <div className="menu">
+      <div className="menu moldura">
         <h2>Passar o ponto</h2>
         <p>
           {kind === 'zerado' ? 'Você vende a barraca pelo caixa mais metade do que investiu.' : 'Na falência, o ponto vale 25% do que foi investido.'}

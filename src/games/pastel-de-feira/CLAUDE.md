@@ -21,6 +21,14 @@ O jogo tem **lógica e canvas em 640×480** (`W`, `H` em `game/constants.ts`); o
 são 1× e passam por `scale2x` (`game/art.ts`); sprites da biblioteca (`caes_pe`) já são 2× nativos e são
 desenhados com `blitFeet` (largura do PNG ÷ 2). Nunca `ctx.drawImage(spriteEmAlta, x, y)` sem tamanho.
 
+Ajudantes de desenho (`game/render/draw.ts`): `drawArt` (sprite no tamanho lógico), `drawThree` (peça
+3-slice `<nome>_esq|_meio|_dir`: bordas de 8 px — 10 no tacho —, meio de 16 px repetido até a largura),
+`drawNine` (9-slice esticado: cantos de 8 em `ui/moldura`, 4 em `ui/aba` e `ui/slot_*`, 3 em `ui/balao`) e
+`drawPlaque` (placa de madeira com o nome da zona). Texto escuro (`PAL.ink`, `PAL.ink2`) vai sem sombra
+(`shadow = null`); `PAL.text` é claro, para faixas vermelhas e fogo. O `icon` de `Control` (`render/panel.ts`)
+é só apresentação. No DOM, os ícones do HUD e dos insumos vêm de `components/icons.ts` e a moldura de
+madeira é a classe `.moldura` (`border-image` com `--pf-moldura`, definida na raiz em `Game.tsx`).
+
 ## Arquitetura
 
 | Camada | Pasta | Regra |
@@ -58,7 +66,8 @@ encomendas, mundo (eventos) e automação. O tutorial (`game/tutorial.ts`) só o
 | `sim/scenarios/*` | um grupo por conjunto de RN (269 cenários) |
 | `sim/player.ts`, `sim/bots.ts`, `sim/report.ts` | jogador automático e robôs de calibração |
 
-Arte: `tools/pixelart/pastel_de_feira.py` (cenário, pisos, equipamentos, pastéis, ícones, capa) e
+Arte: `tools/pixelart/pastel_de_feira.py`, script único (cenário, móveis 3-slice, equipamentos, enfeites,
+pastéis, insumos, ícones do painel/evento/perfil, interface 9-slice, HUD, capa; `--previa` gera prévias) e
 `tools/pixelart/biblioteca/caes_pe.py` (cachorros de pé, compartilhados). Nunca edite PNG à mão.
 
 ## Armadilhas conhecidas

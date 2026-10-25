@@ -12,9 +12,9 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Nome (`cenario/fundo`, `itens/copo`…) → imagem em alta (2×). A capa fica fora: é só do manifest. */
+/** Nome (`cenario/fundo`, `itens/copo`…) → imagem em alta (2×). A capa (manifest) e os ícones `ui/hud_*` (DOM) ficam fora. */
 export async function loadArt(): Promise<Record<string, HTMLCanvasElement>> {
-  const wanted = Object.keys(URLS).filter((p) => !p.endsWith('/capa.png'));
+  const wanted = Object.keys(URLS).filter((p) => !p.endsWith('/capa.png') && !p.includes('/ui/hud_'));
   const entries = await Promise.all(
     wanted.map(async (p) => [p.replace('../assets/', '').replace(/\.png$/, ''), scale2x(await loadImage(URLS[p]))] as const),
   );
