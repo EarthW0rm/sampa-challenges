@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/EarthW0rm/sampa-challenges/compare/v1.3.0...v1.3.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* **pastel-de-feira:** reputação sobe o dobro para permitir recuperação ([#11](https://github.com/EarthW0rm/sampa-challenges/issues/11)) ([0c41933](https://github.com/EarthW0rm/sampa-challenges/commit/0c41933ebe6c54500de4ad761dde3322fa0e7b9b))
+
 ## [1.3.0](https://github.com/EarthW0rm/sampa-challenges/compare/v1.2.0...v1.3.0) (2026-10-25)
 
 
