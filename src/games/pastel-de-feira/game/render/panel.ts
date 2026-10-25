@@ -1,6 +1,6 @@
 import { HOLD_BROOM, HOLD_CLEAN_TABLE, HOLD_OIL_MANUAL, STEP } from '../constants';
 import { ITEMS, type ItemId } from '../data/recipes';
-import { INGREDIENTS } from '../data/catalog';
+import { INGREDIENTS, ingredientLabel } from '../data/catalog';
 import { inside, MIN_TARGET, PANEL, stationLabel, type Rect } from '../layout';
 import { drawPixelText } from '../pixelFont';
 import { currentQuality } from '../sim/quality';
@@ -116,7 +116,7 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
     for (const ing of all.slice(page * 8, page * 8 + 8)) {
       const inTray = st.tray.filter((x) => x === ing).length;
       out.push({
-        rect: next(), label: INGREDIENTS[ing].name.split(' ')[0].slice(0, 8), sub: String(stockQty(st, ing)),
+        rect: next(), label: ingredientLabel(ing), sub: String(stockQty(st, ing)),
         fill: inTray > 0 ? PAL.tileHi : PAL.tile, selected: inTray > 0, run: () => tap('bancada', { k: 'ingrediente', id: ing }),
       });
     }

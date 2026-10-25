@@ -10,6 +10,8 @@ export interface Ingredient {
   /** Custo unitário em R$ (RN-32). */
   cost: number;
   kind: IngredientKind;
+  /** Rótulo do botão da bancada quando a primeira palavra do nome colide com outro insumo (até 8 letras). */
+  short?: string;
 }
 
 // RN-32
@@ -17,8 +19,8 @@ const INGREDIENT_LIST: readonly Ingredient[] = [
   { id: 'massa', name: 'Massa', cost: 0.8, kind: 'massa' },
   { id: 'carne', name: 'Carne', cost: 1.5, kind: 'recheio' },
   { id: 'mucarela', name: 'Muçarela', cost: 1.4, kind: 'recheio' },
-  { id: 'queijo-minas', name: 'Queijo minas', cost: 1.6, kind: 'recheio' },
-  { id: 'queijo-coalho', name: 'Queijo coalho', cost: 1.8, kind: 'recheio' },
+  { id: 'queijo-minas', name: 'Queijo minas', cost: 1.6, kind: 'recheio', short: 'Q.minas' },
+  { id: 'queijo-coalho', name: 'Queijo coalho', cost: 1.8, kind: 'recheio', short: 'Q.coalho' },
   { id: 'frango', name: 'Frango', cost: 1.3, kind: 'recheio' },
   { id: 'calabresa', name: 'Calabresa', cost: 1.4, kind: 'recheio' },
   { id: 'cebola', name: 'Cebola', cost: 0.2, kind: 'recheio' },
@@ -30,7 +32,7 @@ const INGREDIENT_LIST: readonly Ingredient[] = [
   { id: 'catupiry', name: 'Catupiry', cost: 2.8, kind: 'recheio' },
   { id: 'cream-cheese', name: 'Cream cheese', cost: 2.2, kind: 'recheio' },
   { id: 'palmito', name: 'Palmito', cost: 3.5, kind: 'recheio' },
-  { id: 'carne-seca', name: 'Carne seca', cost: 3.8, kind: 'recheio' },
+  { id: 'carne-seca', name: 'Carne seca', cost: 3.8, kind: 'recheio', short: 'C.seca' },
   { id: 'camarao', name: 'Camarão', cost: 4.5, kind: 'recheio' },
   { id: 'bacalhau', name: 'Bacalhau', cost: 5.5, kind: 'recheio' },
   { id: 'banana', name: 'Banana', cost: 0.4, kind: 'recheio' },
@@ -38,8 +40,8 @@ const INGREDIENT_LIST: readonly Ingredient[] = [
   { id: 'doce-de-leite', name: 'Doce de leite', cost: 1.0, kind: 'recheio' },
   { id: 'pacoca', name: 'Paçoca', cost: 0.5, kind: 'recheio' },
   { id: 'goiabada', name: 'Goiabada', cost: 0.7, kind: 'recheio' },
-  { id: 'chocolate-leite', name: 'Chocolate ao leite', cost: 1.2, kind: 'recheio' },
-  { id: 'chocolate-branco', name: 'Chocolate branco', cost: 1.3, kind: 'recheio' },
+  { id: 'chocolate-leite', name: 'Chocolate ao leite', cost: 1.2, kind: 'recheio', short: 'C.leite' },
+  { id: 'chocolate-branco', name: 'Chocolate branco', cost: 1.3, kind: 'recheio', short: 'C.branco' },
   { id: 'creme-avela', name: 'Creme de avelã', cost: 1.6, kind: 'recheio' },
   { id: 'cana', name: 'Cana (1 dose)', cost: 0.7, kind: 'cana' },
   { id: 'limao', name: 'Limão', cost: 0.3, kind: 'complemento' },
@@ -49,6 +51,9 @@ const INGREDIENT_LIST: readonly Ingredient[] = [
 export const INGREDIENTS: Readonly<Record<IngredientId, Ingredient>> = Object.freeze(
   Object.fromEntries(INGREDIENT_LIST.map((i) => [i.id, Object.freeze(i)])),
 );
+
+/** Rótulo do insumo no painel da bancada: único entre os insumos (RN-42), no máximo 8 letras. */
+export const ingredientLabel = (id: IngredientId): string => INGREDIENTS[id].short ?? INGREDIENTS[id].name.split(' ')[0].slice(0, 8);
 
 export const INGREDIENT_IDS: readonly IngredientId[] = INGREDIENT_LIST.map((i) => i.id);
 
