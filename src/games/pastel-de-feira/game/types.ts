@@ -15,7 +15,6 @@ export type StationId =
   | 'tacho1'
   | 'tacho2'
   | 'tacho3'
-  | 'estufa'
   | 'moenda'
   | 'mesas'
   | 'expedicao'

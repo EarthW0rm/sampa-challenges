@@ -62,7 +62,7 @@
       ninguém fica parada.
    3. Fluxo de um pedido de balcão:
       **anotar** (balcão) → **montar** (massa + recheio; 1 etapa por ingrediente; o Especial da Casa tem 4) →
-      **colocar no óleo** (tacho) → **tirar no ponto** (tacho) → [**estufa**, opcional] →
+      **colocar no óleo** (tacho) → **tirar no ponto** (tacho; com estufa, o pastel vai direto para ela) →
       **caldo** (moenda, se pedido) → **entregar** (com o brinde, se houver) → **cobrar** (balcão).
    4. O óleo **suja** a cada pastel frito e precisa ser **trocado**. Durante a troca o tacho fica parado.
    5. A barraca e as mesas **sujam** e alguém precisa limpar.
@@ -152,7 +152,7 @@
 | RN-24 | Modificadores na fritura: Óleo de Algodão +10, Escorredor Profissional +10, óleo sujo (≥ 70% de sujeira) −15, traço Caprichoso +5, curso de Fritura +5. Nota limitada a 0–100 **(P)** | Obrigatória |
 | RN-25 | Decaimento: um pastel pronto fora da estufa perde 1 ponto/s depois de 20 s de espera **(P)**. Pedido de app perde 20 pontos no transporte, perda anulada pela Embalagem Térmica **(P)** | Obrigatória |
 | RN-26 | Caldo de cana não tem nota de qualidade. É pago pelo preço de venda × prêmio de reputação | Obrigatória |
-| RN-27 | **Estufa de vidro:** guarda até 6 pastéis prontos **(P)**, ou 12 com a Estufa grande. Lá dentro a nota fica congelada por 60 s e depois cai 1 ponto/s **(P)**. Sem energia (evento) vale o decaimento normal. A estufa é **compartilhada** entre balcão, mesa e app (RN-96) | Condicional |
+| RN-27 | **Estufa de vidro:** melhoria do **balcão**: uma vitrine em cima do balcão, e não uma estação. O pastel tirado do óleo (pelo pasteleiro, pelo Fritador ou pelo timer) vai **direto** para ela enquanto houver vaga; cheia ou sem energia, fica no balcão. Guarda até 6 pastéis prontos **(P)**, ou 12 com a Estufa grande. Lá dentro a nota fica congelada por 60 s e depois cai 1 ponto/s **(P)**. Sem energia (evento) vale o decaimento normal. A estufa é **compartilhada** entre balcão, mesa e app (RN-96) | Condicional |
 | RN-28 | Pastel entregue sem saquinho de papel (consumível esgotado) perde 10 pontos de nota na entrega **(P)** | Condicional |
 
 ### 3.4 Receitas, bebidas, insumos e estoque
@@ -217,9 +217,9 @@
 
 | # | Regra | Tipo |
 |---|---|---|
-| RN-40 | Posições da barraca (cada uma comporta **uma** pessoa): **Balcão** (anotar, entregar, cobrar), **Montagem** N (monta na bancada e coloca o pastel montado em qualquer tacho com cesto livre, do primeiro para o último), **Fritador** N (cuida de tudo no tacho dele: coloca os pastéis já montados, tira no ponto, põe na estufa e troca o óleo; não monta; os Fritadores assumem, em ordem de posição, os tachos livres — sem o pasteleiro e sem fogo — em ordem; Fritador sem tacho livre fica parado), **Troca de óleo** (volante, troca o óleo de qualquer tacho), **Moenda** (caldo), **Garçom** (só com mesas), **Ajudante** (limpa mesas e barraca), **Expedição** (só com delivery: embalar e entregar ao motoboy), **Escritório** (só o pasteleiro e os cargos de gestão) | Obrigatória |
+| RN-40 | Posições da barraca (cada uma comporta **uma** pessoa): **Balcão** (anotar, entregar, cobrar), **Montagem** N (monta na bancada e coloca o pastel montado em qualquer tacho com cesto livre, do primeiro para o último), **Fritador** N (cuida de tudo no tacho dele: coloca os pastéis já montados, tira no ponto e troca o óleo; não monta; os Fritadores assumem, em ordem de posição, os tachos livres — sem o pasteleiro e sem fogo — em ordem; Fritador sem tacho livre fica parado), **Troca de óleo** (volante, troca o óleo de qualquer tacho), **Moenda** (caldo), **Garçom** (só com mesas), **Ajudante** (limpa mesas e barraca), **Expedição** (só com delivery: embalar e entregar ao motoboy), **Escritório** (só o pasteleiro e os cargos de gestão) | Obrigatória |
 | RN-41 | O pasteleiro ocupa uma posição por vez. Clicar numa estação o desloca até ela: 0,4 s entre estações vizinhas e 0,2 s por estação a mais no caminho **(P)**. Ele só age onde está | Obrigatória |
-| RN-42 | Ações manuais do pasteleiro: anotar = clicar no cliente da frente; montar = clicar em cada ingrediente e depois em "fechar"; colocar = clicar num cesto livre; tirar = clicar no cesto; estufa = arrastar ou clicar o pastel pronto até a estufa; caldo = segurar a moenda (6 s manual, 2,5 s motorizada **(P)**); entregar = clicar no item pronto e depois no cliente; cobrar = clicar nas moedas; trocar óleo = segurar o tacho por 8 s **(P)**; limpar = segurar a mesa (3 s) ou a vassoura (4 s, −25 de sujeira) **(P)** | Obrigatória |
+| RN-42 | Ações manuais do pasteleiro: anotar = clicar no cliente da frente; montar = clicar em cada ingrediente e depois em "fechar"; colocar = clicar num cesto livre; tirar = clicar no cesto (com estufa, o pastel vai direto para ela); caldo = segurar a moenda (6 s manual, 2,5 s motorizada **(P)**); entregar = clicar no item pronto e depois no cliente; cobrar = clicar nas moedas; trocar óleo = segurar o tacho por 8 s **(P)**; limpar = segurar a mesa (3 s) ou a vassoura (4 s, −25 de sujeira) **(P)** | Obrigatória |
 | RN-43 | Tempos dos funcionários, com energia ≥ 40 e sem traços **(P)**: anotar 1,5 s; montar 0,5 s + 1,5 s por etapa (1 etapa = 2 s; 4 etapas = 6,5 s); colocar 0,8 s; tirar no meio da janela do ponto (nunca queima); caldo pelo tempo da moenda + 0,5 s; entregar e cobrar 1,5 s; troca de óleo 10 s; limpar mesa 3 s | Obrigatória |
 | RN-44 | **O Fritador não monta pastel**: frita pastéis já montados (pela Montagem ou pelo pasteleiro). No tacho dele, coloca, tira no ponto e troca o óleo quando passa de 70%. Sem ninguém na Montagem, a montagem fica com o pasteleiro | Condicional |
 | RN-45 | Funcionário **fixo** fica só na posição escolhida. Funcionário em **automático** ocupa a posição vaga de maior prioridade **que o tipo dele permite** (RN-49): Fritador > Balcão > Montagem > Troca de óleo > Moenda > Expedição > Garçom > Ajudante. O óleo é trocado pelo Fritador do tacho ou pela Troca de óleo (volante); as outras posições não trocam | Obrigatória |
@@ -400,7 +400,7 @@ parada em queda de energia.
 
 | Equipamento | Custo **(P)** | Substitui | Faz | Não faz |
 |---|---|---|---|---|
-| Cesto com timer | R$ 600 por tacho | Fritador | Tira sozinho cada pastel do seu tacho no meio da janela do ponto | Montar, colocar, trocar óleo, pôr na estufa (o pastel tirado fica no escorredor) |
+| Cesto com timer | R$ 600 por tacho | Fritador | Tira sozinho cada pastel do seu tacho no meio da janela do ponto | Montar, colocar, trocar óleo (o pastel tirado vai para a estufa, se houver vaga, ou fica no escorredor) |
 | Moenda automática | R$ 900 (requer moenda motorizada) | Moenda | Extrai sozinha um caldo por pedido anotado, com o chorinho configurado | Entregar o copo |
 | Maquininha de cartão | R$ 300 | Parte do Balcão | Cobra sozinha cada pedido entregue no balcão | Anotar e entregar |
 
@@ -513,7 +513,7 @@ parada em queda de energia.
 | Termo | Definição neste contexto |
 |---|---|
 | **Barraca** | Toda a área controlada pelo jogador na feira, medida em m² |
-| **Estação** | Ponto físico da barraca onde se faz uma ação (balcão, bancada, tacho, estufa, moenda, mesa, expedição, escritório, descanso) |
+| **Estação** | Ponto físico da barraca onde se faz uma ação (balcão, bancada, tacho, moenda, mesa, expedição, escritório, descanso; a estufa fica em cima do balcão) |
 | **Posição** | Vaga de trabalho numa estação. Comporta uma pessoa |
 | **Função** | Tipo de trabalho de uma posição (Balcão, Montagem, Fritador, Troca de óleo, Moenda, Garçom, Ajudante, Expedição) |
 | **Tipo de contratação** | Fritador (único que tira do óleo e troca óleo, maior salário) ou Geral (demais posições) |

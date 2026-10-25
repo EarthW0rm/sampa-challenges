@@ -27,7 +27,7 @@ export const EQUIPMENT: Readonly<Record<EquipId, EquipDef>> = Object.freeze({
   'oleo-algodao': { id: 'oleo-algodao', name: 'Óleo de algodão', desc: 'Nota +10, suja menos (3% por pastel). Troca custa R$ 45.', price: 300, minDay: 1, requires: [] },
   escorredor: { id: 'escorredor', name: 'Escorredor profissional', desc: 'Nota +10 em todo pastel frito.', price: 250, minDay: 1, requires: [] },
   'embalagem-termica': { id: 'embalagem-termica', name: 'Embalagem térmica', desc: 'Pedidos do app não perdem nota no transporte.', price: 250, minDay: 1, requires: [] },
-  estufa: { id: 'estufa', name: 'Estufa de vidro', desc: 'Guarda 6 pastéis prontos com a nota congelada por 60 s.', price: 300, minDay: 1, requires: [] },
+  estufa: { id: 'estufa', name: 'Estufa de vidro', desc: 'Vitrine em cima do balcão: o pastel frito vai direto para ela e a nota fica congelada por 60 s. 6 vagas.', price: 300, minDay: 1, requires: [] },
   'estufa-grande': { id: 'estufa-grande', name: 'Estufa grande', desc: 'A estufa passa a guardar 12 pastéis.', price: 350, minDay: 1, requires: ['estufa'] },
   'conta-parceira': { id: 'conta-parceira', name: 'Conta Parceira do app', desc: '+4 comandas aceitas por dia (precisa da área de delivery).', price: 400, minDay: 1, requires: [] },
   'moenda-automatica': { id: 'moenda-automatica', name: 'Moenda automática', desc: 'Extrai um caldo por pedido anotado, sozinha. Substitui a Moenda (Geral, R$ 55/dia). Precisa da moenda motorizada.', price: 900, minDay: 1, requires: ['moenda-motorizada'] },

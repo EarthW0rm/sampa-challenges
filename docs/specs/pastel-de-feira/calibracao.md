@@ -17,6 +17,7 @@ node <tmp>/pf-sim.mjs --bots all --seeds 50 --days 20
 | `PATIENCE` (RN-06) | 45 / 40 / 35 s | 90 / 80 / 70 s | Retorno de teste: dava para atender só 3 clientes sozinho |
 | `QUEUE_CALM_STEP`/`QUEUE_CALM_MIN` (RN-06b, novo) | — | 0,2 / 0,3 | Quem está atrás na fila gasta a paciência mais devagar (1,0; 0,8; 0,6; 0,4; 0,3…) |
 | `DECAY_DELAY`/`DECAY_PER_SECOND` (RN-25) | 10 s / 2 pontos/s | 20 s / 1 ponto/s | Retorno de teste: o pastel pronto durava pouco; agora dura mais que o dobro |
+| Estufa (RN-27) | Estação própria; o pastel vai para ela num toque | Em cima do balcão; o pastel frito vai direto para ela | Pedido do jogo: a estufa é melhoria do balcão. Sai uma estação do caminho do pasteleiro. Os 4 robôs seguem em 50/50 |
 | Início da paciência (RN-06) | Ao chegar ao fim da fila | Ao ter o pedido anotado | Pedido do jogo: o cliente só começa a perder a paciência depois de anotado. Antes disso ele espera na fila (a fila cheia, RN-04, segue limitando). Os 4 robôs seguem em 50/50 |
 | Receitas (RN-30) | Queijo com orégano; Bauru presunto + muçarela; Pizza muçarela + presunto + tomate + orégano | Queijo só muçarela; Bauru muçarela + presunto + tomate; Pizza tomate + muçarela + orégano | Pedido do jogo: cada sabor com o recheio que o nome diz. Os 4 robôs seguem em 50/50 |
 | `TACHO.basketPrice` (RN-73, novo) | Tacho grande R$ 400 (2 → 4) | Cesto extra R$ 200 cada | O Tacho grande virou cesto avulso: mesmo custo para encher um tacho, comprável aos poucos e em ordem entre os tachos. Com a Montagem colocando em qualquer tacho, o Fritador assumindo tachos livres e indo à bancada para montar (RN-40, RN-44) e o Fritador cuidando só do tacho dele (coloca, tira e troca o óleo, sem montar; RN-44, RN-45), os 4 robôs seguem em 50/50 |
@@ -88,18 +89,16 @@ Cada fechamento de dia dos robôs também confere que o save continua válido (i
 | 3 | 209 | 88 | 100% | 4.9 | 19 | 2 | 0 | 50 |
 | 4 | 265 | 98 | 100% | 5.0 | 20 | 3 | 0 | 50 |
 | 5 | 287 | 110 | 100% | 5.0 | 20 | 3 | 0 | 50 |
-| 6 | 277 | 123 | 100% | 5.0 | 21 | 3 | 0 | 50 |
-| 7 | 273 | 138 | 90% | 5.0 | 21 | 5 | 0 | 50 |
-| 8 | 205 | 155 | 60% | 5.0 | 19 | 8 | 0 | 48 |
-| 9 | 153 | 173 | 31% | 5.0 | 22 | 7 | 0 | 48 |
-| 10 | 155 | 194 | 29% | 5.0 | 25 | 5 | 0 | 45 |
-| 11 | 156 | 217 | 26% | 5.0 | 27 | 4 | 0 | 31 |
-| 12 | 179 | 244 | 12% | 5.0 | 28 | 5 | 0 | 17 |
-| 13 | 224 | 273 | 25% | 5.0 | 27 | 7 | 0 | 4 |
-| 14 | 372 | 305 | 100% | 5.0 | 27 | 11 | 0 | 2 |
-| 15 | 353 | 342 | 50% | 5.0 | 27 | 11 | 0 | 2 |
-| 16 | 363 | 383 | 0% | 5.0 | 29 | 12 | 0 | 2 |
-| 17 | 419 | 429 | 0% | 5.0 | 32 | 6 | 0 | 1 |
+| 6 | 288 | 123 | 100% | 5.0 | 21 | 3 | 0 | 50 |
+| 7 | 278 | 138 | 88% | 5.0 | 21 | 4 | 0 | 50 |
+| 8 | 252 | 155 | 77% | 5.0 | 21 | 6 | 0 | 47 |
+| 9 | 118 | 173 | 17% | 5.0 | 19 | 9 | 0 | 47 |
+| 10 | 153 | 194 | 22% | 5.0 | 26 | 5 | 0 | 45 |
+| 11 | 136 | 217 | 3% | 5.0 | 27 | 4 | 0 | 32 |
+| 12 | 157 | 244 | 14% | 5.0 | 26 | 6 | 0 | 14 |
+| 13 | 311 | 273 | 100% | 5.0 | 25 | 7 | 0 | 2 |
+| 14 | 328 | 305 | 100% | 5.0 | 25 | 12 | 1 | 2 |
+| 15 | 299 | 342 | 0% | 5.0 | 26 | 12 | 0 | 1 |
 
 ### `equilibrado`
 
@@ -110,18 +109,18 @@ Cada fechamento de dia dos robôs também confere que o save continua válido (i
 | 3 | 209 | 88 | 100% | 4.9 | 19 | 2 | 0 | 50 |
 | 4 | 265 | 98 | 100% | 5.0 | 20 | 3 | 0 | 50 |
 | 5 | 287 | 110 | 100% | 5.0 | 20 | 3 | 0 | 50 |
-| 6 | 276 | 123 | 100% | 5.0 | 21 | 3 | 0 | 50 |
-| 7 | 305 | 138 | 100% | 5.0 | 22 | 4 | 0 | 50 |
-| 8 | 317 | 155 | 100% | 5.0 | 22 | 5 | 0 | 50 |
-| 9 | 321 | 173 | 100% | 5.0 | 22 | 4 | 0 | 50 |
-| 10 | 323 | 194 | 100% | 5.0 | 22 | 6 | 0 | 50 |
-| 11 | 321 | 217 | 98% | 5.0 | 25 | 5 | 0 | 50 |
-| 12 | 320 | 244 | 94% | 5.0 | 26 | 6 | 0 | 50 |
-| 13 | 321 | 273 | 78% | 5.0 | 26 | 7 | 0 | 50 |
-| 14 | 307 | 305 | 54% | 5.0 | 27 | 7 | 0 | 50 |
-| 15 | 311 | 342 | 44% | 5.0 | 30 | 6 | 0 | 50 |
-| 16 | 367 | 383 | 30% | 5.0 | 34 | 5 | 0 | 50 |
-| 17 | 545 | 429 | 68% | 5.0 | 37 | 3 | 0 | 50 |
-| 18 | 649 | 481 | 94% | 5.0 | 37 | 5 | 0 | 50 |
-| 19 | 636 | 538 | 86% | 5.0 | 38 | 5 | 0 | 50 |
-| 20 | 637 | 603 | 64% | 5.0 | 40 | 6 | 0 | 50 |
+| 6 | 287 | 123 | 100% | 5.0 | 21 | 3 | 0 | 50 |
+| 7 | 312 | 138 | 100% | 5.0 | 22 | 3 | 0 | 50 |
+| 8 | 317 | 155 | 100% | 5.0 | 22 | 4 | 0 | 50 |
+| 9 | 336 | 173 | 100% | 5.0 | 23 | 4 | 0 | 50 |
+| 10 | 335 | 194 | 100% | 5.0 | 23 | 6 | 0 | 50 |
+| 11 | 329 | 217 | 100% | 5.0 | 25 | 5 | 0 | 50 |
+| 12 | 321 | 244 | 96% | 5.0 | 25 | 6 | 0 | 50 |
+| 13 | 323 | 273 | 78% | 5.0 | 27 | 7 | 0 | 50 |
+| 14 | 321 | 305 | 62% | 5.0 | 28 | 7 | 0 | 50 |
+| 15 | 333 | 342 | 50% | 5.0 | 30 | 6 | 0 | 50 |
+| 16 | 366 | 383 | 28% | 5.0 | 32 | 6 | 0 | 50 |
+| 17 | 573 | 429 | 80% | 5.0 | 37 | 4 | 0 | 50 |
+| 18 | 620 | 481 | 80% | 5.0 | 38 | 4 | 0 | 50 |
+| 19 | 660 | 538 | 90% | 5.0 | 39 | 5 | 0 | 50 |
+| 20 | 647 | 603 | 66% | 5.0 | 40 | 6 | 0 | 50 |

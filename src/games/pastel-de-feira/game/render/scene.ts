@@ -90,9 +90,6 @@ function furniture(ctx: CanvasRenderingContext2D, z: Zone): void {
     case 'tacho3':
       drawThree(ctx, 'moveis/fogao', z.x + 4, z.y + 18, z.w - 8);
       break;
-    case 'estufa':
-      drawThree(ctx, 'moveis/estufa', z.x + 4, z.y + 22, z.w - 8);
-      break;
     case 'escritorio':
       if (!drawThree(ctx, 'moveis/escrivaninha', z.x + 8, z.y + 26, z.w - 16)) box(ctx, { x: z.x + 8, y: z.y + 26, w: z.w - 16, h: 22 }, '#3a4a6a', PAL.woodDark);
       break;
@@ -292,15 +289,28 @@ function drawPayQueue(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): voi
   });
 }
 
-function drawWarmer(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): void {
+/** Estufa: vitrine de vidro em cima do balcão, ao lado da placa, com uma vaga de 16 por pastel (RN-27). */
+function drawWarmer(ctx: CanvasRenderingContext2D, st: DayState, bal: Zone, ui: UiState): void {
   const cap = st.config.equipment.warmer;
+  if (cap <= 0) return;
   const warmed = st.ready.filter((r) => r.warmed);
+  const x0 = bal.x + 62;
+  const y0 = bal.y + 2;
+  box(ctx, { x: x0, y: y0, w: cap * 16 + 6, h: 18 }, '#2f4a52', PAL.ink); // vidro sobre o tampo
+  ctx.fillStyle = 'rgba(143, 179, 224, 0.35)';
+  ctx.fillRect(x0 + 1, y0 + 1, cap * 16 + 4, 2); // reflexo
   for (let i = 0; i < cap; i++) {
-    const x = z.x + 10 + (i % 4) * 22;
-    const y = z.y + 32 + Math.floor(i / 4) * 18;
-    if (warmed[i] && drawPastelFlavor(ctx, warmed[i].item, 'ponto', x, y, 18, 12)) continue;
-    ctx.fillStyle = warmed[i] ? itemColor(warmed[i].item) : '#24383e';
-    ctx.fillRect(x, y, 18, 12);
+    const x = x0 + 3 + i * 16;
+    const r = warmed[i];
+    if (!r) continue;
+    if (!drawPastel(ctx, r.item, 'ponto', x, y0 + 5, 16, 11)) {
+      ctx.fillStyle = itemColor(r.item);
+      ctx.fillRect(x + 1, y0 + 5, 14, 10);
+    }
+    if (ui.selected?.kind === 'pastel' && ui.selected.id === r.id) {
+      ctx.strokeStyle = PAL.gold;
+      ctx.strokeRect(x - 0.5, y0 + 3.5, 17, 14);
+    }
   }
 }
 
@@ -320,7 +330,8 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   // balcão: prontos, copos e moedas
   const bal = layout.byId.get('balcao');
   if (bal) {
-    st.ready.slice(0, 10).forEach((r, i) => {
+    drawWarmer(ctx, st, bal, ui);
+    st.ready.filter((r) => !r.warmed).slice(0, 10).forEach((r, i) => {
       const q = currentQuality(r, now(st));
       const x = bal.x + 8 + (i % 5) * 28;
       const y = bal.y + 26 + Math.floor(i / 5) * 22;
@@ -397,9 +408,7 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
     drawPixelText(ctx, 'SUJEIRA', fila.x + 100, fila.y + fila.h - 10, PAL.ink2, 1, null);
   }
 
-  // estufa, caixas térmicas e moenda
-  const es = layout.byId.get('estufa');
-  if (es) drawWarmer(ctx, st, es);
+  // caixas térmicas e moenda
   const cx = layout.byId.get('caixa');
   if (cx) {
     for (let i = 0; i < st.config.coolers; i++) {

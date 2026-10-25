@@ -6,7 +6,6 @@ import { drawPixelText, textWidth } from '../pixelFont';
 import { currentQuality } from '../sim/quality';
 import { fryWindow, isChanging, isDirty, isLocked } from '../sim/stations/fryer';
 import { millSeconds } from '../sim/stations/cane';
-import { warmedCount, warmerCapacity } from '../sim/stations/warmer';
 import { now, type DayState } from '../sim/state';
 import { stockQty } from '../sim/stock';
 import type { Command } from '../types';
@@ -219,14 +218,6 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
       out.push({
         rect: next(), label: shortName(r.item), sub: String(Math.round(currentQuality(r, now(st)))), fill: itemColor(r.item), icon: itemIcon(r.item), flavor: r.item,
         run: () => tap('expedicao', { k: 'pronto', id: r.id }),
-      });
-    }
-  } else if (station === 'estufa') {
-    out.push({ rect: next(), label: 'ESTUFA', sub: `${warmedCount(st)}/${warmerCapacity(st)}`, fill: PAL.blue, icon: 'icones/ctrl_estufa', inert: true, run: () => [] });
-    for (const r of st.ready.filter((x) => !x.warmed).slice(0, 7)) {
-      out.push({
-        rect: next(), label: shortName(r.item), sub: String(Math.round(currentQuality(r, now(st)))), fill: itemColor(r.item), icon: itemIcon(r.item), flavor: r.item,
-        run: () => tap('estufa', { k: 'pronto', id: r.id }),
       });
     }
   } else if (station === 'moenda') {

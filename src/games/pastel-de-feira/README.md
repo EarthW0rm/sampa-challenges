@@ -147,7 +147,8 @@ sorteio** de clientes, ofertas e eventos surpresa (JA-06).
 ### 4.4 Fluxo do pedido e ações do pasteleiro (RN-40 a RN-42)
 
 `anotar` (balcão) → `montar` (bancada) → `colocar` (tacho) → `tirar no ponto` (tacho) →
-[`estufa`] → [`caldo`] (moenda) → `entregar` (balcão) → `cobrar` (balcão).
+[`caldo`] (moenda) → `entregar` (balcão) → `cobrar` (balcão). Com estufa, o pastel tirado do óleo vai
+direto para ela (vitrine em cima do balcão).
 
 **Selo do sabor:** cada pedido no balão, pastel no balcão, na bancada, na estufa e no tacho, e controle de
 pastel no painel mostra um selo redondo com o desenho do sabor (bife, queijo com furos, fatia de pizza…),
@@ -161,7 +162,6 @@ lado de cada receita.
 | Montar | toque em cada **recheio** e em **FECHAR** (temperos e massa entram sozinhos). **LIMPAR** esvazia a bandeja. Até 6 pastéis montados esperando |
 | Colocar | toque num **CESTO** livre do tacho (o pastel selecionado ou o primeiro montado) |
 | Tirar | toque no cesto ocupado |
-| Estufa | toque no pastel pronto no painel da estufa |
 | Caldo | **segure** o sabor na moenda: 6 s na manual, 2,5 s na motorizada, +0,3 s por nível de chorinho. Soltar guarda o progresso |
 | Entregar | toque no item pronto no painel do balcão e depois no cliente |
 | Cobrar | **COBRAR** (moedas) e **PAGAR** (fila de pagamento das mesas) |
@@ -299,7 +299,7 @@ A barraca inicial tem 6 m² com balcão, bancada, 1 tacho pequeno (2 cestos) e m
 | Cesto com timer | R$ 600 por tacho | — | tira sozinho no meio do ponto (nota 80 + equipamento) |
 | Óleo de algodão | R$ 300 | — | nota +10, 3% de sujeira por pastel, troca R$ 45 |
 | Escorredor profissional | R$ 250 | — | nota +10 |
-| Estufa de vidro | R$ 300 | — | 6 vagas, nota congelada 60 s |
+| Estufa de vidro | R$ 300 | — | vitrine em cima do balcão: o pastel frito vai direto para ela; 6 vagas, nota congelada 60 s |
 | Estufa grande | R$ 350 | — | 12 vagas (requer a estufa) |
 | Moenda motorizada | R$ 500 | — | caldo em 2,5 s |
 | Moenda automática | R$ 900 | — | um caldo por pedido anotado, sozinha (requer a motorizada) |
@@ -341,7 +341,7 @@ Equipamentos de automação param na queda de energia e não somam com funcioná
 - **Posições:** Fritador N, Balcão, Montagem N, Troca de óleo, Moenda e, com mesas e delivery, Garçom,
   Ajudante e Expedição (uma Montagem e um Fritador por tacho).
   - **Montagem:** monta na bancada e coloca o pastel em qualquer tacho com cesto livre, do primeiro para o último.
-  - **Fritador:** cuida de tudo no tacho dele — coloca os pastéis já montados, tira no ponto, põe na estufa
+  - **Fritador:** cuida de tudo no tacho dele — coloca os pastéis já montados, tira no ponto
     e troca o óleo quando passa de 70% —, mas **não monta**: sem ninguém na Montagem, quem monta é você. Os
     Fritadores assumem, em ordem, os tachos livres (sem o pasteleiro e sem fogo); sem tacho livre, fica parado.
   - **Troca de óleo:** só Fritador; volante, troca o óleo de qualquer tacho.

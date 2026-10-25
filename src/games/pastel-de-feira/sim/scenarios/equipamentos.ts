@@ -1,6 +1,8 @@
 import { DECAY_DELAY, DECAY_PER_SECOND, STEP } from '../../game/constants';
 import { addCustomer, spawnCustomer } from '../../game/sim/customers';
 import { currentQuality } from '../../game/sim/quality';
+import { fryWindow, takeBasket } from '../../game/sim/stations/fryer';
+import { ITEMS } from '../../game/data/recipes';
 import type { DaySim } from '../../game/sim/day';
 import { consumeIngredient, stockQty } from '../../game/sim/stock';
 import type { DayConfig, TachoConfig } from '../../game/types';
@@ -129,54 +131,54 @@ export const equipamentos: Scenario[] = [
     },
   },
   {
-    id: 'rn27-estufa',
+    id: 'rn27-estufa-no-balcao-recebe-o-pastel-frito',
     rules: 'RN-27, RN-96',
     run(seed) {
-      const sim = makeSim(seed, withEquip({ warmer: 6 }, { stations: ['balcao', 'bancada', 'tacho1', 'estufa', 'moenda'] }));
+      // a estufa fica em cima do balcão: o pastel tirado do óleo vai direto para ela, até encher
+      const fryOut = (sim: ReturnType<typeof makeSim>, n: number) => {
+        const s = sim.state;
+        const t = s.tachos[0];
+        const win = fryWindow(ITEMS.carne, t);
+        for (let i = 0; i < n; i++) {
+          t.baskets[0].frying = { id: 100 + i, item: 'carne', ticks: secs((win.ponto[0] + win.ponto[1]) / 2), burned: false, pontoAlerted: false, burnAlerted: false };
+          takeBasket(s, t, 0);
+        }
+      };
+      const sim = makeSim(seed, withEquip({ warmer: 6 }));
+      sim.state.arrivalLeft = 1e9;
+      checkEq(sim.state.config.stations.includes('estufa' as never), false, 'a estufa não é estação: fica no balcão');
+      fryOut(sim, 7);
       const s = sim.state;
-      s.arrivalLeft = 1e9;
-      for (let i = 0; i < 7; i++) s.ready.push({ id: i + 1, item: 'carne', quality: 80, readyAt: 0 });
-      sim.dispatch({ type: 'tapStation', station: 'estufa' });
-      advance(sim, secs(2));
-      for (let i = 0; i < 7; i++) {
-        sim.dispatch({ type: 'tapSlot', station: 'estufa', slot: { k: 'pronto', id: i + 1 } });
-        sim.step();
-      }
       checkEq(s.ready.filter((r) => r.warmed).length, 6, 'a estufa guarda 6');
-      checkEq(s.rejected, 1, 'o sétimo fica no balcão');
+      checkEq(s.ready.filter((r) => !r.warmed).length, 1, 'o sétimo fica no balcão');
       const r = s.ready[0];
       const t0 = r.readyAt;
       checkEq(currentQuality(r, t0 + 59), 80, 'nota congelada por 60 s');
       checkEq(currentQuality(r, t0 + 70), 70, 'depois cai 1 ponto/s');
-      const fora = s.ready[6];
-      check(currentQuality(fora, t0 + 70) < 80 - 100 || fora.warmed !== true, 'fora da estufa vale o decaimento normal');
       const normal = { id: 9, item: 'carne', quality: 80, readyAt: t0 };
       checkEq(currentQuality(normal, t0 + DECAY_DELAY + 20), 80 - 20 * DECAY_PER_SECOND, 'sem estufa: perde a nota depois do atraso (RN-25)');
       // estufa grande: 12 vagas
-      const big = makeSim(seed, withEquip({ warmer: 12 }, { stations: ['balcao', 'bancada', 'tacho1', 'estufa', 'moenda'] }));
+      const big = makeSim(seed, withEquip({ warmer: 12 }));
       big.state.arrivalLeft = 1e9;
-      for (let i = 0; i < 13; i++) big.state.ready.push({ id: i + 1, item: 'carne', quality: 80, readyAt: 0 });
-      big.dispatch({ type: 'tapStation', station: 'estufa' });
-      advance(big, secs(2));
-      for (let i = 0; i < 13; i++) {
-        big.dispatch({ type: 'tapSlot', station: 'estufa', slot: { k: 'pronto', id: i + 1 } });
-        big.step();
-      }
+      fryOut(big, 13);
       checkEq(big.state.ready.filter((x) => x.warmed).length, 12, 'estufa grande guarda 12');
+      // sem estufa, nada é guardado
+      const none = makeSim(seed, withEquip({ warmer: 0 }));
+      fryOut(none, 2);
+      checkEq(none.state.ready.filter((x) => x.warmed).length, 0, 'sem estufa, o pastel fica no balcão');
     },
   },
   {
-    id: 'estufa-guarda-a-nota-que-ja-decaiu',
-    rules: 'RN-27',
+    id: 'rn27-rn152-sem-energia-o-pastel-frito-nao-entra-na-estufa',
+    rules: 'RN-27, RN-152',
     run(seed) {
-      const sim = makeSim(seed, withEquip({ warmer: 6 }, { stations: ['balcao', 'estufa', 'moenda'] }));
-      sim.state.arrivalLeft = 1e9;
-      sim.state.ready.push({ id: 1, item: 'carne', quality: 80, readyAt: 0 });
-      sim.dispatch({ type: 'tapStation', station: 'estufa' });
-      advance(sim, secs(DECAY_DELAY + 20)); // esperando fora da estufa: 20 s depois do atraso = 20 pontos perdidos
-      sim.dispatch({ type: 'tapSlot', station: 'estufa', slot: { k: 'pronto', id: 1 } });
-      sim.step();
-      checkEq(sim.state.ready[0].quality, 80 - 20 * DECAY_PER_SECOND, 'entra na estufa com a nota que já decaiu');
+      const sim = makeSim(seed, withEquip({ warmer: 6 }));
+      const s = sim.state;
+      s.world.powerLeft = 10; // queda de energia em andamento
+      const t = s.tachos[0];
+      t.baskets[0].frying = { id: 1, item: 'carne', ticks: secs(6), burned: false, pontoAlerted: false, burnAlerted: false };
+      takeBasket(s, t, 0);
+      checkEq(s.ready[0].warmed ?? false, false, 'sem energia, a estufa não guarda');
     },
   },
   {

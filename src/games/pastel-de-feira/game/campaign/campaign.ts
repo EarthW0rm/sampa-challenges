@@ -128,7 +128,6 @@ export function menuEntries(c: Campaign): MenuEntry[] {
 export function stationsOf(c: Campaign): StationId[] {
   const list: StationId[] = ['balcao', 'bancada'];
   c.owned.tachos.forEach((_t, i) => list.push(`tacho${i + 1}` as StationId));
-  if (c.owned.equip.includes('estufa')) list.push('estufa');
   list.push('moenda');
   if (c.owned.tables > 0) list.push('mesas');
   if (c.owned.delivery) list.push('expedicao');

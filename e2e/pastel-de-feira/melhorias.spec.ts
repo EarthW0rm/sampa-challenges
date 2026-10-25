@@ -115,42 +115,39 @@ test.describe('Melhorias compradas e o efeito no Dia de Feira', () => {
     expect(await game.hook((pf) => pf.sim.state.cups.length)).toBe(1);
   });
 
-  test('RN-27: Estufa congela a nota por 60 s; fora dela o pastel perde 1 ponto/s depois de 20 s', async ({ game }) => {
+  test('RN-27: a estufa fica em cima do balcão e o pastel frito vai direto para ela, com a nota congelada por 60 s', async ({ game }) => {
     await game.boot({ campaign: RICH });
     await game.continueToPrep();
     await buy(game, 'Estufa de vidro', 300);
     await game.openFair();
-    expect(await game.hook((pf) => pf.env.layout.zones.map((x) => x.id))).toContain('estufa');
+    expect(await game.hook((pf) => pf.env.layout.zones.map((x) => x.id)), 'não é estação: não tem zona').not.toContain('estufa');
     await assemble(game, 'carne');
     const a = await fry(game, 6.5);
-    await assemble(game, 'carne');
-    const b = await fry(game, 6.5);
-    await game.goTo('estufa');
-    const ctl = await game.controls();
-    expect(ctl[0].sub).toBe(`0/${WARMER.capacity}`);
-    // põe o pastel A na estufa (primeiro item da lista)
-    await game.tapControl('CARNE', 0).catch(async () => {
-      const items = (await game.controls()).slice(1);
-      await game.tapAt(items[0].x + items[0].w / 2, items[0].y + items[0].h / 2);
-      await game.frames(1);
-    });
-    expect(await game.hook((pf, id) => pf.sim.state.ready.find((r) => r.id === id)?.warmed, a.id)).toBe(true);
+    expect(await game.hook((pf, id) => pf.sim.state.ready.find((r) => r.id === id)?.warmed, a.id), 'saiu do óleo direto para a estufa').toBe(true);
     await game.advance(DECAY_DELAY + 30);
-    const q = await game.hook((pf, ids) => {
+    const q = await game.hook((pf, id) => {
       const st = pf.sim.state;
-      const t = st.tick / 60;
-      return ids.map((id) => {
-        const r = st.ready.find((x) => x.id === id)!;
-        const waited = r.warmed ? Math.max(0, t - r.readyAt - 60) : Math.max(0, t - r.readyAt - 20);
-        return Math.round(r.quality - waited);
-      });
-    }, [a.id, b.id]);
-    expect(q[0], 'na estufa: congelada').toBe(QUALITY_PONTO);
-    expect(q[1], 'fora: caiu').toBeLessThan(QUALITY_PONTO);
-    // e o painel mostra a mesma nota que o motor
+      const r = st.ready.find((x) => x.id === id)!;
+      return Math.round(r.quality - Math.max(0, st.tick / 60 - r.readyAt - 60));
+    }, a.id);
+    expect(q, 'na estufa: congelada').toBe(QUALITY_PONTO);
+    // no balcão: o pastel da estufa aparece marcado com E e pode ser entregue dali
     await game.goTo('balcao');
     const subs = (await game.controls()).map((c) => c.sub);
     expect(subs).toContain(`E ${QUALITY_PONTO}`);
+  });
+
+  test('RN-27: com a estufa cheia (6), o sétimo pastel fica no balcão', async ({ game }) => {
+    await game.boot({ campaign: { ...RICH, stock: { massa: 30, carne: 20, mucarela: 20, cana: 10 } } });
+    await game.continueToPrep();
+    await buy(game, 'Estufa de vidro', 300);
+    await game.openFair();
+    for (let i = 0; i < WARMER.capacity + 1; i++) {
+      await assemble(game, 'carne');
+      await fry(game, 6.5);
+    }
+    const s = await game.hook((pf) => ({ warmed: pf.sim.state.ready.filter((r) => r.warmed).length, out: pf.sim.state.ready.filter((r) => !r.warmed).length }));
+    expect(s).toEqual({ warmed: WARMER.capacity, out: 1 });
   });
 
   test('RN-80/RN-72: Mesa exige 2 m² e cria a zona de mesas', async ({ game }) => {

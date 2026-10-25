@@ -13,7 +13,6 @@ import { addDirt, cleanTable, dirtyTable } from './dirt';
 import { assembleItem } from './stations/bench';
 import { makeCup, millSeconds } from './stations/cane';
 import { fryWindow, isChanging, nextFreeBasket, placeBasket, startWorkerOilChange, takeBasket } from './stations/fryer';
-import { warmerCapacity, warmedCount, warmReady } from './stations/warmer';
 import { currentQuality } from './quality';
 import { fatigueFactor, ignite, maybeBurnWorker, canSurprise } from './world';
 import { emit, now, type Customer, type DayState, type Worker, type WorkerTask } from './state';
@@ -344,10 +343,8 @@ function fryerTakes(s: DayState, w: Worker, tachoIndex: number): boolean {
     const win = fryWindow(ITEMS[f.item], tacho);
     const mid = win.ponto[0] + (win.ponto[1] - win.ponto[0]) / 2;
     if (!f.burned && f.ticks * STEP < mid - EPS) continue;
-    const before = s.ready.length;
     if (!takeBasket(s, tacho, i, fryBonus(w))) continue;
     maybeBurnWorker(s, w);
-    if (s.ready.length > before && warmerCapacity(s) > warmedCount(s)) warmReady(s, s.ready[s.ready.length - 1].id);
     return true;
   }
   return false;

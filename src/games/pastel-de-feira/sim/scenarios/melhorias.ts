@@ -87,7 +87,7 @@ export const melhorias: Scenario[] = [
       checkEq(f.warmer, 12, 'estufa grande: 12 vagas');
       checkEq(f.mill, 'motorizada', 'moenda');
       check(f.drainer && f.thermalBag, 'flags');
-      checkEq(stationsOf(c).join(','), 'balcao,bancada,tacho1,estufa,moenda', 'estufa vira estação');
+      checkEq(stationsOf(c).join(','), 'balcao,bancada,tacho1,moenda', 'a estufa fica em cima do balcão: não é estação');
     },
   },
   {

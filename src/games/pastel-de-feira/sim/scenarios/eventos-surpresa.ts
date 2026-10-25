@@ -107,7 +107,7 @@ export const eventosSurpresa: Scenario[] = [
     rules: 'RN-152',
     run(seed) {
       const base = devConfig();
-      const sim = evSim(seed, 'energia', { equipment: { ...base.equipment, warmer: 6, mill: 'motorizada' }, stations: ['balcao', 'bancada', 'tacho1', 'estufa', 'moenda', 'escritorio'] });
+      const sim = evSim(seed, 'energia', { equipment: { ...base.equipment, warmer: 6, mill: 'motorizada' }, stations: ['balcao', 'bancada', 'tacho1', 'moenda', 'escritorio'] });
       const s = sim.state;
       s.ready.push({ id: 1, item: 'carne', quality: 80, readyAt: 0, warmed: true });
       advance(sim, secs(29));
