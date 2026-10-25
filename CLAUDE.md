@@ -17,9 +17,13 @@ npm run dev         # servidor de desenvolvimento
 npm run typecheck   # tsc --noEmit (strict, noUnusedLocals, noUnusedParameters)
 npm run build       # typecheck + vite build -> dist/
 npm run novo-jogo -- <id> "<Título>"   # cria src/games/<id>/ a partir do _modelo
+npm run test:e2e    # testes de ponta a ponta no navegador (Playwright, e2e/), suíte rápida
+npm run test:e2e:campanha   # campanha inteira do Pastel de Feira pela tela (~10 min; no macOS use caffeinate -dimsu)
+npm run typecheck:e2e
 ```
 
-Sempre rode `npm run typecheck` depois de mudar código. Não há suíte de testes.
+Sempre rode `npm run typecheck` depois de mudar código. Os testes de ponta a ponta ficam em `e2e/`
+(hoje só o Pastel de Feira; veja `e2e/README.md`).
 
 ## Arquitetura do hub (`src/hub/`)
 

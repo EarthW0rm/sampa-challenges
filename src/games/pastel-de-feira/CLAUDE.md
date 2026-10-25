@@ -44,6 +44,7 @@ encomendas, mundo (eventos) e automação. O tutorial (`game/tutorial.ts`) só o
 | `game/campaign/shop.ts` | ofertas de compra (a UI e os robôs usam a mesma lista) |
 | `game/sound.ts` | WebAudio sintetizado; `pastel-de-feira:som` e `:musica` |
 | `game/unlocks.ts` | balões de desbloqueio (`pastel-de-feira:visto`) |
+| `game/e2eHook.ts` | gancho dos testes E2E (`window.__pf`), só existe com `window.__PF_E2E__` definido pela página de teste |
 | `sim/run.ts` | `--scenario`, `--replay`, `--bots`, `--list` |
 | `sim/scenarios/*` | um grupo por conjunto de RN (262 cenários) |
 | `sim/player.ts`, `sim/bots.ts`, `sim/report.ts` | jogador automático e robôs de calibração |
@@ -68,3 +69,4 @@ Arte: `tools/pixelart/pastel_de_feira.py` (cenário, pisos, equipamentos, pasté
 3. Replay: grave um dia (`startLog` + `recordReplay`), rode `--replay` duas vezes: o hash é idêntico.
 4. `--bots all --seeds 50`: os 4 robôs passam em ≥ 80% das sementes (ver `calibracao.md`).
 5. Navegador: `#/jogos/pastel-de-feira` em desktop e a ≈ 390 px; a barra "← Sampa Challenges" volta ao hub.
+6. `npm run test:e2e`: suíte de ponta a ponta em `e2e/pastel-de-feira/` (Playwright, cliques no canvas, relógio de quadros controlado). Veja `e2e/README.md`.
