@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/EarthW0rm/sampa-challenges/compare/v1.2.0...v1.3.0) (2026-10-25)
+
+
+### Features
+
+* **pastel-de-feira:** adiciona o jogo Pastel de Feira ([#9](https://github.com/EarthW0rm/sampa-challenges/issues/9)) ([dd9bd1f](https://github.com/EarthW0rm/sampa-challenges/commit/dd9bd1fd05b2a730e478d62298e057e4a23eebee))
+
 ## [1.2.0](https://github.com/EarthW0rm/sampa-challenges/compare/v1.1.0...v1.2.0) (2026-10-24)
 
 
