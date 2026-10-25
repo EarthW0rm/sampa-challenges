@@ -226,7 +226,8 @@ export interface DayResult {
   day: number;
   ticks: number;
   revenue: { counter: number; table: number; app: number; order: number; total: number };
-  costs: { oil: number; fines: number; repairs: number };
+  /** `fines` é o total; `inspection` é a parte do fiscal (RN-152), o resto é multa de encomenda (RN-104). */
+  costs: { oil: number; fines: number; inspection?: number; repairs: number };
   orders: {
     served: number;
     lostPatience: number;
@@ -240,6 +241,8 @@ export interface DayResult {
     appCancelled: number;
     encDone: number;
     encFailed: number;
+    /** Brindes entregues (RN-122). */
+    gifts?: number;
   };
   waste: { burned: number; leftover: number };
   reputation: { successes: number; charm: number; weightedFailures: number; rate: number; change: number };

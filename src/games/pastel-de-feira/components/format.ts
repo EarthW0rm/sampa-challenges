@@ -1,7 +1,10 @@
-export const money = (n: number): string =>
-  `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const reais = (n: number): string => `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export const signedMoney = (n: number): string => `${n < 0 ? '−' : '+'} ${money(Math.abs(n))}`;
+/** Valor em reais; negativo com o mesmo sinal das linhas do balanço ("− R$ 73,00"). */
+export const money = (n: number): string => (n < 0 && reais(-n) !== reais(0) ? `− ${reais(-n)}` : reais(Math.abs(n)));
+
+/** Linha do balanço: entrada com "+", saída com "−". Custo zerado (−0) continua sendo saída. */
+export const signedMoney = (n: number): string => `${n < 0 || Object.is(n, -0) ? '−' : '+'} ${reais(Math.abs(n))}`;
 
 /** Reputação com uma casa decimal e estrelas de meia em meia. */
 export function stars(rep: number): string {

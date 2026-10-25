@@ -8,6 +8,8 @@ const manifest: GameManifest = {
   cover,
   tags: ['1 jogador'],
   accent: '#7fb3dd',
+  // getRecord: loadRecord,          // recorde no card (número)
+  // formatRecord: (n) => `${n} pts`, // opcional: como o card mostra o recorde
   load: () => import('./Game'),
 };
 

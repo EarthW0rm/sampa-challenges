@@ -39,7 +39,7 @@ export function HubHome() {
                     </div>
                     <div className="hub-card-foot">
                       <span className="hub-play">Jogar →</span>
-                      {record !== null && record > 0 && <span className="hub-record">Recorde {record}</span>}
+                      {record !== null && record > 0 && <span className="hub-record">Recorde {g.formatRecord ? g.formatRecord(record) : record}</span>}
                     </div>
                   </div>
                 </a>

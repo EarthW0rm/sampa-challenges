@@ -251,12 +251,16 @@ export interface Stats {
   repairs: number;
   tableRevenue: number;
   giftCost: number;
+  /** Brindes entregues (balcão, mesa e app, RN-122). */
+  gifts: number;
   drinks: number;
   especial: number;
   inspection: 'none' | 'passed' | 'failed';
   annulled: boolean;
   orderRevenue: number;
   fines: number;
+  /** Parte de `fines` que veio do fiscal (RN-152); o resto é multa de encomenda (RN-104). */
+  inspectionFines: number;
   encDone: number;
   encFailed: number;
   appRevenue: number;
@@ -386,7 +390,7 @@ export function createState(config: DayConfig, seed: number): DayState {
     rep: { successes: 0, charm: 0, failures: 0 },
     stats: {
       arrived: 0, served: 0, lostPatience: 0, wrong: 0, queueFull: 0, lostPrice: 0, noStock: 0,
-      burned: 0, revenue: 0, oilCost: 0, repairs: 0, tableRevenue: 0, giftCost: 0, drinks: 0, especial: 0, inspection: 'none', annulled: false, orderRevenue: 0, fines: 0, encDone: 0, encFailed: 0, appRevenue: 0, appPicked: 0, appCancelled: 0, lostDirt: 0, payFail: 0,
+      burned: 0, revenue: 0, oilCost: 0, repairs: 0, tableRevenue: 0, giftCost: 0, gifts: 0, drinks: 0, especial: 0, inspection: 'none', annulled: false, orderRevenue: 0, fines: 0, inspectionFines: 0, encDone: 0, encFailed: 0, appRevenue: 0, appPicked: 0, appCancelled: 0, lostDirt: 0, payFail: 0,
     },
   };
 }

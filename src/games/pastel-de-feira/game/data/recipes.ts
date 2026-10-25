@@ -187,3 +187,23 @@ export const ITEM_BY_FILLING: ReadonlyMap<string, Item> = new Map(
     .filter((i) => i.kind !== 'bebida')
     .map((i) => [fillingKey(i.filling), i]),
 );
+
+/** Rótulos curtos das receitas cuja primeira palavra colide com outra (até 6 letras, para caber a versão). */
+const SHORT: Readonly<Record<string, string>> = {
+  'carne-seca': 'C.seca',
+  'frango-catupiry': 'F.catup',
+  'banana-canela': 'B.canel',
+  'banana-queijo': 'B.quei',
+  'doce-de-leite': 'D.leite',
+  'caldo-puro': 'Puro',
+  'caldo-limao': 'Limao',
+  'caldo-abacaxi': 'Abacaxi',
+};
+
+/** Rótulo do item nos botões do painel (até 8 letras): único entre todas as receitas e versões (`Carne+1`). */
+export function itemLabel(id: ItemId): string {
+  const it = ITEMS[id];
+  if (!it) return id.slice(0, 8);
+  const base = SHORT[it.base] ?? BASE_RECIPES[it.base]?.name.split(' ')[0] ?? it.name.split(' ')[0];
+  return it.version > 0 ? `${base.slice(0, 6)}+${it.version}` : base.slice(0, 8);
+}

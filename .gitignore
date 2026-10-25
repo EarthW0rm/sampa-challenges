@@ -4,3 +4,5 @@ dist
 *.log
 _to_delete/
 __pycache__/
+test-results/
+playwright-report/

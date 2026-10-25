@@ -79,7 +79,10 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   const bonus = result.orders.noStock === 0 ? round2(revenue * Math.max(0, BONUS_WASTE_LIMIT - wastePercent)) : 0;
 
   lines.push({ id: 'receita', label: 'Vendas', amount: round2(revenue) });
-  lines.push({ id: 'insumos', label: 'Insumos usados', amount: -round2(usedCost) });
+  // o custo do brinde aparece separado (RN-122); a soma das duas linhas é o custo dos insumos usados
+  const giftCost = Math.min(round2(usedCost), clampMoney(result.giftCost));
+  lines.push({ id: 'insumos', label: 'Insumos usados', amount: -round2(usedCost - giftCost) });
+  if (giftCost > 0) lines.push({ id: 'brindes', label: 'Insumos dos brindes', amount: -giftCost });
   lines.push({ id: 'estragados', label: 'Insumos estragados', amount: -round2(spoiledCost) });
   if (leftoverSale > 0) lines.push({ id: 'xepa', label: 'Sobras vendidas na xepa', amount: leftoverSale });
   lines.push({ id: 'consumiveis', label: 'Copos e saquinhos', amount: -round2(consumablesCost) });
@@ -92,7 +95,10 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   const repairs = clampMoney(result.costs.repairs);
   if (repairs > 0) lines.push({ id: 'reparos', label: 'Reparo do tacho', amount: -round2(repairs) });
   const fines = clampMoney(result.costs.fines);
-  if (fines > 0) lines.push({ id: 'multas', label: 'Multas de encomenda', amount: -round2(fines) });
+  const inspectionFine = Math.min(fines, clampMoney(result.costs.inspection ?? 0));
+  const orderFines = round2(fines - inspectionFine);
+  if (inspectionFine > 0) lines.push({ id: 'fiscal', label: 'Multa da fiscalização', amount: -round2(inspectionFine) });
+  if (orderFines > 0) lines.push({ id: 'multas', label: 'Multas de encomenda', amount: -orderFines });
 
   // 5. Caixa: compras já saíram no Preparo. Entram vendas e bônus; saem óleo e custos fixos.
   const cashIn = revenue + bonus + leftoverSale - clampMoney(result.costs.oil) - rent - wages - fines - repairs;
@@ -102,6 +108,11 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   const reputationBefore = campaign.reputation;
   const change = result.reputation.change > 0 && campaign.theme === 'tradicional' ? result.reputation.change * THEME_REPUTATION_BONUS : result.reputation.change;
   c.reputation = Math.max(1, Math.min(5, round2(reputationBefore + change)));
+  // fiscal reprovado: −0,3 de reputação no próprio dia, antes de conferir a meta (RN-50, RN-152)
+  if (result.counters.inspection === 'failed') {
+    if (result.counters.annulled) c.lastAnnul = campaign.calendar; // o Despachante anula a multa e a perda de reputação
+    else c.reputation = Math.max(1, round2(c.reputation - SURPRISE.repPenalty));
+  }
 
   // 6b. Desafios da Associação: progresso, prêmio na conclusão e expiração sem penalidade (RN-135)
   const prizes: { id: string; name: string; prize: number }[] = [];
@@ -163,10 +174,6 @@ export function closeDay(campaign: Campaign, result: DayResult): { campaign: Cam
   // 9. Eventos do dia seguinte: reivindicação ou evento previsto (no máximo 1 previsto, RN-150)
   if (rollClaim({ ...c, calendar: c.calendar }, result)) c.claim = 'pendente';
   c.forecast = c.claim === 'pendente' ? null : rollForecast(c);
-  if (result.counters.inspection === 'failed') {
-    if (result.counters.annulled) c.lastAnnul = campaign.calendar; // o Despachante anula a multa e a perda de reputação
-    else c.reputation = Math.max(1, round2(c.reputation - SURPRISE.repPenalty));
-  }
 
   const balance: Balance = {
     lines,

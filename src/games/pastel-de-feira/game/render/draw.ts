@@ -1,6 +1,6 @@
 import { drawPixelText, textWidth } from '../pixelFont';
 import type { ItemId } from '../data/recipes';
-import { ITEMS } from '../data/recipes';
+import { ITEMS, itemLabel } from '../data/recipes';
 import type { Profile } from '../types';
 import type { Rect } from '../layout';
 import { getAssets, LIB_PX, type Equipe, type Pose, type Aparencia } from '../assets';
@@ -34,11 +34,8 @@ export function itemColor(id: ItemId): string {
   return `hsl(${h % 360} 55% 55%)`;
 }
 
-/** Nome curto (até 8 letras) para os botões do painel. */
-export function shortName(id: ItemId): string {
-  const n = ITEMS[id]?.name ?? id;
-  return n.split(' ')[0].slice(0, 8);
-}
+/** Nome curto (até 8 letras e único entre as receitas) para os botões do painel. */
+export const shortName = (id: ItemId): string => itemLabel(id);
 
 export function box(ctx: CanvasRenderingContext2D, r: Rect, fill: string, line?: string): void {
   ctx.fillStyle = fill;

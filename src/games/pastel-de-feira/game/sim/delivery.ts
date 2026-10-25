@@ -91,6 +91,7 @@ function pickup(s: DayState, c: Comanda): void {
     if (c.gifts[k]) {
       addCharm(s, CHARM_GIFT);
       s.stats.giftCost += itemCost(c.items[k]);
+      s.stats.gifts++;
       s.ready.splice(s.ready.indexOf(r), 1);
       return;
     }

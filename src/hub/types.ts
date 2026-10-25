@@ -26,6 +26,8 @@ export interface GameManifest {
   order?: number;
   /** Recorde salvo, se o jogo tiver um. */
   getRecord?: () => number | null;
+  /** Como mostrar o recorde no card (ex.: "dia 7", "R$ 1.962,00"). Sem ele, o card mostra o número. */
+  formatRecord?: (record: number) => string;
   /** Carrega o jogo só quando alguém abre (code splitting). */
   load: () => Promise<{ default: ComponentType<GameProps> }>;
 }

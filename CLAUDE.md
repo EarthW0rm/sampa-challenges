@@ -17,9 +17,13 @@ npm run dev         # servidor de desenvolvimento
 npm run typecheck   # tsc --noEmit (strict, noUnusedLocals, noUnusedParameters)
 npm run build       # typecheck + vite build -> dist/
 npm run novo-jogo -- <id> "<Título>"   # cria src/games/<id>/ a partir do _modelo
+npm run test:e2e    # testes de ponta a ponta no navegador (Playwright, e2e/), suíte rápida
+npm run test:e2e:campanha   # campanha inteira do Pastel de Feira pela tela (~10 min; no macOS use caffeinate -dimsu)
+npm run typecheck:e2e
 ```
 
-Sempre rode `npm run typecheck` depois de mudar código. Não há suíte de testes.
+Sempre rode `npm run typecheck` depois de mudar código. Os testes de ponta a ponta ficam em `e2e/`
+(hoje só o Pastel de Feira; veja `e2e/README.md`).
 
 ## Arquitetura do hub (`src/hub/`)
 
@@ -68,6 +72,10 @@ Cada jogo concentra os números de equilíbrio em `game/constants.ts` e nas prim
 `game/engine.ts`. Os `CLAUDE.md` dos jogos listam cada parâmetro, o valor atual e o efeito.
 Mudou um número? Atualize a tabela no README/CLAUDE.md do jogo.
 
+**O `README.md` de cada jogo é o manual dele.** Toda alteração de regra ou de mecânica — adição,
+mudança ou remoção — atualiza o README do jogo no mesmo commit/PR (no Pastel de Feira, também a spec
+em `docs/specs/pastel-de-feira/`).
+
 ## Sprites
 
 **Biblioteca única:** personagens (cachorros de lado e de trás), caixas/itens, capacetes, HUD e
@@ -108,4 +116,4 @@ Regras, física e IA ficam em TypeScript puro para poderem ser testadas com esbu
 - [ ] Hub abre, o card do jogo aparece, o jogo carrega, a barra "← Sampa Challenges" volta.
 - [ ] Nenhum estilo vazou (a home e os outros jogos continuam iguais).
 - [ ] Testado em ≈390 px de largura.
-- [ ] README/CLAUDE.md do jogo atualizados se regras ou parâmetros mudaram.
+- [ ] README do jogo (o manual) atualizado em toda adição, mudança ou remoção de regra ou mecânica; CLAUDE.md do jogo se parâmetros ou arquitetura mudaram.

@@ -1,6 +1,6 @@
 import type { GameManifest } from '../../hub/types';
 import cover from './assets/capa.png';
-import { loadHubRecord } from './game/record';
+import { formatHubRecord, loadHubRecord } from './game/record';
 
 const manifest: GameManifest = {
   id: 'pastel-de-feira',
@@ -12,6 +12,7 @@ const manifest: GameManifest = {
   accent: '#e8a13a',
   order: 90,
   getRecord: loadHubRecord,
+  formatRecord: (n) => formatHubRecord(n),
   load: () => import('./Game'),
 };
 

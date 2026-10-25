@@ -11,6 +11,7 @@ import { buildStaticLayer, renderScene } from '../game/render/scene';
 import { DaySim } from '../game/sim/day';
 import type { Command, DayConfig, DayResult } from '../game/types';
 import { createUi } from '../game/ui';
+import { exposeForE2E } from '../game/e2eHook';
 
 interface Props {
   config: DayConfig;
@@ -60,6 +61,7 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
     const env: InputEnv = { state: sim.state, layout, ui: createUi() };
     simRef.current = sim;
     envRef.current = env;
+    const e2e = exposeForE2E(sim, env);
 
     let raf = 0;
     let last = performance.now();
@@ -105,6 +107,7 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
       }
       if (sim.isOver() && !finished) {
         finished = true;
+        e2e.finish(sim.result()!);
         doneRef.current(sim.result()!);
         return;
       }
@@ -154,6 +157,7 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
     window.addEventListener('keyup', onKeyUp);
     return () => {
       cancelAnimationFrame(raf);
+      e2e.dispose();
       sound.stop();
       window.removeEventListener('blur', onBlur);
       document.removeEventListener('visibilitychange', onVisibility);
