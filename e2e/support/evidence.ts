@@ -3,27 +3,33 @@
  * em `evidencias/<projeto>/<arquivo>/<teste>/`, com um cabeçalho que diz qual teste é, qual ação
  * acabou de ser feita, em que contexto (passo do fluxo) e o que a tela mostrava naquele instante.
  *
- * Níveis (`PF_EVIDENCIAS` ou a opção `evidencias` do projeto):
+ * O que a tela mostra vem dos descritores (`describe.ts`): a parte genérica e o estado próprio do jogo.
+ *
+ * Níveis (`E2E_EVIDENCIAS`, depois `PF_EVIDENCIAS`, depois a opção `evidencias` do projeto):
  * - `acoes`: marcos + toda ação (padrão);
- * - `marcos`: abertura do jogo, início e fim do dia, fim do teste e chamadas explícitas a `game.evidence()`;
+ * - `marcos`: abertura do jogo, início e fim de partida/dia, fim do teste e chamadas explícitas a `game.evidence()`;
  * - `off`: nada.
  */
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test, type Keyboard, type Locator, type Mouse, type Page, type TestInfo } from '@playwright/test';
+import type { Describer, Details } from './describe';
 
 export type EvidenceLevel = 'acoes' | 'marcos' | 'off';
 
 /** Pasta raiz das evidências (fora do controle de versão). */
-export const EVIDENCE_DIR = fileURLToPath(new URL('../../../evidencias/', import.meta.url));
-const TEST_DIR = fileURLToPath(new URL('../../', import.meta.url));
+export const EVIDENCE_DIR = fileURLToPath(new URL('../../evidencias/', import.meta.url));
+const TEST_DIR = fileURLToPath(new URL('../', import.meta.url));
 
 const LEVELS: readonly EvidenceLevel[] = ['acoes', 'marcos', 'off'];
 
 export function evidenceLevel(option: EvidenceLevel): EvidenceLevel {
-  const env = process.env.PF_EVIDENCIAS as EvidenceLevel | undefined;
-  return env && LEVELS.includes(env) ? env : option;
+  for (const name of ['E2E_EVIDENCIAS', 'PF_EVIDENCIAS']) {
+    const env = process.env[name] as EvidenceLevel | undefined;
+    if (env && LEVELS.includes(env)) return env;
+  }
+  return option;
 }
 
 const slug = (s: string, max = 60): string =>
@@ -41,56 +47,6 @@ const esc = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;'
 // eslint-disable-next-line no-control-regex
 const stripAnsi = (s: string): string => s.replace(/\x1b\[[0-9;]*m/g, '');
 
-type Details = [string, string][];
-
-/** Lê da página o que a tela mostra (tela, HUD, estado do dia). Roda no navegador: precisa ser autocontida. */
-function describeScreen(page: Page): Promise<Details> {
-  return page.evaluate(() => {
-    const out: [string, string][] = [];
-    const text = (el: Element | null): string => (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
-    const shown = (el: Element): boolean => (el as HTMLElement).offsetParent !== null || (el as HTMLElement).getClientRects().length > 0;
-    out.push(['Rota', location.hash || '#/']);
-    const root = document.querySelector('.pastel-de-feira');
-    const dialogs = [...document.querySelectorAll('[role=dialog]')].filter(shown).map((d) => d.getAttribute('aria-label') || text(d).slice(0, 80));
-    if (!root) out.push(['Tela', 'Hub (fora do jogo)']);
-    else if (root.querySelector('.day')) {
-      out.push(['Tela', 'Dia de feira']);
-      const hud = [...root.querySelectorAll('.hud > span')].map(text).filter(Boolean);
-      if (hud.length) out.push(['HUD', hud.join('  ·  ')]);
-    } else if (root.querySelector('.prep')) {
-      const tab = root.querySelector('[role=tab][aria-selected=true]');
-      out.push(['Tela', `Preparo${tab ? ` — aba ${text(tab)}` : ''}`]);
-    } else {
-      const h = [...root.querySelectorAll('h1, h2')].filter(shown).map(text).filter(Boolean);
-      out.push(['Tela', h[0] ?? '(sem título)']);
-    }
-    if (dialogs.length) out.push(['Diálogo', dialogs.join(' | ')]);
-    const status = [...document.querySelectorAll('[role=status], [role=alert]')].filter(shown).map(text).filter(Boolean);
-    if (status.length) out.push(['Mensagem', status.join(' | ').slice(0, 200)]);
-
-    type Hook = {
-      sim: { state: { tick: number; paused: boolean; pasteleiro: { at: string; to: string | null }; customers: { place: string }[]; ready: unknown[]; cups: unknown[] } };
-      env: { ui: { panel: string | null; selected: { kind: string; id: number } | null } };
-      controls: () => { label: string }[];
-    };
-    const pf = (window as unknown as { __pf?: Hook | null }).__pf;
-    if (pf) {
-      const st = pf.sim.state;
-      const s = Math.floor(st.tick / 60);
-      out.push(['Simulação', `passo ${st.tick} (${Math.floor(s / 60)}min${String(s % 60).padStart(2, '0')}s de jogo)${st.paused ? ' — PAUSADO' : ''}`]);
-      out.push(['Pasteleiro', st.pasteleiro.to ? `${st.pasteleiro.at} → ${st.pasteleiro.to}` : `em ${st.pasteleiro.at}`]);
-      const ui = pf.env.ui;
-      out.push(['Painel', ui.panel ? `${ui.panel}: ${pf.controls().map((c) => c.label).join(', ').slice(0, 160)}` : 'recolhido']);
-      if (ui.selected) out.push(['Selecionado', `${ui.selected.kind} #${ui.selected.id}`]);
-      const places = new Map<string, number>();
-      for (const c of st.customers) places.set(c.place, (places.get(c.place) ?? 0) + 1);
-      out.push(['Clientes', st.customers.length ? [...places].map(([p, n]) => `${n} ${p}`).join(', ') : 'nenhum']);
-      out.push(['Prontos', `${st.ready.length} pastel(éis), ${st.cups.length} copo(s)`]);
-    }
-    return out;
-  });
-}
-
 /** Página auxiliar (contexto separado, por worker) que monta o PNG final: cabeçalho + captura. */
 export type Composer = () => Promise<Page>;
 
@@ -105,6 +61,7 @@ export class Evidence {
     private readonly info: TestInfo,
     readonly level: EvidenceLevel,
     private readonly composer: Composer,
+    private readonly describers: readonly Describer[] = [],
   ) {
     const file = relative(TEST_DIR, info.file).replace(/\.spec\.ts$/, '');
     const name = slug(info.title, 80) + (info.retry ? `-retry${info.retry}` : '') + (info.repeatEachIndex ? `-rep${info.repeatEachIndex}` : '');
@@ -113,6 +70,11 @@ export class Evidence {
       rmSync(this.dir, { recursive: true, force: true });
       mkdirSync(this.dir, { recursive: true });
     }
+  }
+
+  /** Pasta das evidências deste teste. */
+  get folder(): string {
+    return this.dir;
   }
 
   /** Roda `fn` sem registrar as ações internas (o chamador registra uma só, já descrita). */
@@ -154,11 +116,26 @@ export class Evidence {
     await this.capture(ok ? 'Fim' : 'Falha', `Teste terminou: ${STATUS[status] ?? status}`, { ok, error });
   }
 
+  /** Roda os descritores na página; um descritor que lança vira uma linha de aviso. */
+  private describe(): Promise<Details> {
+    return this.page.evaluate((srcs) => {
+      const out: [string, string][] = [];
+      for (const src of srcs) {
+        try {
+          out.push(...((0, eval)(`(${src})`) as (w: Window) => [string, string][])(window));
+        } catch (e) {
+          out.push(['Tela', `(não foi possível ler: ${String((e as Error).message ?? e).split('\n')[0]})`]);
+        }
+      }
+      return out;
+    }, this.describers.map((d) => d.src));
+  }
+
   private async capture(kind: string, description: string, end?: { ok: boolean; error?: string }): Promise<void> {
     const n = ++this.n;
     try {
       const shot = await this.page.screenshot({ timeout: 5_000, caret: 'initial' });
-      const details = await describeScreen(this.page).catch((e: Error): Details => [['Tela', `(não foi possível ler: ${e.message.split('\n')[0]})`]]);
+      const details = await this.describe().catch((e: Error): Details => [['Tela', `(não foi possível ler: ${e.message.split('\n')[0]})`]]);
       const html = this.caption(n, kind, description, details, shot, end);
       const composer = await this.composer();
       await composer.setViewportSize({ width: 1280, height: 400 });
