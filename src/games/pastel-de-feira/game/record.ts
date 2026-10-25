@@ -48,3 +48,7 @@ export const savePointRecord = (value: number, store: Store | null = browser()):
 
 /** Recorde do card do hub: o maior dia concluído e, depois de zerar, o maior caixa do modo livre (RN-56). */
 export const loadHubRecord = (store: Store | null = browser()): number => loadCashRecord(store) || loadRecord(store);
+
+/** Texto do recorde no card: caixa em reais depois de zerar, senão o dia (RN-56). */
+export const formatHubRecord = (record: number, store: Store | null = browser()): string =>
+  loadCashRecord(store) > 0 ? `R$ ${record.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `dia ${record}`;
