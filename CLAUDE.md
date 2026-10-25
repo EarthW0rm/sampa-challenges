@@ -23,7 +23,8 @@ npm run typecheck:e2e
 ```
 
 Sempre rode `npm run typecheck` depois de mudar código. Os testes de ponta a ponta ficam em `e2e/`
-(hoje só o Pastel de Feira; veja `e2e/README.md`).
+(hoje só o Pastel de Feira; veja `e2e/README.md`). Cada teste grava evidências (capturas com
+cabeçalho: teste, ação, tela) em `evidencias/` (fora do git; `PF_EVIDENCIAS=marcos|off` reduz).
 
 ## Arquitetura do hub (`src/hub/`)
 
