@@ -34,7 +34,7 @@ export function buildResult(s: DayState): DayResult {
     day: s.config.day,
     ticks: s.tick,
     revenue: { counter: round2(s.stats.revenue - s.stats.tableRevenue - s.stats.appRevenue - s.stats.orderRevenue), table: s.stats.tableRevenue, app: s.stats.appRevenue, order: s.stats.orderRevenue, total: s.stats.revenue },
-    costs: { oil: s.stats.oilCost, fines: s.stats.fines, repairs: s.stats.repairs },
+    costs: { oil: s.stats.oilCost, fines: s.stats.fines, inspection: s.stats.inspectionFines, repairs: s.stats.repairs },
     orders: {
       served: s.stats.served,
       lostPatience: s.stats.lostPatience,
@@ -48,6 +48,7 @@ export function buildResult(s: DayState): DayResult {
       appCancelled: s.stats.appCancelled,
       encDone: s.stats.encDone,
       encFailed: s.stats.encFailed,
+      gifts: s.stats.gifts,
     },
     waste: { burned, leftover },
     reputation: { successes, charm, weightedFailures: failures, rate, change },

@@ -67,6 +67,7 @@ function inspect(s: DayState): void {
       notice(s, 'FISCAL: MULTA ANULADA PELO DESPACHANTE');
     } else {
       s.stats.fines = Math.round((s.stats.fines + SURPRISE.fine) * 100) / 100;
+      s.stats.inspectionFines = Math.round((s.stats.inspectionFines + SURPRISE.fine) * 100) / 100;
       notice(s, `FISCAL: MULTA R$${SURPRISE.fine} E -0,3 DE REPUTACAO`);
     }
   } else {

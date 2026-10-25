@@ -187,4 +187,43 @@ export const fechamento: Scenario[] = [
       checkEq(c.fatigue.queijo, 6, 'a receita que ficou continua contando');
     },
   },
+  {
+    id: 'rn152-multa-do-fiscal-separada-da-encomenda',
+    rules: 'RN-104, RN-152',
+    run() {
+      const c = stocked();
+      const r = baseResult(c, { costs: { oil: 0, fines: 202, inspection: 150, repairs: 0 } });
+      const lines = closeDay(c, r).balance.lines;
+      checkEq(lines.find((l) => l.id === 'fiscal')?.amount, -150, 'linha da multa da fiscalização');
+      checkEq(lines.find((l) => l.id === 'multas')?.amount, -52, 'linha das multas de encomenda');
+      check(!lines.find((l) => l.id === 'fiscal')!.label.includes('encomenda'), 'o rótulo do fiscal não fala em encomenda');
+    },
+  },
+  {
+    id: 'rn50-meta-usa-reputacao-depois-do-fiscal',
+    rules: 'RN-50, RN-152',
+    run() {
+      const c = stocked();
+      // variação do dia −1,0 (3,0 → 2,0, no limite dos dias 1–5); fiscal reprovado tira 0,3
+      const base = baseResult(c, {});
+      const r = { ...base, reputation: { ...base.reputation, change: -1 }, counters: { ...base.counters, inspection: 'failed' as const, annulled: false } };
+      const b = closeDay(c, r).balance;
+      checkNear(b.reputationAfter, 1.7, 'reputação final com o −0,3');
+      checkEq(b.reputationMet, false, 'meta de reputação conferida com a reputação final');
+      checkEq(b.met, false, 'meta não cumprida');
+    },
+  },
+  {
+    id: 'rn122-custo-do-brinde-separado',
+    rules: 'RN-122',
+    run() {
+      const c = stocked();
+      const base = baseResult(c, {});
+      // 4 carnes usadas (massa + carne = R$ 2,30 cada); uma delas foi brinde
+      const left = base.stockLeft.map((l) => (l.ingredient === 'massa' ? { ...l, qty: l.qty - 4 } : l.ingredient === 'carne' ? { ...l, qty: l.qty - 4 } : l));
+      const b = closeDay(c, { ...base, stockLeft: left, giftCost: 2.3 }).balance;
+      checkNear(b.lines.find((l) => l.id === 'brindes')?.amount ?? 0, -2.3, 'linha dos insumos dos brindes');
+      checkNear(b.lines.find((l) => l.id === 'insumos')?.amount ?? 0, -(4 * 2.3 - 2.3), 'insumos usados sem o brinde');
+    },
+  },
 ];

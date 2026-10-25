@@ -24,6 +24,8 @@ interface Closing {
   served: number;
   lost: number;
   appCancelled: number;
+  orders: DayResult['orders'];
+  freeMode: boolean;
 }
 
 /** Depuração: `localStorage['pastel-de-feira:forcar'] = 'fiscal' | 'energia' | 'excursao' | 'fogo' | 'queimado'` força o evento surpresa do dia. */
@@ -105,7 +107,7 @@ export default function PastelDeFeira({ onExit }: GameProps) {
     if (out.campaign.freeMode) saveCashRecord(out.campaign.cash);
     persist(out.campaign, out.balance.bankrupt ? 'fim' : 'preparo');
     const o = result.orders;
-    setClosing({ balance: out.balance, served: o.served, lost: o.lostPatience + o.queueFull + o.lostPrice + o.noStock, appCancelled: o.appCancelled });
+    setClosing({ balance: out.balance, served: o.served, lost: o.lostPatience + o.queueFull + o.lostPrice + o.noStock, appCancelled: o.appCancelled, orders: o, freeMode: campaign.freeMode });
     setCampaign(out.campaign);
     setScreen('fechamento');
   };
@@ -191,6 +193,8 @@ export default function PastelDeFeira({ onExit }: GameProps) {
           served={closing.served}
           lost={closing.lost}
           appCancelled={closing.appCancelled}
+          orders={closing.orders}
+          freeMode={closing.freeMode}
           onNext={() => setScreen(closing.balance.bankrupt ? 'fim' : 'preparo')}
         />
       )}

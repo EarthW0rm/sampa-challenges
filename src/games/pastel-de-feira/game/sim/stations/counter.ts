@@ -108,6 +108,7 @@ export function deliverItem(s: DayState, ref: ItemRef, customerId: number, by?: 
     value = 0; // brinde não paga: dá encanto e custa insumo (RN-122)
     addCharm(s, CHARM_GIFT);
     s.stats.giftCost += itemCost(itemId);
+    s.stats.gifts++;
   }
   c.owed += value;
   line.delivered = itemId;
