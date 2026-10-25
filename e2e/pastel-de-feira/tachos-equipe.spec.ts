@@ -105,4 +105,15 @@ test.describe('Tachos e equipe', () => {
     await game.advance(60);
     expect(await game.hook((pf) => ({ e: pf.sim.state.workers[0].energy, rest: pf.sim.state.workers[0].resting }))).toEqual({ e: 100, rest: null });
   });
+
+  test('RN-170/RN-55a: no dia 1 com tutorial e equipe, a Montagem monta o pedido anotado (o tutorial não congela a equipe)', async ({ game }) => {
+    await game.boot({ campaign: { options: { tutorial: true, unlockAll: true } } });
+    await game.continueToPrep();
+    await hire(game, 'Geral', 'Montagem 1');
+    await game.openFair();
+    await game.waitCustomer();
+    await takeOrder(game);
+    await game.advanceUntil((pf) => pf.sim.state.assembled.length > 0 || pf.sim.state.tachos[0].baskets.some((b) => b.frying !== null), 5, undefined, 1);
+    await expect(game.page.locator('.pastel-de-feira .tutorial-tip')).toBeVisible(); // as dicas continuam
+  });
 });

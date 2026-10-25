@@ -149,4 +149,22 @@ export const tutorial: Scenario[] = [
       saveSeen(quebrado, ['a']); // não lança
     },
   },
+  {
+    id: 'rn170-com-equipe-o-tutorial-nao-congela',
+    rules: 'RN-170, RN-55a',
+    run(seed) {
+      const solo = makeSim(seed, devConfig());
+      solo.setHold(true);
+      checkEq(solo.state.hold, true, 'sem equipe: o passo guiado congela o relógio');
+      const staff = [{ id: 1, name: 'M', kind: 'geral' as const, traits: [], courses: [], mode: 'fixo' as const, position: 'montagem1' as const }];
+      const crew = makeSim(seed, devConfig({ staff }));
+      crew.state.arrivalLeft = 1e9;
+      crew.setHold(true);
+      checkEq(crew.state.hold, false, 'com equipe: o relógio segue');
+      const c = addCustomer(crew.state, 'padrao', ['carne']);
+      c.state = 'anotado';
+      advance(crew, Math.round(3 / STEP));
+      check(crew.state.assembled.length + crew.state.tachos[0].baskets.filter((b) => b.frying).length >= 1, 'a Montagem monta o pedido anotado durante o tutorial');
+    },
+  },
 ];

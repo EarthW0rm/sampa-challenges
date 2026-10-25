@@ -476,7 +476,8 @@ previsão do Preparo) e 1 surpresa por dia.
 - **Recordes** (RN-56): maior dia concluído e, depois de zerar, maior caixa do modo livre (é o que o
   card do hub mostra: "Recorde dia 7" ou "Recorde R$ 1.962,00"); maior valor de ponto.
 - **Tutorial** (RN-170): no dia 1 guia o primeiro pedido; durante cada passo o relógio para, mas os
-  comandos funcionam. **Desbloqueios** (RN-171) com balão na primeira vez: Equipe (dia 2), Associação
+  comandos funcionam. Com equipe no dia 1 (melhorias liberadas, RN-55a) o relógio não para: as dicas
+  continuam e a equipe trabalha. **Desbloqueios** (RN-171) com balão na primeira vez: Equipe (dia 2), Associação
   (3), Delivery e Tema (5), Especial da Casa (6), Escritório (10).
 
 ---

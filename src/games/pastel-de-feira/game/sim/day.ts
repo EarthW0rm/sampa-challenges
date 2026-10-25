@@ -110,9 +110,12 @@ export class DaySim {
     return this.log ?? [];
   }
 
-  /** Controle de sessão do tutorial (RN-170): congela o relógio sem bloquear a interação. */
+  /**
+   * Controle de sessão do tutorial (RN-170): congela o relógio sem bloquear a interação. Com equipe no dia
+   * (dia 1 com as melhorias liberadas, RN-55a) não congela: a equipe ficaria parada junto com o relógio.
+   */
   setHold(on: boolean): void {
-    this.state.hold = on;
+    this.state.hold = on && this.state.workers.length === 0;
   }
 
   step(dt: number = STEP): void {
