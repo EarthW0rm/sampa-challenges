@@ -62,7 +62,7 @@ export function PrepScreen({ campaign: c, onChange, onOpen, onExit, onHandover }
     saveSeen(safeStorage(), next);
   };
   return (
-    <main className="prep">
+    <main className="prep moldura">
       <header className="prep-head">
         <div>
           <strong>Dia {c.day}</strong>
@@ -142,7 +142,7 @@ export function PrepScreen({ campaign: c, onChange, onOpen, onExit, onHandover }
       {tab === 'associacao' && <AssociationTab campaign={c} onChange={onChange} />}
       {confirmOpen && (
         <div className="overlay" role="dialog" aria-label="Aviso antes de abrir a feira">
-          <div className="menu">
+          <div className="menu moldura">
             <h2>Antes de abrir</h2>
             {openWarning(c)?.lines.map((l) => (
               <p key={l} className="warn">

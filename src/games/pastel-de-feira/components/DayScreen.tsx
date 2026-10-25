@@ -12,6 +12,7 @@ import { DaySim } from '../game/sim/day';
 import type { Command, DayConfig, DayResult } from '../game/types';
 import { createUi } from '../game/ui';
 import { exposeForE2E } from '../game/e2eHook';
+import { hudIcon } from './icons';
 
 interface Props {
   config: DayConfig;
@@ -195,20 +196,35 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
   return (
     <div className="day">
       <div className="hud">
-        <span className="hud-clock">{hud.clock}</span>
-        <span>Caixa {hud.cash}</span>
-        <span>Fila {hud.queue}</span>
-        <span>★ {config.reputation.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}</span>
+        <span className="hud-clock">
+          <HudIcon name={config.season} />
+          {hud.clock}
+        </span>
+        <span>
+          <HudIcon name="moeda" />
+          Caixa {hud.cash}
+        </span>
+        <span>
+          <HudIcon name="fila" />
+          Fila {hud.queue}
+        </span>
+        <span>
+          <HudIcon name="estrela" />★ {config.reputation.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}
+        </span>
         <button type="button" onClick={() => toggleMute('som')} aria-pressed={muted.som} aria-label="Efeitos sonoros">
+          <HudIcon name={muted.som ? 'som_off' : 'som'} />
           {muted.som ? 'Som: não' : 'Som: sim'}
         </button>
         <button type="button" onClick={() => toggleMute('musica')} aria-pressed={muted.musica} aria-label="Música">
+          <HudIcon name={muted.musica ? 'musica_off' : 'musica'} />
           {muted.musica ? 'Música: não' : 'Música: sim'}
         </button>
         <button type="button" onClick={() => toggleSpeedRef.current?.()} disabled={hud.guided} aria-pressed={hud.speed === 2} aria-label="Acelerar">
+          <HudIcon name="rapido" />
           {hud.speed === 2 ? '2×' : '1×'}
         </button>
         <button type="button" onClick={togglePause} aria-label="Pausar">
+          <HudIcon name="pausa" />
           Pausa
         </button>
       </div>
@@ -229,7 +245,7 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
       />
       {hud.paused && (
         <div className="overlay" role="dialog" aria-label="Jogo pausado">
-          <div className="menu">
+          <div className="menu moldura">
             <h2>Pausado</h2>
             <button type="button" onClick={() => toggleMute('som')}>
               Efeitos: {muted.som ? 'desligados' : 'ligados'}
@@ -248,4 +264,10 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
       )}
     </div>
   );
+}
+
+/** Ícone decorativo do HUD (16×16 em 2×). */
+function HudIcon({ name }: { name: string }) {
+  const src = hudIcon(name);
+  return src ? <img className="hud-icon" src={src} alt="" aria-hidden="true" width={32} height={32} /> : null;
 }
