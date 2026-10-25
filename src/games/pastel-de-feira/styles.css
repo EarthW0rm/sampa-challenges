@@ -1,0 +1,151 @@
+/* Prefixe tudo com .pastel-de-feira para o estilo não vazar para o hub nem para outros jogos. */
+.pastel-de-feira {
+  --bg: #16121f;
+  --panel: #2e2540;
+  --line: #3a3150;
+  --text: #f4efe2;
+  --muted: #c9c0d8;
+  --accent: #e8a13a;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  min-height: 100%;
+}
+
+.pastel-de-feira .day {
+  position: relative;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pastel-de-feira .hud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  font-size: 14px;
+}
+.pastel-de-feira .hud-clock { font-family: 'Press Start 2P', monospace; color: var(--accent); font-size: 16px; }
+.pastel-de-feira .hud button { margin-left: auto; }
+
+.pastel-de-feira canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 640 / 480;
+  image-rendering: pixelated;
+  border: 4px solid var(--line);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pastel-de-feira .screen {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+.pastel-de-feira h1 { margin: 0; font-family: 'Press Start 2P', monospace; font-size: 20px; color: var(--accent); }
+.pastel-de-feira h2 { margin: 0 0 12px; font-family: 'Press Start 2P', monospace; font-size: 16px; color: var(--accent); }
+.pastel-de-feira p { margin: 0; color: var(--muted); }
+
+.pastel-de-feira button {
+  font: inherit;
+  color: inherit;
+  min-height: 44px;
+  padding: 0 16px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.pastel-de-feira button:hover { border-color: var(--accent); }
+
+.pastel-de-feira .row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+.pastel-de-feira .overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(22, 18, 31, 0.8);
+}
+.pastel-de-feira .menu { display: flex; flex-direction: column; gap: 10px; min-width: 200px; text-align: center; }
+
+.pastel-de-feira .summary { border-collapse: collapse; width: 100%; font-size: 14px; }
+.pastel-de-feira .summary th,
+.pastel-de-feira .summary td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+.pastel-de-feira .summary td { text-align: right; }
+
+/* ---- campanha: título, nova campanha, Preparo, Fechamento ---- */
+.pastel-de-feira .primary { background: #b8741c; border-color: var(--accent); }
+.pastel-de-feira button:disabled { opacity: 0.45; cursor: not-allowed; }
+.pastel-de-feira .warn { color: #ffb4a8; }
+.pastel-de-feira .ok { color: #9be39b; }
+.pastel-de-feira .neg { color: #ffb4a8; }
+.pastel-de-feira .banner { margin: 0; padding: 8px 12px; background: #3a1f24; text-align: center; font-size: 13px; }
+.pastel-de-feira .menu button { width: 100%; }
+
+.pastel-de-feira fieldset.profiles { border: 0; padding: 0; margin: 0; width: 100%; display: grid; gap: 8px; text-align: left; }
+.pastel-de-feira fieldset.profiles legend { padding: 0; margin-bottom: 8px; color: var(--muted); }
+.pastel-de-feira .choice { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; padding: 10px; border: 2px solid var(--line); border-radius: 4px; background: var(--panel); cursor: pointer; }
+.pastel-de-feira .choice.on { border-color: var(--accent); }
+.pastel-de-feira .choice input { grid-row: span 2; align-self: center; }
+.pastel-de-feira .choice-name { font-weight: 700; }
+.pastel-de-feira .choice-text { color: var(--muted); font-size: 13px; }
+.pastel-de-feira .check { display: flex; align-items: center; gap: 10px; text-align: left; min-height: 44px; }
+.pastel-de-feira .check input { width: 22px; height: 22px; flex: none; }
+
+.pastel-de-feira .prep { max-width: 720px; margin: 0 auto; padding: 8px 12px 96px; display: flex; flex-direction: column; gap: 10px; }
+.pastel-de-feira .prep-head { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.pastel-de-feira .prep-head .goal { flex-basis: 100%; color: var(--muted); font-size: 13px; }
+.pastel-de-feira .tabs { display: flex; gap: 6px; overflow-x: auto; }
+.pastel-de-feira .tabs button { flex: none; }
+.pastel-de-feira .tabs button.on { border-color: var(--accent); background: #4a3a2a; }
+.pastel-de-feira .tab { display: flex; flex-direction: column; gap: 8px; }
+.pastel-de-feira .hint { font-size: 12px; color: var(--muted); }
+.pastel-de-feira .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pastel-de-feira .group { margin: 10px 0 2px; font-size: 13px; color: var(--accent); text-transform: uppercase; }
+.pastel-de-feira h3.group { font-family: inherit; }
+.pastel-de-feira .item { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px; background: #1f1829; border: 1px solid var(--line); border-radius: 4px; }
+.pastel-de-feira .item-main { display: flex; flex-direction: column; flex: 1 1 140px; min-width: 0; text-align: left; font-size: 13px; }
+.pastel-de-feira .item-main span { color: var(--muted); font-size: 12px; }
+.pastel-de-feira .stepper { display: flex; align-items: center; gap: 6px; }
+.pastel-de-feira .stepper span { min-width: 56px; text-align: center; font-size: 14px; }
+.pastel-de-feira .stepper button { min-width: 44px; padding: 0; }
+.pastel-de-feira .prep-foot { position: sticky; bottom: 0; display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; background: var(--bg); border-top: 1px solid var(--line); }
+.pastel-de-feira .prep-foot .primary { flex: 1; }
+
+.pastel-de-feira .closing .summary td.ok { color: #9be39b; }
+.pastel-de-feira .summary tr.total th,
+.pastel-de-feira .summary tr.total td { border-top: 2px solid var(--accent); font-weight: 700; }
+
+.pastel-de-feira,
+.pastel-de-feira *,
+.pastel-de-feira *::before,
+.pastel-de-feira *::after { box-sizing: border-box; }
+
+.pastel-de-feira .badge { display: inline-block; margin-right: 6px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 3px; font-size: 11px; color: var(--text); background: #2a2238; }
+.pastel-de-feira .muted { color: var(--muted); }
+.pastel-de-feira .field { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
+.pastel-de-feira select { font: inherit; color: var(--text); background: var(--panel); border: 2px solid var(--line); border-radius: 4px; min-height: 40px; padding: 0 6px; }
+.pastel-de-feira .courses { display: flex; flex-wrap: wrap; gap: 6px; flex-basis: 100%; }
+.pastel-de-feira .courses button { font-size: 12px; min-height: 40px; padding: 0 10px; }
+.pastel-de-feira .item.staff { align-items: flex-start; }
+
+.pastel-de-feira .forecast { flex-direction: column; align-items: stretch; gap: 4px; }
+.pastel-de-feira .claim { margin-top: 6px; }
+
+.pastel-de-feira .tutorial-tip { margin: 6px 0; padding: 8px 12px; background: #3a2f4a; border: 2px solid #ffd36b; border-radius: 4px; font-size: 14px; text-align: center; }
+.pastel-de-feira .unlock { margin: 8px 0; padding: 10px 12px; background: #2f3a4a; border: 2px solid #5aa7e8; border-radius: 4px; display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.pastel-de-feira .unlock p { margin: 0; font-size: 14px; }

@@ -34,6 +34,7 @@ ser o mesmo nos três jogos.
 |---|---|---|---|
 | `caes` | `p1_*` (caramelo, moto azul, baú vermelho) e `p2_*` (branquinho, moto verde, baú amarelo): `dano{0,1,2}`, `dano{0,1,2}_{arremesso,ko,grau}`, `destruida`, `destruida_ko`; só o `p1` tem também `normal_0/1`, `turbo_0/1`, `grau_0/1`, `tonto` | 80×80 | Cachorro Loko (`p1_normal/turbo/grau/tonto`), Capacete Voador (`dano*`, `destruida*`) |
 | `caes_costas` | `<raça>_<150\|600\|1000>_<reto\|esq\|dir\|grau\|queda>` com raça = caramelo, pitbull, pincher, collie; cores-chave magenta (`#ff00ff`, `#b000b0`, `#ff9cff`) trocadas pelo jogo | 80×88 (queda 96×88) | Corredor SP |
+| `caes_pe` | `<raça>_<p\|m\|g>_<pose>` com raça = caramelo, pitbull, pincher, collie, dalmata, salsicha, vira-lata e pose = parado, andando_0/1, sentado, comendo_0/1, bravo, feliz; `pasteleiro_<pose>` e `func_<fritador\|geral>_<pose>` (avental e chapéu); pelo em cores-chave magenta (`#ff00ff`, `#b000b0`, `#ff9cff`) trocadas pelo jogo | p 48×64, m 56×72, g 64×80 | Pastel de Feira |
 | `itens` | `caixa_{caixa,turbo,grau,ima,vida,dobro}`, `pizza`, `sacola`, `bomba_{0,1}` | 24×24 | Cachorro Loko |
 | `itens` | `pickup_{capacete,pacote,vida,velocidade,grau}` | 32×32 | Corredor SP |
 | `capacete` | `p1_{0..3}`, `p2_{0..3}` (4 rotações; cor do boné de cada jogador) | 16×16 | Capacete Voador, Corredor SP |

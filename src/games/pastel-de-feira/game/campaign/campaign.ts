@@ -1,0 +1,190 @@
+import { GOAL_BASE, GOAL_GROWTH, STOCK_CAPACITY, THEME_DIRT_LIMIT_POPULAR } from '../constants';
+import { INGREDIENTS, DOUGH_SHELF_DAYS, CONSUMABLE_IDS } from '../data/catalog';
+import { ITEMS, type ItemId } from '../data/recipes';
+import { SPACE } from '../data/equipment';
+import { orderStations } from '../layout';
+import { positionsAvailable } from './positions';
+import { seasonOf } from './season';
+import { EVENTS_FIRST_DAY, SURPRISE } from '../data/events';
+import type { DayConfig, EquipmentFlags, MenuEntry, StationId } from '../types';
+import type { Campaign, NewCampaignOptions } from './types';
+import { fatigueFactor } from './fatigue';
+import { defaultPrice } from './pricing';
+
+export const START_CASH = 200;
+export const START_REPUTATION = 3;
+export const TRADITIONAL_CASH_BONUS = 100;
+/** Capacidade extra por caixa térmica (RN-39). */
+export const COOLER_CAPACITY = 80;
+export const CAMPAIGN_DAYS = 20;
+
+export const round2 = (v: number): number => Math.round(v * 100) / 100;
+
+export function newCampaign(opts: NewCampaignOptions): Campaign {
+  const items: ItemId[] = ['carne', 'queijo', 'caldo-puro'];
+  const prices: Record<ItemId, number> = {};
+  for (const id of items) prices[id] = defaultPrice(id);
+  return {
+    seed: opts.seed,
+    day: 1,
+    calendar: 1,
+    freeMode: false,
+    cash: START_CASH + (opts.profile === 'tradicional' ? TRADITIONAL_CASH_BONUS : 0),
+    reputation: START_REPUTATION,
+    profile: opts.profile,
+    theme: null,
+    eventsOn: opts.eventsOn,
+    tutorial: opts.tutorial,
+    inventory: [],
+    consumables: { copo: 0, saquinho: 0, embalagem: 0 },
+    owned: {
+      items,
+      slotsSalgado: 3,
+      slotsDoce: 2,
+      tachos: [{ baskets: 2, oil: 'comum', thermostat: false, alarm: false, timer: false }],
+      coolers: 0,
+      extraM2: 0,
+      equip: [],
+      tables: 0,
+      delivery: false,
+      office: false,
+      rest: 0,
+      spent: 0,
+    },
+    menu: { salgados: ['carne', 'queijo'], doces: [], bebidas: ['caldo-puro'] },
+    prices,
+    forecast: null,
+    claim: null,
+    raiseUntil: 0,
+    lastAnnul: -99,
+    challenges: [],
+    orders: [],
+    roles: [],
+    promo: { brindeN: 0, chorinho: 0, xepa: false, xepaDiscount: 0.3 },
+    deliveryOn: true,
+    autoAccept: false,
+    staff: [],
+    nextStaffId: 1,
+    hiredToday: [],
+    fatigue: {},
+    boughtToday: 0,
+    resumes: 0,
+    history: [],
+  };
+}
+
+export const cloneCampaign = (c: Campaign): Campaign => structuredClone(c);
+
+/** Capacidade de estoque de alimento em unidades (RN-38, RN-39). */
+export const capacityMax = (c: Campaign): number => STOCK_CAPACITY + COOLER_CAPACITY * c.owned.coolers;
+
+export const capacityUsed = (c: Campaign): number => c.inventory.reduce((n, l) => n + l.qty, 0);
+
+export const capacityFree = (c: Campaign): number => Math.max(0, capacityMax(c) - capacityUsed(c));
+
+/** Estoque atual de um insumo. */
+export const stockOf = (c: Campaign, ing: string): number =>
+  c.inventory.reduce((n, l) => (l.ingredient === ing ? n + l.qty : n), 0);
+
+/** Último dia de validade de um insumo comprado hoje: massa vale 3 dias, o resto só hoje (RN-34). */
+export const expiryFor = (c: Campaign, ing: string): number =>
+  INGREDIENTS[ing].kind === 'massa' ? c.calendar + DOUGH_SHELF_DAYS - 1 : c.calendar;
+
+/** Meta de lucro líquido do dia N (RN-50). */
+export const profitGoal = (day: number): number => Math.round(GOAL_BASE * Math.pow(GOAL_GROWTH, day - 1) * 100) / 100;
+
+/** Reputação mínima ao fim do dia N (RN-50). */
+export const minReputation = (day: number): number => (day <= 5 ? 2 : day <= 12 ? 3 : 3.5);
+
+/** Hash determinístico da semente do dia: muda com o calendário e com cada retomada (PA-13). */
+export function daySeed(c: Campaign): number {
+  let h = (c.seed ^ Math.imul(c.calendar, 0x9e3779b1)) >>> 0;
+  h = (h ^ Math.imul(c.resumes + 1, 0x85ebca6b)) >>> 0;
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
+  return (h ^ (h >>> 12)) >>> 0 || 1;
+}
+
+/** Cardápio do dia com preço e procura (fadiga). */
+export function menuEntries(c: Campaign): MenuEntry[] {
+  const out: MenuEntry[] = [];
+  for (const id of [...c.menu.salgados, ...c.menu.doces, ...c.menu.bebidas]) {
+    out.push({ item: id, price: c.prices[id] ?? defaultPrice(id), weight: ITEMS[id].kind === 'bebida' ? 1 : fatigueFactor(c, ITEMS[id].base) });
+  }
+  return out;
+}
+
+/** Estações que existem na barraca, na ordem física (RN-41). */
+export function stationsOf(c: Campaign): StationId[] {
+  const list: StationId[] = ['balcao', 'bancada'];
+  c.owned.tachos.forEach((_t, i) => list.push(`tacho${i + 1}` as StationId));
+  if (c.owned.equip.includes('estufa')) list.push('estufa');
+  list.push('moenda');
+  if (c.owned.tables > 0) list.push('mesas');
+  if (c.owned.delivery) list.push('expedicao');
+  if (c.owned.office) list.push('escritorio');
+  if (c.owned.rest > 0) list.push('descanso');
+  return orderStations(list);
+}
+
+/** Metros quadrados totais da barraca (RN-70, RN-71). */
+export const totalM2 = (c: Campaign): number => SPACE.base + c.owned.extraM2;
+
+/** Metros quadrados ocupados pelas estruturas opcionais (RN-72). A barraca inicial já usa os 6 m² base. */
+export function usedM2(c: Campaign): number {
+  return (c.owned.tachos.length - 1) * 2 + c.owned.coolers + c.owned.tables * 2 + (c.owned.delivery ? 3 : 0) + (c.owned.office ? 4 : 0) + (c.owned.rest > 0 ? 1 : 0);
+}
+
+export const freeM2 = (c: Campaign): number => c.owned.extraM2 - usedM2(c);
+
+/** Taxa diária de espaço cobrada no fechamento (RN-71). */
+export const dailySpaceFee = (c: Campaign): number => c.owned.extraM2 * SPACE.dailyFee;
+
+export function equipmentFlags(c: Campaign): EquipmentFlags {
+  return {
+    drainer: c.owned.equip.includes('escorredor'),
+    warmer: c.owned.equip.includes('estufa-grande') ? 12 : c.owned.equip.includes('estufa') ? 6 : 0,
+    mill: c.owned.equip.includes('moenda-motorizada') ? 'motorizada' : 'manual',
+    thermalBag: c.owned.equip.includes('embalagem-termica'),
+    autoMill: c.owned.equip.includes('moenda-automatica'),
+    cardMachine: c.owned.equip.includes('maquininha'),
+  };
+}
+
+/** Campanha → simulação (`DayConfig`). Não muda a campanha. */
+export function toDayConfig(c: Campaign): DayConfig {
+  const consumables = { ...c.consumables };
+  for (const id of CONSUMABLE_IDS) consumables[id] = Math.max(0, consumables[id]);
+  return {
+    day: c.day,
+    reputation: c.reputation,
+    menu: menuEntries(c),
+    stock: c.inventory
+      .filter((l) => l.qty > 0)
+      .map((l) => ({ ingredient: l.ingredient, qty: l.qty, daysLeft: Math.max(1, l.expires - c.calendar + 1) })),
+    consumables,
+    stations: stationsOf(c),
+    tachos: c.owned.tachos.map((t) => ({ ...t })),
+    equipment: equipmentFlags(c),
+    staff: c.staff.map((w) => ({ id: w.id, name: w.name, kind: w.kind, traits: [...w.traits], courses: [...w.courses], mode: w.mode, position: w.position })),
+    positions: positionsAvailable(c),
+    profile: c.profile,
+    season: seasonOf(c.day),
+    forecast: c.forecast,
+    eventsOn: c.eventsOn && c.day >= EVENTS_FIRST_DAY,
+    annulFine: c.roles.includes('despachante') && c.calendar - c.lastAnnul >= SURPRISE.annulEveryDays,
+    claimRefused: c.claim === 'recusada',
+    orders: c.orders.map((o) => ({ id: o.dayId, item: o.item, qty: o.qty, pickupAt: Math.round((o.hour - 7) * (240 / 7) * 100) / 100, pay: o.pay, fine: o.fine })),
+    roles: [...c.roles],
+    promo: { ...c.promo },
+    theme: c.theme,
+    dirtLimit: c.theme === 'popular' ? THEME_DIRT_LIMIT_POPULAR : undefined,
+    delivery: { on: c.owned.delivery && c.deliveryOn, auto: c.autoAccept, partner: c.owned.equip.includes('conta-parceira') },
+    tables: c.owned.tables,
+    restSlots: c.owned.rest,
+    tutorial: c.tutorial && c.day === 1,
+    coolers: c.owned.coolers,
+  };
+}
+
+/** Pode abrir a feira? Precisa de ao menos um salgado no cardápio. */
+export const canOpen = (c: Campaign): boolean => c.menu.salgados.length > 0 && c.claim !== 'pendente';

@@ -1,0 +1,229 @@
+import type { ConsumableId, IngredientId } from '../data/catalog';
+import type { EquipId } from '../data/equipment';
+import type { Forecast } from '../data/events';
+import type { OfficeRole } from '../data/office';
+import type { CourseId, PositionId, StaffKind, TraitId } from '../data/staff';
+import type { ItemId } from '../data/recipes';
+import type { TachoConfig } from '../types';
+
+/** Estado da campanha entre os dias (plan.md 3.3). Só dados serializáveis em JSON. */
+
+export type PastryProfile = 'tradicional' | 'negociante' | 'chapeiro' | 'boa-praca' | 'gestor';
+export const PASTRY_PROFILES: readonly PastryProfile[] = ['tradicional', 'negociante', 'chapeiro', 'boa-praca', 'gestor'];
+
+export type Theme = 'popular' | 'tradicional' | 'gourmet';
+
+/** Lote de insumo no estoque da barraca. */
+export interface InvLot {
+  ingredient: IngredientId;
+  qty: number;
+  /** Custo unitário pago (R$), para o custo do que foi usado ou estragou. */
+  unitCost: number;
+  /** Último dia do calendário em que o lote ainda vale. Estraga no fechamento desse dia. */
+  expires: number;
+  /** Já passou uma noite na caixa térmica (não renova de novo). */
+  inCooler: boolean;
+}
+
+export interface Owned {
+  /** Receitas, versões e bebidas compradas. */
+  items: ItemId[];
+  /** Vagas do cardápio (RN-30b). */
+  slotsSalgado: number;
+  slotsDoce: number;
+  tachos: TachoConfig[];
+  /** Caixas térmicas compradas (RN-39). */
+  coolers: number;
+  /** Metros quadrados comprados além dos 6 iniciais (RN-71). */
+  extraM2: number;
+  /** Equipamentos globais comprados (RN-73). */
+  equip: EquipId[];
+  /** Mesas compradas (US-114), 0 a 4. */
+  tables: number;
+  /** Área de delivery comprada (US-115). */
+  delivery: boolean;
+  /** Escritório comprado (US-117). */
+  office: boolean;
+  /** Vagas da área de descanso: 0 = sem área (RN-117). */
+  rest: number;
+  /** Dinheiro gasto em equipamentos, espaço, mesas e estruturas (base do valor do ponto, RN-57). */
+  spent: number;
+}
+
+/** Funcionário contratado (RN-47–49). `position` vale só no modo fixo. */
+export interface Staff {
+  id: number;
+  name: string;
+  kind: StaffKind;
+  traits: TraitId[];
+  courses: CourseId[];
+  mode: 'fixo' | 'auto';
+  position: PositionId | null;
+  /** Já fez um curso hoje (no máximo 1 por dia, RN-118). */
+  trainedToday: boolean;
+}
+
+/** Candidato do dia (não é salvo: sai da semente e do calendário). */
+export interface Candidate {
+  id: string;
+  name: string;
+  kind: StaffKind;
+  traits: TraitId[];
+}
+
+export interface Promo {
+  /** 0 = desligado; de 2 a 6: a cada N pastéis, 1 de brinde (RN-120). */
+  brindeN: number;
+  /** Nível do chorinho, 0 a 3 (RN-123). */
+  chorinho: number;
+  xepa: boolean;
+  /** Desconto da xepa, de 0,1 a 0,5 (RN-124). */
+  xepaDiscount: number;
+}
+
+/** Encomenda aceita no Preparo para o dia seguinte (RN-102). `dayId` identifica a encomenda dentro do dia. */
+export interface BigOrderOffer {
+  id: string;
+  dayId: number;
+  item: ItemId;
+  qty: number;
+  /** Hora do relógio do jogo da retirada, de 9 a 13,5. */
+  hour: number;
+  pay: number;
+  fine: number;
+}
+
+/** Desafio aceito da Associação da Feira (RN-135). */
+export interface ActiveChallenge {
+  id: string;
+  /** Dia do calendário em que foi aceito. */
+  acceptedOn: number;
+  /** Último dia do calendário em que vale. Depois disso expira sem penalidade. */
+  deadline: number;
+  /** Progresso (sequência de dias, por exemplo). */
+  progress: number;
+}
+
+export interface MenuChoice {
+  salgados: ItemId[];
+  doces: ItemId[];
+  bebidas: ItemId[];
+}
+
+export interface DayHistory {
+  day: number;
+  calendar: number;
+  revenue: number;
+  profit: number;
+  reputation: number;
+  met: boolean;
+  served: number;
+  lost: number;
+  wasteUnits: number;
+}
+
+export interface Campaign {
+  /** Semente da campanha; a do dia sai de `hash(seed, calendar, resumes)`. */
+  seed: number;
+  /** Dia da campanha (contador de metas). Não avança quando a meta falha (RN-50). */
+  day: number;
+  /** Dias de feira já realizados (sempre avança). Valida a massa e varia a semente. */
+  calendar: number;
+  freeMode: boolean;
+  cash: number;
+  reputation: number;
+  profile: PastryProfile;
+  theme: Theme | null;
+  eventsOn: boolean;
+  tutorial: boolean;
+  inventory: InvLot[];
+  consumables: Record<ConsumableId, number>;
+  owned: Owned;
+  menu: MenuChoice;
+  prices: Record<ItemId, number>;
+  /** Evento previsto do dia, sorteado no fechamento anterior (RN-150, RN-151). */
+  forecast: Forecast | null;
+  /** Reivindicação da equipe: pendente de resposta ou a escolha do dia (RN-151). */
+  claim: 'pendente' | 'pausa' | 'aumento' | 'recusada' | null;
+  /** O aumento de 10% vale até este dia do calendário. */
+  raiseUntil: number;
+  /** Dia do calendário da última multa anulada pelo Despachante. */
+  lastAnnul: number;
+  /** Desafios aceitos (RN-135). */
+  challenges: ActiveChallenge[];
+  /** Encomendas aceitas para o próximo Dia de Feira (RN-102). */
+  orders: BigOrderOffer[];
+  /** Cargos de gestão contratados, no máximo 3 (RN-100, RN-103). */
+  roles: OfficeRole[];
+  /** Promoções do dia (RN-120, RN-123, RN-124). */
+  promo: Promo;
+  /** Delivery ligado hoje e aceite automático (RN-90, RN-95). */
+  deliveryOn: boolean;
+  autoAccept: boolean;
+  staff: Staff[];
+  nextStaffId: number;
+  /** Candidatos já contratados hoje (somem da lista do dia). */
+  hiredToday: string[];
+  /** Dias seguidos no cardápio por receita base (RN-30c). */
+  fatigue: Record<string, number>;
+  /** Unidades de insumo compradas no Preparo de hoje (base do % de desperdício, RN-37). */
+  boughtToday: number;
+  /** Quantas vezes o dia foi retomado pelo checkpoint (muda a semente, PA-13). */
+  resumes: number;
+  history: DayHistory[];
+}
+
+/** Motivos fixos de recusa de uma ação do Preparo (plan.md 4.3). */
+export type Refusal = 'semCaixa' | 'semCapacidade' | 'limite' | 'bloqueadoAteDia' | 'requer' | 'semEspaco';
+
+export type ActionResult = { ok: true; campaign: Campaign } | { ok: false; motivo: Refusal };
+
+export const REFUSAL_TEXT: Readonly<Record<Refusal, string>> = {
+  semCaixa: 'Caixa insuficiente',
+  semCapacidade: 'Sem espaço no estoque',
+  limite: 'Limite atingido',
+  bloqueadoAteDia: 'Ainda não disponível',
+  requer: 'Falta um requisito',
+  semEspaco: 'Sem espaço na barraca',
+};
+
+export interface NewCampaignOptions {
+  profile: PastryProfile;
+  eventsOn: boolean;
+  tutorial: boolean;
+  seed: number;
+}
+
+/** Linha do balanço do dia (tela de Fechamento). */
+export interface BalanceLine {
+  id: string;
+  label: string;
+  /** Positivo entra no lucro, negativo sai. */
+  amount: number;
+}
+
+export interface Balance {
+  lines: BalanceLine[];
+  profit: number;
+  goal: number | null;
+  minReputation: number | null;
+  profitMet: boolean;
+  reputationMet: boolean;
+  met: boolean;
+  reputationBefore: number;
+  reputationAfter: number;
+  /** Unidades estragadas no fechamento (recheios, cana, complementos e massa vencida). */
+  spoiledUnits: number;
+  burnedUnits: number;
+  leftoverUnits: number;
+  /** Custo dos brindes entregues (já está nos insumos usados). */
+  giftCost: number;
+  wastePercent: number;
+  bonus: number;
+  fines: number;
+  /** Desafios concluídos no dia, com o prêmio. */
+  prizes: { id: string; name: string; prize: number }[];
+  bankrupt: boolean;
+  newDay: number;
+  freeModeStarted: boolean;
+}
