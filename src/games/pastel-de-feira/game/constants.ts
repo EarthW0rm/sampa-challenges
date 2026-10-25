@@ -139,6 +139,8 @@ export const CHARM_CHORINHO = 0.1;
 export const CHARM_INSPECTION = 2;
 export const REPUTATION_TARGET_RATE = 0.75;
 export const REPUTATION_RATE_GAIN = 2;
+/** Ganho quando a taxa passa da meta: um dia perfeito (taxa 1) dá +1,0 estrela e a campanha consegue se recuperar. */
+export const REPUTATION_RATE_GAIN_UP = 4;
 export const REPUTATION_MAX_DAILY_CHANGE = 1;
 
 // RN-38 / RN-34
