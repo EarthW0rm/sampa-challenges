@@ -4,6 +4,15 @@ Leia antes o `CLAUDE.md` da raiz (CSS escopado em `.pastel-de-feira`, assets den
 manifest leve). Regras e parâmetros: `README.md` desta pasta. Spec, plano e tarefas:
 `docs/specs/pastel-de-feira/` (os diagramas C4 e de sequência estão em `plan.md`, em PlantUML).
 
+## README é o manual do jogo (obrigatório)
+
+O [`README.md`](./README.md) desta pasta é o **manual completo** do jogo: como jogar, controles, todas
+as regras com os valores atuais, campanha, parâmetros, arquitetura, como contribuir e como testar.
+**Toda alteração de regra ou de mecânica — adição, mudança ou remoção — atualiza o README no mesmo
+commit/PR**, além da spec (`docs/specs/pastel-de-feira/spec.md`). Vale também para valor (P),
+preço, catálogo (receita, insumo, equipamento, evento, desafio), controle, tela, desbloqueio e
+mensagem do fechamento. Mudança sem README atualizado está incompleta.
+
 ## Visual em alta e resolução (exceção à regra 7 da raiz)
 
 O jogo tem **lógica e canvas em 640×480** (`W`, `H` em `game/constants.ts`); o canvas é 1280×960
@@ -46,7 +55,7 @@ encomendas, mundo (eventos) e automação. O tutorial (`game/tutorial.ts`) só o
 | `game/unlocks.ts` | balões de desbloqueio (`pastel-de-feira:visto`) |
 | `game/e2eHook.ts` | gancho dos testes E2E (`window.__pf`), só existe com `window.__PF_E2E__` definido pela página de teste |
 | `sim/run.ts` | `--scenario`, `--replay`, `--bots`, `--list` |
-| `sim/scenarios/*` | um grupo por conjunto de RN (262 cenários) |
+| `sim/scenarios/*` | um grupo por conjunto de RN (269 cenários) |
 | `sim/player.ts`, `sim/bots.ts`, `sim/report.ts` | jogador automático e robôs de calibração |
 
 Arte: `tools/pixelart/pastel_de_feira.py` (cenário, pisos, equipamentos, pastéis, ícones, capa) e
@@ -59,6 +68,7 @@ Arte: `tools/pixelart/pastel_de_feira.py` (cenário, pisos, equipamentos, pasté
 - `game/assets.ts` importa `shared/sprites` e `game/art.ts` de forma dinâmica: `import.meta.glob` quebra a simulação em node.
 - Mudou o formato do save? Aumente a versão em `save.ts` e escreva a migração.
 - Mudou um valor (P)? Rode `--bots all --seeds 50` e atualize `docs/specs/pastel-de-feira/calibracao.md` e a tabela do `README.md`.
+- Mudou, acrescentou ou removeu regra/mecânica? Atualize a seção correspondente do `README.md` (manual) e a spec.
 - O primeiro `dt` do `requestAnimationFrame` pode ser negativo: o laço limita com `Math.max(0, Math.min(dt, MAX_FRAME_DT))`.
 - StrictMode roda efeitos duas vezes: o `DaySim` nasce dentro do `useEffect` e o cleanup remove listeners e cancela o `requestAnimationFrame`.
 
