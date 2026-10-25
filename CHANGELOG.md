@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0](https://github.com/EarthW0rm/sampa-challenges/compare/v1.3.1...v1.4.0) (2026-10-25)
+
+
+### Features
+
+* **pastel-de-feira:** equipe por tacho, cesto avulso, estufa no balcão, opções de campanha e selos de sabor ([#18](https://github.com/EarthW0rm/sampa-challenges/issues/18)) ([76c6694](https://github.com/EarthW0rm/sampa-challenges/commit/76c6694c73c65113c1554e9536e60f032e71dbaa))
+* **pastel-de-feira:** implanta a arte nova da barraca aconchegante ([#16](https://github.com/EarthW0rm/sampa-challenges/issues/16)) ([493b17a](https://github.com/EarthW0rm/sampa-challenges/commit/493b17a9fe782075071e6349a4462595d622caab))
+
 ## [1.3.1](https://github.com/EarthW0rm/sampa-challenges/compare/v1.3.0...v1.3.1) (2026-10-25)
 
 
