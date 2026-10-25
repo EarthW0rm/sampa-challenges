@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { HANDOVER } from '../game/campaign/actions/handover';
+import { START_CASH, TRADITIONAL_CASH_BONUS } from '../game/campaign/campaign';
 import { money } from './format';
 
 interface Props {
@@ -20,7 +21,10 @@ export function HandoverDialog({ value, kind, onConfirm, onCancel }: Props) {
           {kind === 'zerado' ? 'Você vende a barraca pelo caixa mais metade do que investiu.' : 'Na falência, o ponto vale 25% do que foi investido.'}
         </p>
         <p>Valor do ponto: {money(value)}</p>
-        <p>A campanha nova começa com {money(200 + HANDOVER.startShare * value)} no caixa, novo perfil e reputação 3,0.</p>
+        <p>
+          A campanha nova começa com {money(START_CASH + HANDOVER.startShare * value)} no caixa ({money(START_CASH + TRADITIONAL_CASH_BONUS + HANDOVER.startShare * value)} com o
+          perfil Tradicional), novo perfil e reputação 3,0.
+        </p>
         <p className="warn">A campanha atual é apagada de forma definitiva.</p>
         <button
           type="button"
