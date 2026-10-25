@@ -74,12 +74,11 @@ export const automacao: Scenario[] = [
       sim.dispatch({ type: 'tapStation', station: 'escritorio' });
       advance(sim, secs(8));
       checkEq(sim.state.ready[0].quality, 80, 'o timer tirou (sem o +5 do curso do Fritador)');
-      // o Fritador segue fazendo as outras tarefas: com Colocador vago ele monta e coloca
-      const c = addCustomer(sim.state, 'padrao', ['carne']);
-      c.state = 'anotado';
+      // o Fritador segue cuidando do tacho: coloca o pastel já montado
       sim.state.ready.length = 0;
-      advance(sim, secs(12));
-      check(sim.state.assembled.length > 0 || sim.state.tachos[0].baskets.some((b) => b.frying) || sim.state.ready.length > 0, 'o Fritador montou e colocou');
+      sim.state.assembled.push({ id: 2, item: 'carne' });
+      advance(sim, secs(1));
+      check(sim.state.tachos[0].baskets.some((b) => b.frying?.id === 2), 'o Fritador colocou o pastel montado');
     },
   },
   {

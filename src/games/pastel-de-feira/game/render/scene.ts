@@ -7,13 +7,13 @@ import { queueOf, xepaActive } from '../sim/customers';
 import { hasPower } from '../sim/world';
 import { fryWindow, isChanging, isDirty, isLocked } from '../sim/stations/fryer';
 import { millSeconds } from '../sim/stations/cane';
-import { homeStation } from '../sim/staff';
+import { workerStation } from '../sim/staff';
 import { now, type Customer, type DayState } from '../sim/state';
 import type { UiState } from '../ui';
 import { SCALE } from '../hires';
 import { aparenciaDe, type Pose } from '../assets';
 import { drawTachoFx } from './fx';
-import { bar, box, drawArt, drawCliente, drawEquipe, drawNine, drawPastel, drawPlaque, drawThree, itemColor, PAL, PROFILE_COLOR, textCenter } from './draw';
+import { bar, box, drawArt, drawCliente, drawEquipe, drawFlavor, drawNine, drawPastel, drawPastelFlavor, drawPlaque, drawThree, itemColor, PAL, PROFILE_COLOR, textCenter } from './draw';
 
 /** Posição do cliente `i` da fila (frente à direita, perto do balcão). */
 export function queueSpot(layout: Layout, i: number): { x: number; y: number } {
@@ -42,11 +42,12 @@ export function workerSpots(layout: Layout, st: DayState): Map<number, { x: numb
       const z = layout.byId.get('descanso');
       if (z) spot = { x: z.x + 20 + rest++ * 28, y: z.y + z.h - 10 };
     } else if (w.position) {
-      const home = w.position === 'trocador' ? ('tacho1' as const) : homeStation(w.position);
-      const z = home ? layout.byId.get(home) : undefined;
+      const at = workerStation(st, w);
+      const z = at ? layout.byId.get(at) : undefined;
       if (z) {
         const n = Number(w.position.slice(-1));
-        const dx = w.position === 'trocador' ? z.w - 22 : w.position.startsWith('colocador') ? 22 + (n - 1) * 30 : 22;
+        // a Troca de óleo fica no canto direito do tacho; a Montagem, lado a lado na bancada
+        const dx = w.position === 'trocador' ? z.w - 22 : w.position.startsWith('montagem') ? 22 + (n - 1) * 30 : 22;
         spot = { x: z.x + dx, y: z.y + z.h - 8 };
       }
     }
@@ -88,9 +89,6 @@ function furniture(ctx: CanvasRenderingContext2D, z: Zone): void {
     case 'tacho2':
     case 'tacho3':
       drawThree(ctx, 'moveis/fogao', z.x + 4, z.y + 18, z.w - 8);
-      break;
-    case 'estufa':
-      drawThree(ctx, 'moveis/estufa', z.x + 4, z.y + 22, z.w - 8);
       break;
     case 'escritorio':
       if (!drawThree(ctx, 'moveis/escrivaninha', z.x + 8, z.y + 26, z.w - 16)) box(ctx, { x: z.x + 8, y: z.y + 26, w: z.w - 16, h: 22 }, '#3a4a6a', PAL.woodDark);
@@ -142,8 +140,11 @@ const CRUMBS: readonly (readonly [number, number])[] = [
   [210, 108],
 ];
 
+/** Visto (✓) em pixels de 2×2 sobre o selo da linha entregue. */
+const CHECK: readonly (readonly [number, number])[] = [[1, 6], [3, 8], [5, 6], [7, 4], [9, 2]];
+
 function drawBalloon(ctx: CanvasRenderingContext2D, c: Customer, x: number, y: number): void {
-  const w = 12 * c.lines.length + 8;
+  const w = 14 * c.lines.length + 6;
   const bx = Math.round(x - w / 2);
   if (drawNine(ctx, 'ui/balao', { x: bx, y: y - 22, w, h: 20 }, 3)) drawArt(ctx, 'ui/balao_rabo', Math.round(x) - 3, y - 3);
   else box(ctx, { x: bx, y: y - 22, w, h: 20 }, PAL.paper, PAL.ink);
@@ -151,10 +152,18 @@ function drawBalloon(ctx: CanvasRenderingContext2D, c: Customer, x: number, y: n
     textCenter(ctx, '?', x, y - 18, PAL.ink, 2, null);
   } else {
     c.lines.forEach((l, i) => {
-      box(ctx, { x: bx + 4 + i * 12, y: y - 17, w: 10, h: 10 }, l.delivered ? '#d9b27a' : itemColor(l.item), PAL.ink);
+      const sx = bx + 4 + i * 14;
+      // o selo mostra o sabor pela forma; sem arte, o quadrado de cor
+      if (!drawFlavor(ctx, l.item, sx, y - 18)) box(ctx, { x: sx, y: y - 17, w: 10, h: 10 }, l.delivered ? '#d9b27a' : itemColor(l.item), PAL.ink);
+      else if (l.delivered) {
+        ctx.fillStyle = 'rgba(251,246,232,0.6)'; // entregue: véu claro e um visto
+        ctx.fillRect(sx, y - 18, 12, 12);
+        ctx.fillStyle = PAL.green;
+        for (const [dx, dy] of CHECK) ctx.fillRect(sx + dx, y - 18 + dy, 2, 2);
+      }
       if (l.gift) {
         ctx.fillStyle = PAL.gold; // brinde: estrela dourada no canto
-        ctx.fillRect(bx + 10 + i * 12, y - 19, 3, 3);
+        ctx.fillRect(sx + 9, y - 19, 3, 3);
       }
     });
   }
@@ -178,7 +187,9 @@ function drawTacho(ctx: CanvasRenderingContext2D, st: DayState, ui: UiState, z: 
     drawBasket(ctx, x, y, bw, 44, alarmOn);
     if (f && win) {
       const pst = f.burned ? 'queimado' : sec < win.ponto[0] ? 'cru' : sec <= win.ponto[1] ? 'ponto' : 'passado';
-      if (!drawPastel(ctx, f.item, pst, x + 2, y + 6, bw - 4, b.shadow !== null ? 12 : 18)) {
+      // cesto estreito: o selo vai acima do cesto, não sobre o pastel
+      if (bw < 18) drawFlavor(ctx, f.item, x + bw / 2 - 6, y - 14);
+      if (!drawPastelFlavor(ctx, f.item, pst, x + 2, y + 6, bw - 4, b.shadow !== null ? 12 : 18, bw >= 18)) {
         ctx.fillStyle = f.burned ? '#241a14' : itemColor(f.item);
         ctx.fillRect(x + 3, y + 6, bw - 6, b.shadow !== null ? 8 : 14);
       }
@@ -278,15 +289,28 @@ function drawPayQueue(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): voi
   });
 }
 
-function drawWarmer(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): void {
+/** Estufa: vitrine de vidro em cima do balcão, ao lado da placa, com uma vaga de 16 por pastel (RN-27). */
+function drawWarmer(ctx: CanvasRenderingContext2D, st: DayState, bal: Zone, ui: UiState): void {
   const cap = st.config.equipment.warmer;
+  if (cap <= 0) return;
   const warmed = st.ready.filter((r) => r.warmed);
+  const x0 = bal.x + 62;
+  const y0 = bal.y + 2;
+  box(ctx, { x: x0, y: y0, w: cap * 16 + 6, h: 18 }, '#2f4a52', PAL.ink); // vidro sobre o tampo
+  ctx.fillStyle = 'rgba(143, 179, 224, 0.35)';
+  ctx.fillRect(x0 + 1, y0 + 1, cap * 16 + 4, 2); // reflexo
   for (let i = 0; i < cap; i++) {
-    const x = z.x + 10 + (i % 4) * 22;
-    const y = z.y + 32 + Math.floor(i / 4) * 18;
-    if (warmed[i] && drawPastel(ctx, warmed[i].item, 'ponto', x, y, 18, 12)) continue;
-    ctx.fillStyle = warmed[i] ? itemColor(warmed[i].item) : '#24383e';
-    ctx.fillRect(x, y, 18, 12);
+    const x = x0 + 3 + i * 16;
+    const r = warmed[i];
+    if (!r) continue;
+    if (!drawPastel(ctx, r.item, 'ponto', x, y0 + 5, 16, 11)) {
+      ctx.fillStyle = itemColor(r.item);
+      ctx.fillRect(x + 1, y0 + 5, 14, 10);
+    }
+    if (ui.selected?.kind === 'pastel' && ui.selected.id === r.id) {
+      ctx.strokeStyle = PAL.gold;
+      ctx.strokeRect(x - 0.5, y0 + 3.5, 17, 14);
+    }
   }
 }
 
@@ -306,11 +330,12 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   // balcão: prontos, copos e moedas
   const bal = layout.byId.get('balcao');
   if (bal) {
-    st.ready.slice(0, 10).forEach((r, i) => {
+    drawWarmer(ctx, st, bal, ui);
+    st.ready.filter((r) => !r.warmed).slice(0, 10).forEach((r, i) => {
       const q = currentQuality(r, now(st));
       const x = bal.x + 8 + (i % 5) * 28;
       const y = bal.y + 26 + Math.floor(i / 5) * 22;
-      if (!drawPastel(ctx, r.item, q >= 50 ? 'ponto' : 'passado', x, y, 22, 14)) {
+      if (!drawPastelFlavor(ctx, r.item, q >= 50 ? 'ponto' : 'passado', x, y, 22, 14)) {
         ctx.fillStyle = itemColor(r.item);
         ctx.fillRect(x, y, 22, 14);
       }
@@ -343,7 +368,7 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
     st.assembled.slice(0, 6).forEach((a, i) => {
       const x = ban.x + 8 + (i % 4) * 28;
       const y = ban.y + 44 + Math.floor(i / 4) * 18;
-      if (drawPastel(ctx, a.item, 'cru', x, y, 22, 14)) return;
+      if (drawPastelFlavor(ctx, a.item, 'cru', x, y, 22, 14)) return;
       ctx.fillStyle = itemColor(a.item);
       ctx.fillRect(x, y, 22, 14);
     });
@@ -383,9 +408,7 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
     drawPixelText(ctx, 'SUJEIRA', fila.x + 100, fila.y + fila.h - 10, PAL.ink2, 1, null);
   }
 
-  // estufa, caixas térmicas e moenda
-  const es = layout.byId.get('estufa');
-  if (es) drawWarmer(ctx, st, es);
+  // caixas térmicas e moenda
   const cx = layout.byId.get('caixa');
   if (cx) {
     for (let i = 0; i < st.config.coolers; i++) {

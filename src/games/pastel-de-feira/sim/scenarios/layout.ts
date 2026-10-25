@@ -28,12 +28,12 @@ export const layout: Scenario[] = [
     id: 'rn75-frequentes-acima-do-painel',
     rules: 'RN-75',
     run() {
-      const all: StationId[] = ['balcao', 'bancada', 'tacho1', 'tacho2', 'tacho3', 'estufa', 'moenda', 'mesas', 'expedicao', 'escritorio', 'descanso'];
+      const all: StationId[] = ['balcao', 'bancada', 'tacho1', 'tacho2', 'tacho3', 'moenda', 'mesas', 'expedicao', 'escritorio', 'descanso'];
       const l = buildLayout(all, { coolers: 2 });
       for (const z of l.zones) {
         if (FREQUENT.has(z.id)) check(!coveredByPanel(z), `${z.id} não pode ficar sob o painel`);
       }
-      check(l.zones.length === 13, 'todas as zonas existem na barraca cheia (12 estações e a caixa térmica)');
+      check(l.zones.length === 12, 'todas as zonas existem na barraca cheia (11 com a fila e a caixa térmica; a estufa fica no balcão)');
       for (let i = 0; i < l.zones.length; i++) {
         for (let j = i + 1; j < l.zones.length; j++) check(!overlap(l.zones[i], l.zones[j]), `${l.zones[i].id} sobrepõe ${l.zones[j].id} na barraca cheia`);
         check(!overlap(l.zones[i], ALERT_BAND), `${l.zones[i].id} invade a faixa de avisos`);
@@ -45,7 +45,7 @@ export const layout: Scenario[] = [
     id: 'combinacoes-de-compras',
     rules: 'plan 8 (risco de layout)',
     run() {
-      const opt: StationId[] = ['bancada', 'tacho2', 'tacho3', 'estufa', 'mesas', 'expedicao', 'escritorio', 'descanso'];
+      const opt: StationId[] = ['bancada', 'tacho2', 'tacho3', 'mesas', 'expedicao', 'escritorio', 'descanso'];
       for (let mask = 0; mask < 1 << opt.length; mask++) {
         const list = orderStations(['balcao', 'tacho1', 'moenda', ...opt.filter((_o, i) => mask & (1 << i))]);
         for (const coolers of [0, 1, 2]) {
@@ -63,7 +63,7 @@ export const layout: Scenario[] = [
     id: 'grafo-de-deslocamento-conexo',
     rules: 'RN-41',
     run() {
-      const all = orderStations(['descanso', 'balcao', 'moenda', 'tacho3', 'bancada', 'tacho1', 'estufa', 'mesas', 'expedicao', 'escritorio', 'tacho2']);
+      const all = orderStations(['descanso', 'balcao', 'moenda', 'tacho3', 'bancada', 'tacho1', 'mesas', 'expedicao', 'escritorio', 'tacho2']);
       checkEq(all[0], 'balcao', 'a ordem física começa no balcão');
       const g = neighborGraph(all);
       const seen = new Set<StationId>([all[0]]);

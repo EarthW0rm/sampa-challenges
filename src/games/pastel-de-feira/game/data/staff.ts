@@ -47,7 +47,7 @@ export const TRAIT_COUNT_WEIGHTS: readonly number[] = [0.3, 0.45, 0.25];
 
 export type PositionId =
   | 'balcao'
-  | 'colocador1' | 'colocador2' | 'colocador3'
+  | 'montagem1' | 'montagem2' | 'montagem3'
   | 'fritador1' | 'fritador2' | 'fritador3'
   | 'trocador'
   | 'moenda'
@@ -56,17 +56,17 @@ export type PositionId =
   | 'expedicao';
 
 export const POSITION_LABEL: Readonly<Record<PositionId, string>> = {
-  balcao: 'Balcão', colocador1: 'Colocador 1', colocador2: 'Colocador 2', colocador3: 'Colocador 3',
-  fritador1: 'Fritador 1', fritador2: 'Fritador 2', fritador3: 'Fritador 3', trocador: 'Trocador de óleo',
+  balcao: 'Balcão', montagem1: 'Montagem 1', montagem2: 'Montagem 2', montagem3: 'Montagem 3',
+  fritador1: 'Fritador 1', fritador2: 'Fritador 2', fritador3: 'Fritador 3', trocador: 'Troca de óleo',
   moenda: 'Moenda', garcom: 'Garçom', ajudante: 'Ajudante', expedicao: 'Expedição',
 };
 
 /** Posições que só o tipo Fritador ocupa (RN-49). */
 export const FRYER_ONLY: readonly PositionId[] = ['fritador1', 'fritador2', 'fritador3', 'trocador'];
 
-/** Prioridade do modo automático (RN-45): Fritador > Balcão > Colocador > Moenda > Expedição > Garçom > Ajudante. */
+/** Prioridade do modo automático (RN-45): Fritador > Balcão > Montagem > Troca de óleo > Moenda > Expedição > Garçom > Ajudante. */
 export const AUTO_PRIORITY: readonly PositionId[] = [
-  'fritador1', 'fritador2', 'fritador3', 'balcao', 'colocador1', 'colocador2', 'colocador3', 'moenda', 'expedicao', 'garcom', 'ajudante',
+  'fritador1', 'fritador2', 'fritador3', 'balcao', 'montagem1', 'montagem2', 'montagem3', 'trocador', 'moenda', 'expedicao', 'garcom', 'ajudante',
 ];
 
 // RN-43: tempos de funcionário com energia ≥ 40 e sem traços (s)

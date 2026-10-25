@@ -45,6 +45,8 @@ export const sujeira: Scenario[] = [
       suja.state.dirt = 60;
       const a = addCustomer(limpa.state, 'padrao', ['carne']);
       const b = addCustomer(suja.state, 'padrao', ['carne']);
+      a.state = 'anotado'; // a paciência só conta depois de anotar (RN-06)
+      b.state = 'anotado';
       advance(limpa, secs(10));
       advance(suja, secs(10));
       checkNear(a.patience, PATIENCE.padrao - 10, 'barraca limpa: 10 s gastam 10 s', 0.05);

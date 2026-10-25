@@ -352,7 +352,7 @@ export function swapDemand(s: DayState): void {
 /** Quanto da paciência gasta por segundo: 1 para o primeiro da fila, menos para quem está atrás (RN-06b). */
 export const queueCalm = (rank: number): number => Math.max(QUEUE_CALM_MIN, 1 - QUEUE_CALM_STEP * rank);
 
-/** Chegadas e paciência. A paciência corre até o pedido completo ser recebido (RN-06). */
+/** Chegadas e paciência. A paciência só corre depois que o pedido é anotado, até ele chegar completo (RN-06). */
 export function updateCustomers(s: DayState, dt: number): void {
   s.arrivalLeft -= dt;
   while (s.arrivalLeft <= 0) {
@@ -364,6 +364,7 @@ export function updateCustomers(s: DayState, dt: number): void {
   const queue = queueOf(s);
   for (let i = s.customers.length - 1; i >= 0; i--) {
     const c = s.customers[i];
+    if (c.state === 'aguardando') continue; // ainda não anotado: a paciência não começou a contar
     const rank = c.place === 'fila' ? queue.indexOf(c) : 0;
     c.patience -= drain * queueCalm(rank);
     if (c.patience <= 0) {

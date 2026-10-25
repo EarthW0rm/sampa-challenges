@@ -1,19 +1,10 @@
 import { ENERGY } from '../../src/games/pastel-de-feira/game/data/staff';
 import { QUALITY_PONTO } from '../../src/games/pastel-de-feira/game/constants';
-import { expect, test, type GamePage } from './support/game';
+import { expect, test } from './support/game';
 import { assemble, fryTimes, tapBasket } from './support/flow';
+import { hire } from './support/staff';
 
 const DAY2 = { patch: (c: import('../../src/games/pastel-de-feira/game/campaign/types').Campaign) => ({ ...c, day: 2, calendar: 2, cash: 1000 }) };
-
-/** Contrata o primeiro candidato do tipo e escolhe a posição. */
-async function hire(game: GamePage, kind: 'Fritador' | 'Geral', position: string): Promise<void> {
-  const page = game.page;
-  await page.getByRole('tab', { name: 'Equipe' }).click();
-  const cand = page.locator('.pastel-de-feira li.item').filter({ has: page.locator('strong', { hasText: `· ${kind}` }) }).filter({ has: page.getByRole('button', { name: /^Contratar/ }) }).first();
-  await cand.getByRole('button', { name: /^Contratar/ }).click();
-  const staff = page.locator('.pastel-de-feira li.item.staff').last();
-  await staff.getByRole('combobox').selectOption({ label: position });
-}
 
 /** RN-40, RN-43, RN-45, RN-47, RN-48, RN-49, RN-115, RN-116: equipe contratada no Preparo e trabalhando no dia. */
 test.describe('Equipe', () => {

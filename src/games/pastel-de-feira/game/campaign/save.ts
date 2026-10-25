@@ -11,7 +11,7 @@ import { PASTRY_PROFILES, type Campaign, type DayHistory, type InvLot, type Them
 /** Persistência da campanha (plan.md 3.3): schema versionado, type guards à mão e migrações. Sem `localStorage` direto. */
 
 export const SAVE_KEY = 'pastel-de-feira:campanha';
-export const CURRENT_VERSION = 1;
+export const CURRENT_VERSION = 2;
 const MAX_SAVE_CHARS = 400_000;
 
 /** O que o save precisa do navegador; o node usa um fake em memória. */
@@ -27,8 +27,8 @@ export type SavePhase = 'preparo' | 'dia' | 'fim';
  * `campaign` é o estado de campanha da fase: no Preparo, o atual; em `dia`, o checkpoint do início
  * do Dia de Feira (a retomada recomeça dali); em `fim`, o estado depois da falência.
  */
-export interface SaveV1 {
-  version: 1;
+export interface SaveV2 {
+  version: 2;
   phase: SavePhase;
   campaign: Campaign;
 }
@@ -36,13 +36,20 @@ export interface SaveV1 {
 export type LoadWarning = 'invalido' | 'semPersistencia';
 
 export interface LoadResult {
-  save: SaveV1 | null;
+  save: SaveV2 | null;
   aviso?: LoadWarning;
 }
 
 export type Migration = (save: unknown) => unknown;
 /** `migrations[n]` converte a versão n para a n+1. */
-export const MIGRATIONS: Record<number, Migration> = {};
+export const MIGRATIONS: Record<number, Migration> = {
+  // v1 → v2: a posição Colocador N passou a se chamar Montagem N (RN-40) e a campanha ganhou as opções (RN-55a)
+  1: (save) => {
+    const v = save as { version: number; campaign?: { staff?: { position?: unknown }[] } };
+    const staff = Array.isArray(v.campaign?.staff) ? v.campaign!.staff.map((w) => (typeof w?.position === 'string' && /^colocador[1-3]$/.test(w.position) ? { ...w, position: w.position.replace('colocador', 'montagem') } : w)) : v.campaign?.staff;
+    return { ...v, version: 2, campaign: v.campaign && { ...v.campaign, staff, settings: { staffFatigue: true, unlockAll: false } } };
+  },
+};
 
 // ---------------------------------------------------------------- guards
 
@@ -100,6 +107,7 @@ export function isCampaign(v: unknown): v is Campaign {
   if (!isStr(v.profile) || !PASTRY_PROFILES.includes(v.profile as never)) return false;
   if (v.theme !== null && !(isStr(v.theme) && THEMES.includes(v.theme as Theme))) return false;
   if (!isBool(v.eventsOn) || !isBool(v.tutorial) || !isInt(v.boughtToday) || !isInt(v.resumes)) return false;
+  if (!isRec(v.settings) || !isBool(v.settings.staffFatigue) || !isBool(v.settings.unlockAll)) return false;
   if (!Array.isArray(v.inventory) || v.inventory.length > 500 || !v.inventory.every(isLot)) return false;
   if (!isRec(v.consumables) || !CONSUMABLE_IDS.every((id) => isInt((v.consumables as Rec)[id], 0, 999))) return false;
 
@@ -110,7 +118,7 @@ export function isCampaign(v: unknown): v is Campaign {
   if (!o.equip.every((e) => isStr(e) && (EQUIP_IDS as readonly string[]).includes(e))) return false;
   if (!Array.isArray(o.tachos) || o.tachos.length < 1 || o.tachos.length > 3) return false;
   for (const t of o.tachos) {
-    if (!isRec(t) || (t.baskets !== 2 && t.baskets !== 4) || (t.oil !== 'comum' && t.oil !== 'algodao')) return false;
+    if (!isRec(t) || !isInt(t.baskets, 2, 4) || (t.oil !== 'comum' && t.oil !== 'algodao')) return false;
     if (!isBool(t.thermostat) || !isBool(t.alarm) || !isBool(t.timer)) return false;
   }
   if (!isInt(o.tables, 0, 4) || !isBool(o.delivery) || !isBool(o.office) || !isInt(o.rest, 0, 4) || o.rest === 1) return false;
@@ -147,7 +155,7 @@ export function isCampaign(v: unknown): v is Campaign {
   return true;
 }
 
-export function isSave(v: unknown): v is SaveV1 {
+export function isSave(v: unknown): v is SaveV2 {
   return isRec(v) && v.version === CURRENT_VERSION && (v.phase === 'preparo' || v.phase === 'dia' || v.phase === 'fim') && isCampaign(v.campaign);
 }
 
@@ -209,7 +217,7 @@ export function saveCampaign(storage: StorageLike | null, campaign: Campaign, ph
   if (!storage) return false;
   const write = (c: Campaign): boolean => {
     try {
-      storage.setItem(SAVE_KEY, JSON.stringify({ version: CURRENT_VERSION, phase, campaign: c } satisfies SaveV1));
+      storage.setItem(SAVE_KEY, JSON.stringify({ version: CURRENT_VERSION, phase, campaign: c } satisfies SaveV2));
       return true;
     } catch {
       return false;

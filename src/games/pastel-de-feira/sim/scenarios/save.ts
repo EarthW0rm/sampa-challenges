@@ -1,5 +1,5 @@
 import { newCampaign, cloneCampaign } from '../../game/campaign/campaign';
-import { clearSave, load, migrate, saveCampaign, saveCheckpoint, SAVE_KEY, type Migration, type StorageLike } from '../../game/campaign/save';
+import { clearSave, load, migrate, MIGRATIONS, saveCampaign, saveCheckpoint, SAVE_KEY, type Migration, type StorageLike } from '../../game/campaign/save';
 import type { Campaign } from '../../game/campaign/types';
 import { loadCashRecord, loadRecord, saveCashRecord, saveDayRecord } from '../../game/record';
 import { closeDay } from '../../game/campaign/closing';
@@ -185,6 +185,21 @@ export const save: Scenario[] = [
     },
   },
   {
+    id: 'migracao-v1-para-v2-colocador-vira-montagem',
+    rules: 'plan 3.3, RN-40',
+    run() {
+      const c = sample();
+      const staff = [
+        { id: 1, name: 'Zé', kind: 'geral', traits: [], courses: [], mode: 'fixo', position: 'colocador2', trainedToday: false },
+        { id: 2, name: 'Bia', kind: 'fritador', traits: [], courses: [], mode: 'fixo', position: 'fritador1', trainedToday: false },
+      ];
+      const out = load(raw({ version: 1, phase: 'preparo', campaign: { ...c, staff } }));
+      check(out.save !== null, 'save v1 migrou e validou');
+      checkEq(out.save!.version, 2, 'versão 2');
+      checkEq(out.save!.campaign.staff.map((w) => w.position).join(','), 'montagem2,fritador1', 'Colocador 2 vira Montagem 2; o resto fica');
+    },
+  },
+  {
     id: 'migracao-v0-para-v1',
     rules: 'plan 3.3',
     run() {
@@ -195,7 +210,7 @@ export const save: Scenario[] = [
         return { ...o, version: 1, campaign: { ...rest, cash: money } };
       };
       const st = raw(old);
-      const out = load(st, { 0: m0 });
+      const out = load(st, { ...MIGRATIONS, 0: m0 });
       check(out.save !== null, 'migrou e validou');
       checkEq(out.save!.campaign.cash, 321, 'campo migrado');
       const sem = quiet(() => load(raw(old)));

@@ -3,6 +3,7 @@ import { newCampaign, toDayConfig } from '../../game/campaign/campaign';
 import { closeDay } from '../../game/campaign/closing';
 import type { Campaign } from '../../game/campaign/types';
 import type { DaySim } from '../../game/sim/day';
+import { fryerTachos } from '../../game/sim/staff';
 import { hasPower } from '../../game/sim/world';
 import type { DayConfig } from '../../game/types';
 import { advance, check, checkEq, checkNear, makeSim, runDay, type Scenario } from '../harness';
@@ -106,7 +107,7 @@ export const eventosSurpresa: Scenario[] = [
     rules: 'RN-152',
     run(seed) {
       const base = devConfig();
-      const sim = evSim(seed, 'energia', { equipment: { ...base.equipment, warmer: 6, mill: 'motorizada' }, stations: ['balcao', 'bancada', 'tacho1', 'estufa', 'moenda', 'escritorio'] });
+      const sim = evSim(seed, 'energia', { equipment: { ...base.equipment, warmer: 6, mill: 'motorizada' }, stations: ['balcao', 'bancada', 'tacho1', 'moenda', 'escritorio'] });
       const s = sim.state;
       s.ready.push({ id: 1, item: 'carne', quality: 80, readyAt: 0, warmed: true });
       advance(sim, secs(29));
@@ -183,9 +184,9 @@ export const eventosSurpresa: Scenario[] = [
       checkEq(s.workers[0].position, 'fritador1', 'Fritador na posição');
       s.tachos[0].fireLeft = 20;
       advance(sim, 2);
-      checkEq(s.workers[0].position, null, 'sai da posição durante o fogo');
+      checkEq(fryerTachos(s).get(s.workers[0].id), undefined, 'sem tacho durante o fogo (assume só tacho livre)');
       advance(sim, secs(21));
-      checkEq(s.workers[0].position, 'fritador1', 'volta quando o bloqueio acaba');
+      checkEq(fryerTachos(s).get(s.workers[0].id), 0, 'volta ao tacho quando o bloqueio acaba');
     },
   },
   {

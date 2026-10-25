@@ -7,7 +7,8 @@ import { QUALITY_BONUS, THERMOSTAT } from '../../data/equipment';
 import { ITEMS, type Item } from '../../data/recipes';
 import { swapDemand } from '../customers';
 import { addDirt } from '../dirt';
-import { fireOnPlace } from '../world';
+import { fireOnPlace, hasPower } from '../world';
+import { warmReady } from './warmer';
 import { isAt } from '../pasteleiro';
 import { emit, now, type DayState, type Tacho } from '../state';
 
@@ -117,6 +118,8 @@ export function takeBasket(s: DayState, tacho: Tacho, index: number, extra = 0, 
   const wide: FryWindow = byPlayer && s.config.profile === 'chapeiro' ? { ponto: [win.ponto[0], Math.min(win.burnAt - 0.01, win.ponto[1] + 1)], burnAt: win.burnAt } : win;
   const outcome = fryOutcome(wide, f.ticks * STEP);
   s.ready.push({ id: f.id, item: f.item, quality: Math.min(100, outcomeQuality(s, tacho, outcome) + (f.bonus ?? 0) + extra), readyAt: now(s) });
+  // com estufa no balcão, o pastel frito vai direto para ela; cheia ou sem energia, fica no balcão (RN-27)
+  if (hasPower(s)) warmReady(s, f.id);
   emit(s, outcome === 'ponto' ? 'tirou_no_ponto' : outcome === 'cru' ? 'tirou_cru' : 'tirou_passado', f.id);
   return true;
 }

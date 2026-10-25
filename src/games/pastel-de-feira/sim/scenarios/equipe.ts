@@ -64,7 +64,7 @@ export const equipe: Scenario[] = [
     rules: 'RN-48',
     run() {
       let c = rich();
-      checkEq(positionsAvailable(c).join(','), 'balcao,colocador1,fritador1,trocador,moenda', 'posições da barraca inicial');
+      checkEq(positionsAvailable(c).join(','), 'balcao,montagem1,fritador1,trocador,moenda', 'posições da barraca inicial');
       c = hireKind(hireKind(hireKind(c, 'fritador'), 'geral'), 'geral');
       checkEq(c.staff.length, 3, 'contratou 3');
       checkEq(rollCandidates(c).length, 3, 'contratados saem da lista do dia');
@@ -78,7 +78,7 @@ export const equipe: Scenario[] = [
       refused(fire(c, 999), 'requer', 'dispensar quem não existe');
       let g = must(buySpace(rich(), 2));
       g = must(buyTachoExtra(g));
-      checkEq(positionsAvailable(g).length, 7, 'um tacho a mais: +2 posições (colocador e fritador)');
+      checkEq(positionsAvailable(g).length, 7, 'um tacho a mais: +2 posições (Montagem e Fritador)');
     },
   },
   {

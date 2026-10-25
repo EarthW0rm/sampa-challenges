@@ -1,7 +1,12 @@
 import { PATIENCE, STEP } from '../../game/constants';
 import { unitCost } from '../../game/campaign/actions/inventory';
 import { payroll } from '../../game/campaign/actions/staff';
-import { newCampaign, toDayConfig } from '../../game/campaign/campaign';
+import { CAMPAIGN_DAYS, MAX_START_CASH, newCampaign, toDayConfig } from '../../game/campaign/campaign';
+import { buyRecipe } from '../../game/campaign/actions/upgrades';
+import { offers } from '../../game/campaign/shop';
+import { acceptChallenge, rollChallenges } from '../../game/campaign/actions/challenges';
+import { pendingUnlock } from '../../game/unlocks';
+import { crewSim, member } from './posicoes';
 import type { Campaign, PastryProfile } from '../../game/campaign/types';
 import { addCustomer } from '../../game/sim/customers';
 import type { DaySim } from '../../game/sim/day';
@@ -77,6 +82,59 @@ export const perfis: Scenario[] = [
       checkNear(addCustomer(normal.state, 'padrao', ['carne']).patience, PATIENCE.padrao, 'base');
       checkNear(addCustomer(boa.state, 'padrao', ['carne']).patience, PATIENCE.padrao * 1.15, 'Boa-praça: +15%');
       checkNear(addCustomer(boa.state, 'exigente', ['carne']).patience, PATIENCE.exigente * 1.15, 'também no Exigente');
+    },
+  },
+  {
+    id: 'rn55a-capital-e-dia-inicial',
+    rules: 'RN-55a',
+    run() {
+      const opts = { profile: 'tradicional' as const, eventsOn: false, tutorial: true, seed: 4 };
+      checkEq(newCampaign(opts).cash, 300, 'padrão do Tradicional: R$ 300');
+      checkEq(newCampaign({ ...opts, startCash: 100 }).cash, 300, 'nunca abaixo do padrão');
+      checkEq(newCampaign({ ...opts, startCash: 5000 }).cash, 5000, 'capital escolhido');
+      checkEq(newCampaign({ ...opts, startCash: 1e9 }).cash, MAX_START_CASH, 'teto do capital');
+      const d8 = newCampaign({ ...opts, startDay: 8 });
+      checkEq([d8.day, d8.calendar].join(','), '8,8', 'começa no dia 8');
+      checkEq(d8.tutorial, false, 'tutorial só no dia 1');
+      checkEq(toDayConfig(d8).day, 8, 'o dia de feira é o 8');
+      checkEq(newCampaign({ ...opts, startDay: 99 }).day, CAMPAIGN_DAYS, 'no máximo o último dia da campanha');
+      checkEq(newCampaign(opts).settings.staffFatigue && !newCampaign(opts).settings.unlockAll, true, 'padrão: com cansaço e com travas por dia');
+    },
+  },
+  {
+    id: 'rn55a-liberar-melhorias',
+    rules: 'RN-55a, RN-73',
+    run() {
+      const base = { profile: 'tradicional' as const, eventsOn: false, tutorial: false, seed: 4, startCash: 5000 };
+      const travada = newCampaign(base);
+      const r = buyRecipe(travada, 'palmito');
+      checkEq(r.ok ? 'ok' : r.motivo, 'bloqueadoAteDia', 'sem a opção: Palmito só a partir do dia 6');
+      check(offers(travada).some((o) => o.minDay === 6), 'a loja mostra o dia mínimo');
+      const livre = newCampaign({ ...base, unlockAll: true });
+      check(buyRecipe(livre, 'palmito').ok, 'com a opção: Palmito no dia 1');
+      check(offers(livre).every((o) => o.minDay === undefined), 'nenhuma oferta travada por dia');
+      // equipe e Associação também: desafios desde o dia 1 e os balões do que foi liberado (o tema segue o dia 5)
+      checkEq(rollChallenges(travada).length, 0, 'sem a opção: desafios só a partir do dia 3');
+      check(rollChallenges(livre).length > 0, 'com a opção: desafios no dia 1');
+      check(acceptChallenge(livre, rollChallenges(livre)[0].id).ok, 'e dá para aceitar');
+      checkEq(pendingUnlock(1, []), null, 'sem a opção: nenhum balão no dia 1');
+      const seen: string[] = [];
+      for (let u = pendingUnlock(1, seen, true); u; u = pendingUnlock(1, seen, true)) seen.push(u.id);
+      checkEq(seen.join(','), 'equipe,associacao,delivery,especial,escritorio', 'com a opção: balões do que foi liberado, sem o tema');
+    },
+  },
+  {
+    id: 'rn55a-sem-cansaco-da-equipe',
+    rules: 'RN-55a, RN-115',
+    run(seed) {
+      const on = crewSim(seed, [member('geral', { mode: 'fixo', position: 'balcao' })]);
+      const off = crewSim(seed, [member('geral', { mode: 'fixo', position: 'balcao' })], { staffFatigue: false });
+      advance(on, secs(60));
+      advance(off, secs(60));
+      check(on.state.workers[0].energy < 100, 'com cansaço, a energia cai');
+      checkEq(off.state.workers[0].energy, 100, 'sem cansaço, a energia fica em 100');
+      checkEq(newCampaign({ profile: 'gestor', eventsOn: false, tutorial: false, seed: 1, staffFatigue: false }).settings.staffFatigue, false, 'a opção vai para a campanha');
+      checkEq(toDayConfig(newCampaign({ profile: 'gestor', eventsOn: false, tutorial: false, seed: 1, staffFatigue: false })).staffFatigue, false, 'e para o dia');
     },
   },
 ];

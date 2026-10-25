@@ -35,12 +35,12 @@ export const PANEL: Rect = { x: 0, y: H - 180, w: W, h: 180 };
 export const MIN_TARGET = 72;
 
 const LABELS: Record<StationId, string> = {
-  balcao: 'BALCAO', bancada: 'BANCADA', tacho1: 'TACHO 1', tacho2: 'TACHO 2', tacho3: 'TACHO 3', estufa: 'ESTUFA',
+  balcao: 'BALCAO', bancada: 'BANCADA', tacho1: 'TACHO 1', tacho2: 'TACHO 2', tacho3: 'TACHO 3',
   moenda: 'MOENDA', mesas: 'MESAS', expedicao: 'EXPEDICAO', escritorio: 'ESCRITORIO', descanso: 'DESCANSO',
 };
 export const stationLabel = (id: StationId): string => LABELS[id];
 
-const MID: readonly StationId[] = ['bancada', 'tacho1', 'tacho2', 'tacho3', 'estufa', 'moenda'];
+const MID: readonly StationId[] = ['bancada', 'tacho1', 'tacho2', 'tacho3', 'moenda'];
 const LOW: readonly StationId[] = ['mesas', 'expedicao', 'escritorio', 'descanso'];
 
 const TOP_Y = 30;
@@ -50,7 +50,7 @@ const GAP = 6;
 
 /** Ordem física das estações na barraca: base do deslocamento do pasteleiro (RN-41). */
 export const STATION_ORDER: readonly StationId[] = [
-  'balcao', 'bancada', 'tacho1', 'tacho2', 'tacho3', 'estufa', 'moenda', 'mesas', 'expedicao', 'escritorio', 'descanso',
+  'balcao', 'bancada', 'tacho1', 'tacho2', 'tacho3', 'moenda', 'mesas', 'expedicao', 'escritorio', 'descanso',
 ];
 
 /** Põe as estações na ordem física. */

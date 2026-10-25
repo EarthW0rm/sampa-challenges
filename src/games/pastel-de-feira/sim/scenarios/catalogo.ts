@@ -32,7 +32,7 @@ export const catalogo: Scenario[] = [
     rules: 'RN-30, D-09, D-11',
     run() {
       const steps: Record<string, number> = {
-        carne: 1, queijo: 1, calabresa: 2, bauru: 2, pizza: 3, palmito: 2, especial: 4,
+        carne: 1, queijo: 1, calabresa: 2, bauru: 3, pizza: 2, palmito: 2, especial: 4,
         'banana-canela': 1, 'banana-queijo': 2, 'romeu-julieta': 2, 'carne+1': 2, 'carne+2': 3,
         'queijo+1': 1, 'palmito+1': 3, 'camarao+1': 2, 'carne-seca+1': 2, 'doce-de-leite+1': 2,
         'chocolate+1': 1, 'chocolate+2': 1,

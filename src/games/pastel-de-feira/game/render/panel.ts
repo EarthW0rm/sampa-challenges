@@ -6,12 +6,11 @@ import { drawPixelText, textWidth } from '../pixelFont';
 import { currentQuality } from '../sim/quality';
 import { fryWindow, isChanging, isDirty, isLocked } from '../sim/stations/fryer';
 import { millSeconds } from '../sim/stations/cane';
-import { warmedCount, warmerCapacity } from '../sim/stations/warmer';
 import { now, type DayState } from '../sim/state';
 import { stockQty } from '../sim/stock';
 import type { Command } from '../types';
 import { PANEL_IDLE_SECONDS, type UiState } from '../ui';
-import { bar, box, drawArt, drawNine, itemColor, PAL, pastelCat, shortName, textCenter, type PastelState } from './draw';
+import { bar, box, drawArt, drawFlavor, drawNine, itemColor, PAL, pastelCat, shortName, textCenter, type PastelState } from './draw';
 import { getAssets, LIB_PX } from '../assets';
 
 /** Controle do painel da estação. `run` roda ao tocar (ou ao começar a segurar); `release`, ao soltar. */
@@ -24,6 +23,8 @@ export interface Control {
   selected?: boolean;
   /** Só apresentação: sprite do ícone em `assets/` (`icones/ctrl_anotar`, `itens/ing_carne`…). */
   icon?: string;
+  /** Só apresentação: sabor do pastel do ícone, desenhado como selo no canto (passo 4a da arte). */
+  flavor?: ItemId;
   /** Só apresentação: o controle só informa (`run` nunca faz nada); a célula aparece desligada. */
   inert?: boolean;
   run: () => Command[];
@@ -102,7 +103,7 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
       const q = Math.round(currentQuality(r, now(st)));
       const sel = ui.selected?.kind === 'pastel' && ui.selected.id === r.id;
       out.push({
-        rect: next(), label: shortName(r.item), sub: `${r.warmed ? 'E ' : ''}${q}`, fill: itemColor(r.item), selected: sel, icon: itemIcon(r.item),
+        rect: next(), label: shortName(r.item), sub: `${r.warmed ? 'E ' : ''}${q}`, fill: itemColor(r.item), selected: sel, icon: itemIcon(r.item), flavor: r.item,
         run: () => {
           ui.selected = sel ? null : { kind: 'pastel', id: r.id };
           return [];
@@ -140,7 +141,7 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
     for (const a of st.assembled.slice(0, pages > 1 ? 5 : 6)) {
       const sel = st.selectedAssembled === a.id;
       out.push({
-        rect: next(), label: shortName(a.item), sub: 'MONTADO', fill: itemColor(a.item), selected: sel, icon: itemIcon(a.item, 'cru'),
+        rect: next(), label: shortName(a.item), sub: 'MONTADO', fill: itemColor(a.item), selected: sel, icon: itemIcon(a.item, 'cru'), flavor: a.item,
         run: () => tap('bancada', { k: 'montado', id: a.id }),
       });
     }
@@ -167,7 +168,7 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
         const blink = tacho.alarm && !!f && !!win && !f.burned && (seconds >= win.ponto[0] && seconds <= win.ponto[1] || seconds >= win.burnAt - 1);
         out.push({
           rect: next(), label: `CESTO ${i + 1}`, sub: f ? (f.burned ? 'QUEIMOU' : shortName(f.item)) : 'LIVRE', fill: PAL.tile,
-          selected: blink && Math.floor(ui.clock * 6) % 2 === 0, icon: f && state ? itemIcon(f.item, state) : 'icones/ctrl_cesto',
+          selected: blink && Math.floor(ui.clock * 6) % 2 === 0, icon: f && state ? itemIcon(f.item, state) : 'icones/ctrl_cesto', flavor: f && state ? f.item : undefined,
           bar: f && win ? { frac: seconds / win.burnAt, color } : undefined, run: () => tap(station, { k: 'cesto', index: i }),
         });
       });
@@ -197,7 +198,7 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
     };
     for (const r of st.ready.slice(0, 7)) {
       out.push({
-        rect: next(), label: shortName(r.item), sub: String(Math.round(currentQuality(r, now(st)))), fill: itemColor(r.item), icon: itemIcon(r.item),
+        rect: next(), label: shortName(r.item), sub: String(Math.round(currentQuality(r, now(st)))), fill: itemColor(r.item), icon: itemIcon(r.item), flavor: r.item,
         run: () => deliverTo(r.item, { kind: 'pastel', id: r.id }),
       });
     }
@@ -215,16 +216,8 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
     out.push({ rect: next(), label: 'EMBALAGEM', sub: String(st.consumables.embalagem), fill: PAL.tile, icon: 'icones/ctrl_embalagem', inert: true, run: () => [] });
     for (const r of st.ready.filter((x) => x.reservedFor === undefined).slice(0, 6)) {
       out.push({
-        rect: next(), label: shortName(r.item), sub: String(Math.round(currentQuality(r, now(st)))), fill: itemColor(r.item), icon: itemIcon(r.item),
+        rect: next(), label: shortName(r.item), sub: String(Math.round(currentQuality(r, now(st)))), fill: itemColor(r.item), icon: itemIcon(r.item), flavor: r.item,
         run: () => tap('expedicao', { k: 'pronto', id: r.id }),
-      });
-    }
-  } else if (station === 'estufa') {
-    out.push({ rect: next(), label: 'ESTUFA', sub: `${warmedCount(st)}/${warmerCapacity(st)}`, fill: PAL.blue, icon: 'icones/ctrl_estufa', inert: true, run: () => [] });
-    for (const r of st.ready.filter((x) => !x.warmed).slice(0, 7)) {
-      out.push({
-        rect: next(), label: shortName(r.item), sub: String(Math.round(currentQuality(r, now(st)))), fill: itemColor(r.item), icon: itemIcon(r.item),
-        run: () => tap('estufa', { k: 'pronto', id: r.id }),
       });
     }
   } else if (station === 'moenda') {
@@ -250,13 +243,16 @@ export function controlAt(controls: readonly Control[], x: number, y: number): C
 }
 
 /** Ícone centrado em (cx, cy): 24×24 no tamanho natural; sprites com menos de 20 de largura em 2× (escala inteira). */
-function drawIcon(ctx: CanvasRenderingContext2D, name: string, cx: number, cy: number): void {
+function drawIcon(ctx: CanvasRenderingContext2D, name: string, cx: number, cy: number, flavor?: ItemId): void {
   const img = getAssets()?.art(name);
   if (!img) return;
   const k = img.width / LIB_PX < 20 ? 2 : 1;
   const w = (img.width / LIB_PX) * k;
   const h = (img.height / LIB_PX) * k;
-  drawArt(ctx, name, Math.round(cx - w / 2), Math.round(cy - h / 2), w, h);
+  const x = Math.round(cx - w / 2);
+  const y = Math.round(cy - h / 2);
+  drawArt(ctx, name, x, y, w, h);
+  if (flavor && pastelCat(flavor) !== 'copo') drawFlavor(ctx, flavor, x + w - 9, y - 4); // pastel em 2×, selo em 1×
 }
 
 /** Texto da célula: k=2 se couber na largura, senão k=1 (um pouco mais abaixo). */
@@ -283,7 +279,7 @@ export function drawPanel(ctx: CanvasRenderingContext2D, st: DayState, ui: UiSta
     ctx.fillStyle = c.fill;
     ctx.fillRect(x + 4, y + 4, w - 8, 3);
     const cx = x + w / 2;
-    if (c.icon) drawIcon(ctx, c.icon, cx, y + 22);
+    if (c.icon) drawIcon(ctx, c.icon, cx, y + 22, c.flavor);
     cellText(ctx, c.label, cx, y + 38, w, PAL.ink);
     if (c.sub) cellText(ctx, c.sub, cx, y + 51, w, PAL.ink2);
     if (c.bar) bar(ctx, x + 6, y + h - 9, w - 12, 6, c.bar.frac, c.bar.color);

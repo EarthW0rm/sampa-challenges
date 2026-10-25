@@ -1,5 +1,5 @@
 import {
-  buyCooler, buyDrink, buyEquipment, buyMenuBoard, buyRecipe, buySpace, buyTachoExtra, buyTachoUpgrade, buyVersion,
+  buyBasket, buyCooler, buyDrink, buyEquipment, buyMenuBoard, buyRecipe, buySpace, buyTachoExtra, buyTachoUpgrade, buyVersion,
 } from '../../game/campaign/actions/upgrades';
 import { closeDay } from '../../game/campaign/closing';
 import { dailySpaceFee, equipmentFlags, freeM2, newCampaign, stationsOf, totalM2, toDayConfig, usedM2 } from '../../game/campaign/campaign';
@@ -87,7 +87,7 @@ export const melhorias: Scenario[] = [
       checkEq(f.warmer, 12, 'estufa grande: 12 vagas');
       checkEq(f.mill, 'motorizada', 'moenda');
       check(f.drainer && f.thermalBag, 'flags');
-      checkEq(stationsOf(c).join(','), 'balcao,bancada,tacho1,estufa,moenda', 'estufa vira estação');
+      checkEq(stationsOf(c).join(','), 'balcao,bancada,tacho1,moenda', 'a estufa fica em cima do balcão: não é estação');
     },
   },
   {
@@ -122,17 +122,36 @@ export const melhorias: Scenario[] = [
     id: 'rn73-melhorias-por-tacho',
     rules: 'RN-73',
     run() {
-      let c = must(buyTachoUpgrade(rich(), 'grande', 0));
-      checkEq(c.owned.tachos[0].baskets, 4, 'tacho grande: 4 cestos');
-      refused(buyTachoUpgrade(c, 'grande', 0), 'limite', 'já é grande');
+      let c = must(buyBasket(rich()));
+      c = must(buyBasket(c));
+      checkEq(c.owned.tachos[0].baskets, 4, 'dois cestos avulsos: tacho 1 com 4 cestos');
+      refused(buyBasket(c), 'limite', 'um tacho só, já com 4 cestos');
       refused(buyTachoUpgrade(c, 'alarme', 1), 'limite', 'tacho inexistente');
       c = must(buyTachoUpgrade(c, 'termostato', 0));
       c = must(buyTachoUpgrade(c, 'alarme', 0));
-      checkEq(100000 - c.cash, 400 + 350 + 60, 'preços por tacho');
+      checkEq(100000 - c.cash, 2 * 200 + 350 + 60, 'preços por tacho');
       check(c.owned.tachos[0].thermostat && c.owned.tachos[0].alarm, 'flags do tacho');
       refused(buyTachoUpgrade(rich({ cash: 10 }), 'alarme', 0), 'semCaixa', 'sem caixa');
       const cfg = toDayConfig(c);
-      checkEq(cfg.tachos[0].baskets, 4, 'DayConfig recebe o tacho grande');
+      checkEq(cfg.tachos[0].baskets, 4, 'DayConfig recebe os 4 cestos');
+    },
+  },
+  {
+    id: 'rn73-cesto-avulso-enche-os-tachos-em-ordem',
+    rules: 'RN-73',
+    run() {
+      let c = must(buyTachoExtra(must(buySpace(rich(), 2))));
+      checkEq(c.owned.tachos.map((t) => t.baskets).join(','), '2,2', 'tacho novo nasce com 2 cestos');
+      for (let i = 0; i < 3; i++) c = must(buyBasket(c));
+      checkEq(c.owned.tachos.map((t) => t.baskets).join(','), '4,3', 'enche o tacho 1 até 4 e passa para o 2');
+      c = must(buyBasket(c));
+      refused(buyBasket(c), 'limite', 'todos os tachos com 4 cestos');
+      c = must(buyTachoExtra(must(buySpace(c, 2))));
+      checkEq(c.owned.tachos.map((t) => t.baskets).join(','), '4,4,2', 'tacho novo depois dos cestos: 2');
+      c = must(buyBasket(c));
+      checkEq(c.owned.tachos[2].baskets, 3, 'o próximo cesto vai para o tacho 3');
+      refused(buyBasket(rich({ cash: 100 })), 'semCaixa', 'R$ 200 por cesto');
+      checkEq(toDayConfig(c).tachos.map((t) => t.baskets).join(','), '4,4,3', 'o dia recebe os cestos de cada tacho');
     },
   },
   {

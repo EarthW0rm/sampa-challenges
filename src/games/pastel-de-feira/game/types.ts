@@ -15,7 +15,6 @@ export type StationId =
   | 'tacho1'
   | 'tacho2'
   | 'tacho3'
-  | 'estufa'
   | 'moenda'
   | 'mesas'
   | 'expedicao'
@@ -143,6 +142,8 @@ export interface DayConfig {
   forecast: Forecast | null;
   /** Eventos ligados na campanha e a partir do dia 4 (RN-150). */
   eventsOn: boolean;
+  /** Funcionários cansam (RN-115). Desligado na nova campanha (RN-55a): a energia não cai. */
+  staffFatigue: boolean;
   /** O Despachante anula a multa de fiscalização deste dia (RN-103). */
   annulFine: boolean;
   /** Equipe recusada na reivindicação: −15% de velocidade no dia (RN-151). */

@@ -2,7 +2,7 @@ import { COOLER, DELIVERY, EQUIPMENT, MENU_BOARDS, SPACE, TABLE, TACHO, type Equ
 import { OFFICE, ROLES, type OfficeRole } from '../../data/office';
 import { REST_AREA } from '../../data/staff';
 import { BASE_RECIPES, ITEMS, UPGRADES, itemId, type ItemId } from '../../data/recipes';
-import { cloneCampaign, freeM2, round2, totalM2 } from '../campaign';
+import { cloneCampaign, freeM2, lockedByDay, round2, totalM2 } from '../campaign';
 import { defaultPrice } from '../pricing';
 import type { ActionResult, Campaign } from '../types';
 
@@ -24,7 +24,7 @@ export function buyRecipe(c: Campaign, base: string): ActionResult {
   const r = BASE_RECIPES[base];
   if (!r) return no('limite');
   if (c.owned.items.includes(base)) return no('limite');
-  if (c.day < r.unlock.day) return no('bloqueadoAteDia');
+  if (lockedByDay(c, r.unlock.day)) return no('bloqueadoAteDia');
   if (!canPay(c, r.unlock.price)) return no('semCaixa');
   const next = cloneCampaign(c);
   charge(next, r.unlock.price, false);
@@ -55,7 +55,7 @@ export function buyDrink(c: Campaign, id: ItemId): ActionResult {
   const it = ITEMS[id];
   if (!it || it.kind !== 'bebida') return no('limite');
   if (c.owned.items.includes(id)) return no('limite');
-  if (c.day < it.unlock.day) return no('bloqueadoAteDia');
+  if (lockedByDay(c, it.unlock.day)) return no('bloqueadoAteDia');
   if (!canPay(c, it.unlock.price)) return no('semCaixa');
   const next = cloneCampaign(c);
   charge(next, it.unlock.price, false);
@@ -69,7 +69,7 @@ export function buyEquipment(c: Campaign, id: EquipId): ActionResult {
   const def = EQUIPMENT[id];
   if (!def) return no('limite');
   if (c.owned.equip.includes(id)) return no('limite');
-  if (c.day < def.minDay) return no('bloqueadoAteDia');
+  if (lockedByDay(c, def.minDay)) return no('bloqueadoAteDia');
   if (def.requires.some((r) => !c.owned.equip.includes(r))) return no('requer');
   if (id === 'conta-parceira' && !c.owned.delivery) return no('requer');
   if (!canPay(c, def.price)) return no('semCaixa');
@@ -88,7 +88,7 @@ export function buyTachoExtra(c: Campaign): ActionResult {
   const next = cloneCampaign(c);
   charge(next, TACHO.extraPrice, true);
   next.owned.tachos.push({
-    baskets: 2,
+    baskets: TACHO.baseBaskets,
     oil: c.owned.equip.includes('oleo-algodao') ? 'algodao' : 'comum',
     thermostat: false,
     alarm: false,
@@ -97,21 +97,34 @@ export function buyTachoExtra(c: Campaign): ActionResult {
   return { ok: true, campaign: next };
 }
 
-export type TachoUpgrade = 'grande' | 'termostato' | 'alarme' | 'timer';
+export type TachoUpgrade = 'termostato' | 'alarme' | 'timer';
 
-/** Melhorias por tacho (RN-73): grande (4 cestos), termostato e alarme. */
+/** Tacho que recebe o próximo cesto avulso: o primeiro, em ordem, com menos de 4 cestos (RN-73). */
+export const nextBasketTacho = (c: Campaign): number => c.owned.tachos.findIndex((t) => t.baskets < TACHO.maxBaskets);
+
+/** Cesto avulso (RN-73): +1 cesto no primeiro tacho com menos de 4, do primeiro para o último. */
+export function buyBasket(c: Campaign): ActionResult {
+  const index = nextBasketTacho(c);
+  if (index < 0) return no('limite');
+  if (!canPay(c, TACHO.basketPrice)) return no('semCaixa');
+  const next = cloneCampaign(c);
+  charge(next, TACHO.basketPrice, true);
+  next.owned.tachos[index].baskets++;
+  return { ok: true, campaign: next };
+}
+
+/** Melhorias por tacho (RN-73): termostato, alarme e cesto com timer. */
 export function buyTachoUpgrade(c: Campaign, kind: TachoUpgrade, index: number): ActionResult {
   const t = c.owned.tachos[index];
   if (!t) return no('limite');
-  const owned = kind === 'grande' ? t.baskets === 4 : kind === 'termostato' ? t.thermostat : kind === 'alarme' ? t.alarm : t.timer;
+  const owned = kind === 'termostato' ? t.thermostat : kind === 'alarme' ? t.alarm : t.timer;
   if (owned) return no('limite');
-  const price = kind === 'grande' ? TACHO.largePrice : kind === 'termostato' ? TACHO.thermostatPrice : kind === 'alarme' ? TACHO.alarmPrice : TACHO.timerPrice;
+  const price = kind === 'termostato' ? TACHO.thermostatPrice : kind === 'alarme' ? TACHO.alarmPrice : TACHO.timerPrice;
   if (!canPay(c, price)) return no('semCaixa');
   const next = cloneCampaign(c);
   charge(next, price, true);
   const nt = next.owned.tachos[index];
-  if (kind === 'grande') nt.baskets = 4;
-  else if (kind === 'termostato') nt.thermostat = true;
+  if (kind === 'termostato') nt.thermostat = true;
   else if (kind === 'alarme') nt.alarm = true;
   else nt.timer = true;
   return { ok: true, campaign: next };
@@ -189,7 +202,7 @@ export function buyTable(c: Campaign): ActionResult {
 /** Área de delivery (RN-90): R$ 600, 3 m², a partir do dia 5. */
 export function buyDeliveryArea(c: Campaign): ActionResult {
   if (c.owned.delivery) return no('limite');
-  if (c.day < DELIVERY.minDay) return no('bloqueadoAteDia');
+  if (lockedByDay(c, DELIVERY.minDay)) return no('bloqueadoAteDia');
   if (freeM2(c) < DELIVERY.space) return no('semEspaco');
   if (!canPay(c, DELIVERY.price)) return no('semCaixa');
   const next = cloneCampaign(c);
@@ -201,7 +214,7 @@ export function buyDeliveryArea(c: Campaign): ActionResult {
 /** Escritório (RN-100): R$ 1.500, 4 m², a partir do dia 10, com 3 vagas de cargo. */
 export function buyOffice(c: Campaign): ActionResult {
   if (c.owned.office) return no('limite');
-  if (c.day < OFFICE.minDay) return no('bloqueadoAteDia');
+  if (lockedByDay(c, OFFICE.minDay)) return no('bloqueadoAteDia');
   if (freeM2(c) < OFFICE.space) return no('semEspaco');
   if (!canPay(c, OFFICE.price)) return no('semCaixa');
   const next = cloneCampaign(c);

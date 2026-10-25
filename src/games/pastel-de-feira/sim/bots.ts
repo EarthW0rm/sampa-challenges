@@ -3,7 +3,7 @@ import { closeDay } from '../game/campaign/closing';
 import { buyConsumable, buyIngredient } from '../game/campaign/actions/inventory';
 import { setDelivery, setPrice, setPromo, toggleMenuItem } from '../game/campaign/actions/menu';
 import { hire, rollCandidates } from '../game/campaign/actions/staff';
-import { buyDeliveryArea } from '../game/campaign/actions/upgrades';
+import { buyDeliveryArea, nextBasketTacho } from '../game/campaign/actions/upgrades';
 import { offers } from '../game/campaign/shop';
 import { isCampaign } from '../game/campaign/save';
 import { suggestPurchase } from '../game/campaign/suggest';
@@ -80,7 +80,7 @@ export function restock(c: Campaign): Campaign {
 
 /** Ordem de compra do robô equilibrado (plan 5.4): tacho → estoque → estufa → mesas → receitas, com funcionário quando a fila perde gente. */
 // (sem mesas nem delivery: o jogador automático só atende o balcão)
-const SHOP_ORDER = ['alarme0', 'grande0', 'caixa-termica', 'estufa', 'placa-salgado', 'frango', 'calabresa', 'tacho-extra', 'caixa-termica', 'm2', 'especial', 'termostato0', 'estufa-grande'];
+const SHOP_ORDER = ['alarme0', 'cesto0', 'cesto0', 'caixa-termica', 'estufa', 'placa-salgado', 'frango', 'calabresa', 'tacho-extra', 'caixa-termica', 'm2', 'especial', 'termostato0', 'estufa-grande'];
 
 /** Põe no cardápio o que couber (preço padrão), sem tirar nada. */
 function fillMenu(c: Campaign): Campaign {
@@ -113,6 +113,16 @@ function optimizePrices(c: Campaign): Campaign {
   return c;
 }
 
+/**
+ * Oferta da ordem de compra. `cesto<N>` é o cesto avulso enquanto ele cai no tacho N (repetível: dois `cesto0`
+ * enchem o tacho 1, como o antigo Tacho grande); as outras ofertas, uma vez por dia.
+ */
+export function findOffer<O extends { id: string }>(catalog: readonly O[], c: Campaign, id: string, picked: ReadonlySet<string>): O | undefined {
+  const basket = /^cesto(\d)$/.exec(id);
+  if (basket) return Number(basket[1]) === nextBasketTacho(c) ? catalog.find((x) => x.id === 'cesto') : undefined;
+  return catalog.find((x) => x.id === id && !picked.has(x.id));
+}
+
 export function invest(c: Campaign, last?: DayRow, first: readonly string[] = []): Campaign {
   const reserve = 250 + c.day * 15;
   let bought = 0;
@@ -120,7 +130,7 @@ export function invest(c: Campaign, last?: DayRow, first: readonly string[] = []
   const picked = new Set<string>();
   for (const id of [...first, ...SHOP_ORDER]) {
     if (bought >= 2) break;
-    const o = catalog.find((x) => x.id === id && !picked.has(x.id));
+    const o = findOffer(catalog, c, id, picked);
     if (!o) continue;
     const r = o.buy(c);
     if (r.ok && r.campaign.cash >= reserve) {

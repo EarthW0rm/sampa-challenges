@@ -157,6 +157,22 @@ export function drawPastel(ctx: CanvasRenderingContext2D, id: ItemId, state: Pas
   return true;
 }
 
+/** Selo do sabor (12×12 lógicos) com os pontinhos da versão (+1, +2). Devolve false sem arte (use `itemColor`). */
+export function drawFlavor(ctx: CanvasRenderingContext2D, id: ItemId, x: number, y: number): boolean {
+  const it = ITEMS[id];
+  const key = it?.kind === 'bebida' ? id : (it?.base ?? id);
+  if (!drawArt(ctx, `icones/sabor_${key}`, x, y)) return false;
+  for (let i = 0; i < (it?.version ?? 0); i++) drawArt(ctx, 'ui/selo_versao', x - 2 + i * 4, y - 1);
+  return true;
+}
+
+/** Pastel com o selo do sabor no canto superior direito (mesmo retângulo do `drawPastel`). `seal: false` só o pastel. */
+export function drawPastelFlavor(ctx: CanvasRenderingContext2D, id: ItemId, state: PastelState, x: number, y: number, w: number, h: number, seal = true): boolean {
+  const ok = drawPastel(ctx, id, state, x, y, w, h);
+  if (ok && seal && pastelCat(id) !== 'copo') drawFlavor(ctx, id, x + w - 9, y - 4);
+  return ok;
+}
+
 /** Imagem do jogo na posição (canto superior esquerdo) com o tamanho original em pixels lógicos. */
 export function drawArt(ctx: CanvasRenderingContext2D, name: string, x: number, y: number, w?: number, h?: number): boolean {
   const img = getAssets()?.art(name);

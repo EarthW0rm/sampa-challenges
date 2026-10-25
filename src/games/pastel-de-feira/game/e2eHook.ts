@@ -15,7 +15,7 @@ export interface E2EHook {
   sim: DaySim;
   env: InputEnv;
   /** Controles do painel aberto, com o retângulo lógico de cada um. */
-  controls: () => { label: string; sub?: string; selected?: boolean; x: number; y: number; w: number; h: number }[];
+  controls: () => { label: string; sub?: string; selected?: boolean; icon?: string; flavor?: string; x: number; y: number; w: number; h: number }[];
   /** Clientes da fila do balcão na ordem, com o ponto lógico dos pés. */
   queue: () => { id: number; x: number; y: number }[];
   /** Funcionários e o ponto lógico dos pés. */
@@ -34,7 +34,7 @@ export function exposeForE2E(sim: DaySim, env: InputEnv): { finish: (r: DayResul
   const hook: E2EHook = {
     sim,
     env,
-    controls: () => panelControls(sim.state, env.ui).map((c) => ({ label: c.label, sub: c.sub, selected: c.selected, ...c.rect })),
+    controls: () => panelControls(sim.state, env.ui).map((c) => ({ label: c.label, sub: c.sub, selected: c.selected, icon: c.icon, flavor: c.flavor, ...c.rect })),
     queue: () => queueOf(sim.state).map((c, i) => ({ id: c.id, ...queueSpot(env.layout, i) })),
     workers: () => [...workerSpots(env.layout, sim.state)].map(([id, p]) => ({ id, ...p })),
     result: null,

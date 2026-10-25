@@ -1,11 +1,12 @@
 import { CHALLENGES, CHALLENGE_OFFERS, CHALLENGE_OFFERS_WITH_DISPATCHER, MAX_ACTIVE_CHALLENGES, challengeById, type ChallengeDef } from '../../data/challenges';
 import { Rng } from '../../rng';
-import { cloneCampaign } from '../campaign';
+import { cloneCampaign, lockedByDay } from '../campaign';
+import { unlockDay } from '../../unlocks';
 import type { ActionResult, Campaign } from '../types';
 
 /** Desafios oferecidos hoje: até 2 (3 com Despachante), só os atingíveis e ainda não aceitos (RN-135, RN-137). */
 export function rollChallenges(c: Campaign): ChallengeDef[] {
-  if (!c.owned.office && c.day < 3) return [];
+  if (!c.owned.office && lockedByDay(c, unlockDay('associacao'))) return []; // a partir do dia 3, ou já com a opção de liberar (RN-55a)
   const rng = new Rng(c.seed).fork(`desafios:${c.calendar}`);
   const pool = CHALLENGES.filter((d) => d.available(c) && !c.challenges.some((a) => a.id === d.id));
   const max = c.roles.includes('despachante') ? CHALLENGE_OFFERS_WITH_DISPATCHER : CHALLENGE_OFFERS;
