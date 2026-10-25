@@ -115,8 +115,10 @@ sorteio** de clientes, ofertas e eventos surpresa (JA-06).
 - Pedido: 1 a 2 pastéis e 0 a 1 caldo (chance base de caldo 40%), só do cardápio com insumo. Cada
   cliente pode pedir um **doce** além dos salgados: 25% (35% a partir das 11h).
 - **Paciência** do primeiro da fila: Econômico 90 s, Padrão 80 s, Exigente 70 s **(P)**. Quem está
-  atrás gasta mais devagar: ×1,0; 0,8; 0,6; 0,4; 0,3 por posição (RN-06b). A paciência corre até o
-  pedido completo ser entregue. Esgotada, o cliente vai embora sem pagar (falha de peso 1,0).
+  atrás gasta mais devagar: ×1,0; 0,8; 0,6; 0,4; 0,3 por posição (RN-06b). A paciência **só começa a
+  contar quando o pedido é anotado** (antes disso o cliente espera na fila sem desistir; a fila cheia,
+  RN-04, segue limitando) e corre até o pedido completo ser entregue. Esgotada, o cliente vai embora sem
+  pagar (falha de peso 1,0).
 - Modificadores: perfil Boa-praça +15%; mesa ×1,5; curso de Atendimento de quem anota +5%; barraca
   com sujeira ≥ 60 gasta a paciência 25% mais rápido.
 

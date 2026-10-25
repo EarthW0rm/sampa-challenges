@@ -1,6 +1,13 @@
 import { DIRT_PATIENCE_FACTOR, PATIENCE, QUEUE_CALM_MIN, QUEUE_CALM_STEP, QUEUE_MAX } from '../../src/games/pastel-de-feira/game/constants';
-import { expect, test } from './support/game';
-import { assemble, deliver, fry } from './support/flow';
+import { expect, test, type GamePage } from './support/game';
+import { assemble, deliver, fry, takeOrder } from './support/flow';
+
+/** Anota pela tela os pedidos dos `n` primeiros da fila (ANOTAR no balcão) e espera ficarem anotados. */
+async function noteFirst(game: GamePage, n: number): Promise<void> {
+  await game.goTo('balcao');
+  for (let i = 0; i < n; i++) await game.tapControl('ANOTAR');
+  await game.advanceUntil((pf, k) => pf.queue().slice(0, k).every((q) => pf.sim.state.customers.find((c) => c.id === q.id)?.state === 'anotado'), 10, n, 1);
+}
 
 /** RN-02, RN-04, RN-05, RN-06, RN-06b, RN-133 (paciência), HUD da fila. */
 test.describe('Clientes, fila e paciência', () => {
@@ -31,8 +38,21 @@ test.describe('Clientes, fila e paciência', () => {
     for (const x of c) expect(x.max).toBe(PATIENCE[x.profile as keyof typeof PATIENCE]);
   });
 
+  test('RN-06: antes de o pedido ser anotado, a paciência não conta', async ({ game }) => {
+    await game.waitCustomer();
+    const read = () => game.hook((pf) => pf.sim.state.customers.map((c) => ({ id: c.id, p: c.patience, max: c.patienceMax, state: c.state })));
+    const a = await read();
+    await game.advance(30);
+    const b = await read();
+    for (const x of a) {
+      const y = b.find((k) => k.id === x.id);
+      if (y && y.state === 'aguardando') expect(y.p, `cliente ${x.id} ainda não anotado`).toBe(y.max);
+    }
+  });
+
   test('RN-06b: o primeiro da fila gasta 1 s de paciência por segundo; quem está atrás, menos', async ({ game }) => {
     await game.advanceUntil((pf) => pf.queue().length >= 3, 120);
+    await noteFirst(game, 3); // a paciência só conta depois de anotado (RN-06)
     const read = () => game.hook((pf) => pf.queue().map((q) => pf.sim.state.customers.find((c) => c.id === q.id)!).map((c) => ({ id: c.id, p: c.patience })));
     const a = await read();
     await game.frames(60);
@@ -46,6 +66,7 @@ test.describe('Clientes, fila e paciência', () => {
 
   test('RN-133: com sujeira ≥ 60 a paciência gasta 25% mais rápido (−20% de paciência)', async ({ game }) => {
     await game.waitCustomer();
+    await takeOrder(game); // a paciência só conta depois de anotado (RN-06)
     await game.hook((pf) => {
       pf.sim.state.dirt = 60;
     });
@@ -58,6 +79,7 @@ test.describe('Clientes, fila e paciência', () => {
   test('RN-06: esgotada a paciência o cliente vai embora sem pagar (falha)', async ({ game }) => {
     await game.waitCustomer();
     const first = await game.hook((pf) => pf.queue()[0].id);
+    await takeOrder(game); // anotado: a paciência começa a contar
     await game.advanceUntil((pf, id) => !pf.sim.state.customers.some((c) => c.id === id), 100, first, 60);
     const s = await game.hook((pf) => ({ lost: pf.sim.state.stats.lostPatience, failures: pf.sim.state.rep.failures, revenue: pf.sim.state.stats.revenue }));
     expect(s.lost).toBeGreaterThanOrEqual(1);

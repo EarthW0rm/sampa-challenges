@@ -86,12 +86,20 @@ export const clientes: Scenario[] = [
     id: 'rn06-paciencia',
     rules: 'RN-06',
     run(seed) {
-      // o primeiro da fila gasta a paciência em tempo real: cada perfil sai ao esgotar a sua
+      // antes de anotar, a paciência não conta: o cliente espera o tempo que for
+      const wait = makeSim(seed);
+      wait.state.arrivalLeft = 1e9;
+      const w = addCustomer(wait.state, 'exigente', ['carne']);
+      advance(wait, Math.round(200 / STEP)); // bem mais que os 70 s de um Exigente
+      check(wait.state.customers.includes(w), 'sem anotar, ninguém desiste');
+      checkEq(w.patience, PATIENCE.exigente, 'paciência intacta até anotar');
+      // depois de anotado, o primeiro da fila gasta a paciência em tempo real: cada perfil sai ao esgotar a sua
       for (const profile of PROFILES) {
         const sim = makeSim(seed);
         sim.state.arrivalLeft = 1e9;
         const c = addCustomer(sim.state, profile, ['carne']);
         checkEq(c.patience, PATIENCE[profile], `${profile}: paciência base`);
+        c.state = 'anotado';
         advance(sim, Math.round((PATIENCE[profile] - 1) / STEP));
         check(sim.state.customers.includes(c), `${profile} ainda espera 1 s antes do fim`);
         advance(sim, Math.round(2 / STEP));
@@ -110,6 +118,7 @@ export const clientes: Scenario[] = [
       const first = addCustomer(sim.state, 'padrao', ['carne']);
       const second = addCustomer(sim.state, 'padrao', ['carne']);
       const third = addCustomer(sim.state, 'padrao', ['carne']);
+      for (const c of [first, second, third]) c.state = 'anotado'; // a paciência só conta depois de anotar (RN-06)
       advance(sim, Math.round(10 / STEP));
       checkNear(first.patience, PATIENCE.padrao - 10, 'primeiro: ritmo normal', 0.05);
       checkNear(second.patience, PATIENCE.padrao - 10 * queueCalm(1), 'segundo: mais calmo', 0.05);

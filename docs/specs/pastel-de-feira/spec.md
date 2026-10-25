@@ -122,7 +122,7 @@
 | RN-03 | Reputação abaixo de 2 estrelas reduz a chegada de clientes em 30% **(P)** | Condicional |
 | RN-04 | A fila do balcão tem no máximo 6 clientes **(P)**. Cliente que chega com a fila cheia vai embora (pedido perdido, peso 0,5 na reputação) | Restritiva |
 | RN-05 | Cada cliente pede de 1 a 2 pastéis e de 0 a 1 caldo **(P)**, só entre os itens ativos do cardápio com insumo disponível. Estação (RN-140) e promoção do brinde (RN-121) modificam essas quantidades | Obrigatória |
-| RN-06 | Paciência base (do fim da fila ao recebimento do pedido completo): Econômico 90 s, Padrão 80 s, Exigente 70 s **(P)**. Esgotada a paciência, o cliente vai embora sem pagar (falha) | Obrigatória |
+| RN-06 | Paciência base (contada **a partir do pedido anotado** até o recebimento do pedido completo; antes de anotado o cliente não perde paciência): Econômico 90 s, Padrão 80 s, Exigente 70 s **(P)**. Esgotada a paciência, o cliente vai embora sem pagar (falha) | Obrigatória |
 | RN-06b | **Calma por posição na fila:** a paciência de quem espera na fila do balcão gasta mais devagar a cada posição atrás do primeiro: ritmo = máx(0,3; 1 − 0,2 × posição), ou seja 1,0; 0,8; 0,6; 0,4; 0,3… **(P)**. Quem avança na fila passa a gastar no ritmo da nova posição. Vale só para a fila do balcão (mesa e fila de pagamento seguem o ritmo normal) | Obrigatória |
 | RN-07 | **Corte seco às 14h:** nenhum cliente novo chega. Quem está na fila, nas mesas ou na fila de pagamento vai embora sem pagar e **sem falha**. Pedidos em produção, pastéis prontos não entregues e comandas não retiradas são perdidos **sem falha**. Os pastéis prontos e montados contam como desperdício | Obrigatória |
 
