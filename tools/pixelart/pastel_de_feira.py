@@ -1,5 +1,5 @@
 """Pastel de Feira ("barraca aconchegante"): cenário, móveis, equipamentos, interface (molduras de
-madeira 9-slice), ícones do painel, de evento e de perfil, ingredientes, pastéis, HUD e capa.
+madeira 9-slice), ícones do painel, de evento e de perfil, selos de sabor, ingredientes, pastéis, HUD e capa.
 
 Uso:
   python3 pastel_de_feira.py <pasta-de-saida> [--previa <pasta-de-previa>] [--caes <pasta caes_pe>]
@@ -576,6 +576,124 @@ CTRL = ['anotar', 'cobrar', 'pagar', 'caixa', 'vassoura', 'fechar', 'limpar', 'm
         'encomenda', 'comandas', 'embalagem', 'estufa', 'copos', 'caldo_puro', 'caldo_limao', 'caldo_abacaxi']
 
 
+
+# ---------------------------------------------------------------- selos de sabor (12×12)
+# Um selo por receita base e por caldo: disco de papel com contorno e um pictograma próprio, para o sabor
+# ser reconhecido pela FORMA, não só pela cor. Versões (+1/+2) ganham pontinhos dourados no código
+# (`ui/selo_versao`). A chave é `ITEMS[id].base` (ou o id do caldo).
+def _rows(p, rows, c):
+    for y, spans in rows:
+        for x0, x1 in spans: R(p, x0, y, x1 - x0 + 1, 1, c)
+
+
+def selo(sabor):
+    im = new(12, 12); p = Pen(im)
+    p.ell(0, 0, 11, 11, INK); p.ell(1, 1, 10, 10, PAPEL)
+    if sabor == 'carne':
+        R(p, 3, 4, 6, 4, '#8b3a26'); R(p, 4, 3, 4, 1, '#8b3a26'); R(p, 2, 5, 1, 2, '#8b3a26'); R(p, 9, 5, 1, 2, '#8b3a26')
+        R(p, 4, 5, 4, 1, '#f0d0c0'); R(p, 3, 8, 6, 1, '#5a2418'); p.put(4, 3, '#b4553a')
+    elif sabor == 'queijo':
+        R(p, 2, 6, 8, 3, '#f2c14e'); R(p, 4, 5, 6, 1, '#f2c14e'); R(p, 6, 4, 4, 1, '#f2c14e'); R(p, 8, 3, 2, 1, '#f2c14e')
+        R(p, 2, 9, 8, 1, OURO_D); p.put(4, 7, '#c9961e'); p.put(7, 6, '#c9961e'); p.put(8, 8, '#c9961e')
+    elif sabor in ('frango', 'frango-catupiry'):
+        dx = 0 if sabor == 'frango' else -1
+        p.ell(2 + dx, 2, 7 + dx, 7, '#d9a05a'); p.put(3 + dx, 3, '#f0c890'); p.put(4 + dx, 3, '#f0c890')
+        R(p, 7 + dx, 7, 2, 2, '#e7e1d6'); R(p, 8 + dx, 8, 2, 1, '#e7e1d6'); p.put(9 + dx, 9, '#e7e1d6'); p.put(9 + dx, 7, '#e7e1d6')
+        R(p, 2 + dx, 7, 3, 1, '#a8661c')
+        if sabor == 'frango-catupiry': R(p, 7, 2, 3, 3, '#8fb3e0'); R(p, 7, 2, 3, 1, '#ffffff')
+    elif sabor == 'calabresa':
+        p.ell(2, 2, 9, 9, '#a8321e'); p.ell(3, 3, 8, 8, '#d9603f')
+        for x, y in ((4, 5), (7, 4), (6, 7), (4, 7), (7, 6)): p.put(x, y, '#f4d0c0')
+    elif sabor == 'bauru':
+        R(p, 3, 2, 6, 1, '#e0a050'); R(p, 2, 3, 8, 2, '#e0a050'); p.put(4, 3, '#f6c766')
+        R(p, 2, 5, 8, 1, '#f2d14c'); R(p, 2, 6, 8, 1, '#e88a9a'); R(p, 2, 7, 8, 2, '#c98a3c'); R(p, 2, 9, 8, 1, '#8e5222')
+    elif sabor == 'pizza':
+        R(p, 2, 2, 8, 2, '#c98a3c'); R(p, 2, 2, 8, 1, '#e0a050')
+        _rows(p, ((4, ((3, 8),)), (5, ((3, 8),)), (6, ((4, 7),)), (7, ((4, 7),)), (8, ((5, 6),)), (9, ((5, 6),))), '#f2c14e')
+        for x, y in ((4, 4), (7, 5), (5, 7)): p.put(x, y, TOLDO)
+    elif sabor == 'palmito':
+        R(p, 5, 5, 2, 5, '#8b5a2b'); p.put(5, 6, '#6e4320')
+        _rows(p, ((2, ((4, 7),)), (3, ((2, 5), (6, 9))), (4, ((1, 2), (5, 6), (9, 10))), (5, ((1, 1), (10, 10)))), '#3e8e3a')
+        R(p, 4, 2, 4, 1, '#6fbf4a')
+    elif sabor == 'carne-seca':
+        R(p, 2, 4, 8, 4, '#5a2a1a'); R(p, 3, 3, 3, 1, '#5a2a1a'); R(p, 7, 8, 3, 1, '#5a2a1a'); R(p, 2, 4, 8, 1, '#7a3a22')
+        for x, y in ((3, 5), (6, 6), (8, 5), (5, 7)): p.put(x, y, '#ffffff')
+    elif sabor == 'camarao':
+        _rows(p, ((2, ((4, 7),)), (3, ((3, 8),)), (4, ((2, 4), (7, 8))), (5, ((2, 3),)), (6, ((2, 4),)), (7, ((3, 6),)), (8, ((5, 7),))), '#f08a6a')
+        R(p, 8, 7, 2, 3, '#d9603f'); p.put(5, 3, '#d9603f'); p.put(3, 5, '#d9603f'); p.put(4, 7, '#d9603f'); p.put(7, 3, INK)
+    elif sabor == 'bacalhau':
+        p.ell(1, 3, 8, 8, '#6f8496'); R(p, 2, 6, 5, 1, '#c9d3dc'); R(p, 8, 5, 1, 2, '#6f8496'); R(p, 9, 3, 1, 6, '#6f8496'); R(p, 10, 3, 1, 2, '#6f8496'); R(p, 10, 7, 1, 2, '#6f8496')
+        p.put(3, 4, INK); p.put(5, 4, '#9fb0c0')
+    elif sabor == 'especial':
+        _rows(p, ((1, ((5, 6),)), (2, ((5, 6),)), (3, ((4, 7),)), (4, ((1, 10),)), (5, ((2, 9),)), (6, ((3, 8),)), (7, ((3, 8),)), (8, ((2, 4), (7, 9))), (9, ((2, 3), (8, 9)))), OURO)
+        R(p, 5, 3, 1, 3, OURO_L); R(p, 3, 7, 6, 1, OURO_D)
+    elif sabor in ('banana-canela', 'banana-queijo'):
+        _rows(p, ((3, ((2, 3),)), (4, ((2, 4),)), (5, ((3, 6),)), (6, ((4, 9),)), (7, ((6, 8),))), '#f2d14c')
+        p.put(2, 2, '#6b4a12'); p.put(9, 6, '#6b4a12'); R(p, 4, 6, 3, 1, '#d9b32e')
+        if sabor == 'banana-canela':
+            for x, y in ((7, 2), (8, 3), (9, 2), (6, 3)): p.put(x, y, '#8b4a22')
+        else:
+            R(p, 3, 8, 4, 2, '#f2c14e'); p.put(4, 8, '#c9961e'); R(p, 3, 10, 4, 0, '#b8860b')
+    elif sabor == 'doce-de-leite':
+        R(p, 3, 4, 6, 6, '#c27a22'); R(p, 2, 3, 8, 1, TOLDO); R(p, 3, 2, 6, 1, TOLDO); p.put(4, 2, '#ffffff'); p.put(7, 3, '#ffffff')
+        R(p, 4, 5, 1, 3, '#e8a33a'); R(p, 6, 4, 2, 2, '#e8a33a')
+    elif sabor == 'romeu-julieta':
+        _rows(p, ((3, ((2, 4), (7, 9))), (4, ((2, 9),)), (5, ((2, 9),)), (6, ((3, 8),)), (7, ((4, 7),)), (8, ((5, 6),))), '#a8321e')
+        p.put(3, 4, '#e0624a'); p.put(3, 3, '#e0624a'); R(p, 6, 8, 0, 0, INK)
+    elif sabor == 'chocolate':
+        R(p, 2, 3, 8, 6, '#6b3a1e'); R(p, 5, 3, 1, 6, '#4a2410'); R(p, 2, 6, 8, 1, '#4a2410'); R(p, 3, 4, 2, 1, '#8e5228')
+        R(p, 7, 3, 3, 2, BORDA_L)
+    elif sabor == 'caldo-puro':
+        R(p, 5, 1, 2, 10, CANA); R(p, 5, 1, 1, 10, CANA_L); R(p, 5, 4, 2, 1, CANA_D); R(p, 5, 8, 2, 1, CANA_D)
+        R(p, 7, 3, 2, 1, '#6fa24a'); R(p, 8, 2, 2, 1, '#6fa24a')
+    elif sabor == 'caldo-limao':
+        p.ell(2, 2, 9, 9, '#5f8f2a'); p.ell(3, 3, 8, 8, '#d4ee8a'); R(p, 5, 3, 2, 6, '#9bc53d'); R(p, 3, 5, 6, 2, '#9bc53d'); R(p, 5, 5, 2, 2, '#eef8c8')
+    elif sabor == 'caldo-abacaxi':
+        p.ell(3, 4, 8, 10, '#f2c14e'); R(p, 4, 1, 1, 3, '#3e8e3a'); R(p, 7, 1, 1, 3, '#3e8e3a'); R(p, 5, 1, 2, 3, '#5fae4a')
+        for x, y in ((5, 6), (7, 7), (5, 8), (6, 5)): p.put(x, y, OURO_D)
+    else:
+        raise ValueError(sabor)
+    return im
+
+
+SABORES = ['carne', 'queijo', 'frango', 'calabresa', 'bauru', 'frango-catupiry', 'pizza', 'palmito', 'carne-seca',
+           'camarao', 'bacalhau', 'especial', 'banana-canela', 'doce-de-leite', 'romeu-julieta', 'banana-queijo',
+           'chocolate', 'caldo-puro', 'caldo-limao', 'caldo-abacaxi']
+NOME_SABOR = {'carne': 'CARNE', 'queijo': 'QUEIJO', 'frango': 'FRANGO', 'calabresa': 'CALABRESA', 'bauru': 'BAURU',
+              'frango-catupiry': 'F.CATUP', 'pizza': 'PIZZA', 'palmito': 'PALMITO', 'carne-seca': 'C.SECA',
+              'camarao': 'CAMARAO', 'bacalhau': 'BACALHAU', 'especial': 'ESPECIAL', 'banana-canela': 'B.CANEL',
+              'doce-de-leite': 'D.LEITE', 'romeu-julieta': 'ROMEU', 'banana-queijo': 'B.QUEI', 'chocolate': 'CHOCOLATE',
+              'caldo-puro': 'PURO', 'caldo-limao': 'LIMAO', 'caldo-abacaxi': 'ABACAXI'}
+
+
+def selo_versao():
+    im = new(4, 4); p = Pen(im)
+    R(p, 0, 0, 4, 4, INK); R(p, 1, 1, 2, 2, OURO); p.put(1, 1, OURO_L)
+    return im
+
+
+def com_selo(im, sprite, x, y, sabor, versao=0, k=1):
+    """Pastel com o selo no canto superior direito (prévia; o jogo faz o mesmo em `drawFlavor`)."""
+    im.alpha_composite(sprite, (x, y))
+    s = SAIDA[f'icones/sabor_{sabor}']
+    if k > 1: s = s.resize((12 * k, 12 * k), Image.NEAREST)
+    sx, sy = x + sprite.width - s.width + 3 * k, y - 4 * k
+    im.alpha_composite(s, (sx, sy))
+    for i in range(versao): im.alpha_composite(SAIDA['ui/selo_versao'], (sx - 2 + i * 4, sy - 1))
+
+
+def previa_selos():
+    cols, cw, ch = 5, 150, 120
+    rows = (len(SABORES) + cols - 1) // cols
+    im = Image.new('RGBA', (cols * cw, rows * ch), hexc(PERG))
+    for i, s in enumerate(SABORES):
+        x, y = (i % cols) * cw, (i // cols) * ch
+        im.alpha_composite(SAIDA[f'icones/sabor_{s}'].resize((48, 48), Image.NEAREST), (x + 51, y + 14))
+        nome = NOME_SABOR[s]
+        texto(im, nome, x + cw // 2 - tw(nome, 2) // 2, y + 78, TXT, 2)
+        texto(im, s.upper().replace('-', ' ')[:28], x + cw // 2 - tw(s.upper()[:28]) // 2, y + 96, TXT_2)
+    return im
+
 # ---------------------------------------------------------------- interface (9-slice e faixas)
 def moldura():
     """Moldura do painel e das telas: 24×24, cantos de 8 (madeira 6 px + pergaminho)."""
@@ -820,9 +938,10 @@ def previa_dia(caes_dir):
     # balcão (306,30 326×118)
     bx, by, bw = 306, 30, 326
     im.alpha_composite(tres('moveis/balcao', bw - 8), (bx + 4, by + 20))
-    for i, (cat, est) in enumerate((('salgado', 'ponto'), ('salgado', 'ponto'), ('doce', 'ponto'))):
-        x = bx + 8 + i * 28; im.alpha_composite(SAIDA[f'itens/pastel_{cat}_{est}'].resize((22, 14), Image.NEAREST), (x, by + 26))
-        barra(im, x, by + 43, 22, 4, [0.8, 0.5, 0.9][i], VERDE)
+    for i, (cat, sab, v) in enumerate((('salgado', 'carne', 0), ('salgado', 'queijo', 0), ('doce', 'romeu-julieta', 0), ('salgado', 'carne', 1))):
+        x = bx + 8 + i * 28
+        com_selo(im, SAIDA[f'itens/pastel_{cat}_ponto'], x + 2, by + 30, sab, v)
+        barra(im, x, by + 43, 22, 4, [0.8, 0.5, 0.9, 0.7][i], VERDE)
     for i in range(2): im.alpha_composite(SAIDA['itens/copo'], (bx + 150 + i * 12, by + 28))
     for i in range(3): im.alpha_composite(SAIDA['itens/moeda'], (bx + bw - 22 - i * 12, by + 52))
     im.alpha_composite(SAIDA['equip/maquininha'], (bx + bw - 34, by + 26))
@@ -845,7 +964,7 @@ def previa_dia(caes_dir):
         R(p, bxx, byy, 44, 40, ACO_O); grade(im, bxx + 1, byy + 1, 42, 38)
         im.alpha_composite(SAIDA['equip/cesto_alca'], (bxx + 19, byy - 8))
         if i == 0:
-            im.alpha_composite(SAIDA['itens/pastel_salgado_cru'].resize((32, 22), Image.NEAREST), (bxx + 6, byy + 9))
+            com_selo(im, SAIDA['itens/pastel_salgado_cru'].resize((32, 22), Image.NEAREST), bxx + 6, byy + 12, 'queijo')
             barra(im, bxx, byy + 44, 44, 6, 0.55, AZUL)
     barra(im, x + 8, zy + zh - 22, zw - 16, 6, 0.4, OLEO)
     placa_em(im, 'TACHO 1', x + 4, zy + 4)
@@ -861,15 +980,16 @@ def previa_dia(caes_dir):
     im.alpha_composite(SAIDA['decor/migalhas'], (150, 132))
     # balões (antes dos cães, desenhados na mesma passada 1×)
     spots = [(270 - i * 46, 134) for i in range(5)]
+    pedidos = [['carne', 'caldo-puro'], ['queijo'], None, ['pizza', 'romeu-julieta'], None]
     for i, (sx, sy) in enumerate(spots):
-        anot = i == 0
-        w = 36 if anot else 20
+        linhas = pedidos[i]
+        anot = linhas is not None
+        w = 14 * len(linhas) + 6 if anot else 20
         bx0 = sx - w // 2; byy = sy - 38 - 22
         im.alpha_composite(nine(SAIDA['ui/balao'], 3, w, 20), (bx0, byy))
         im.alpha_composite(SAIDA['ui/balao_rabo'], (sx - 3, byy + 19))
         if anot:
-            im.alpha_composite(SAIDA['itens/ing_carne'].crop((0, 0, 12, 12)), (bx0 + 4, byy + 4))
-            im.alpha_composite(SAIDA['itens/copo'].resize((8, 11), Image.NEAREST), (bx0 + 22, byy + 4))
+            for j, sab in enumerate(linhas): im.alpha_composite(SAIDA[f'icones/sabor_{sab}'], (bx0 + 4 + j * 14, byy + 4))
         else:
             texto(im, '?', sx - 3, byy + 5, TXT, 2)
         barra(im, bx0, byy - 6, w, 4, [0.25, 0.5, 0.7, 0.9, 0.95][i], VERMELHO if i == 0 else VERDE)
@@ -878,16 +998,18 @@ def previa_dia(caes_dir):
     im.alpha_composite(nine(SAIDA['ui/moldura'], 8, 640, 180), (0, 300))
     ab = nine(SAIDA['ui/aba'], 4, tw('BALCAO', 2) + 16, 18); im.alpha_composite(ab, (10, 292)); texto(im, 'BALCAO', 18, 296, TXT, 2)
     barra(im, 640 - 74, 308, 64, 8, 0.7, PERG_D)
-    ctrls = [('ANOTAR', '5', AZUL, 'icones/ctrl_anotar', None, 'normal'), ('COBRAR', 'R$12', OURO, 'icones/ctrl_cobrar', None, 'normal'),
-             ('VASSOURA', '11%', ACO_P, 'icones/ctrl_vassoura', 0.0, 'normal'), ('CARNE', '65', '#b4412b', 'itens/pastel_salgado_ponto', None, 'selecionado'),
-             ('QUEIJO', '82', OURO, 'itens/pastel_salgado_ponto', None, 'normal'), ('CALDO', 'PURO', CANA, 'icones/ctrl_caldo_puro', None, 'normal')]
-    for i, (lab, sub, fill, icon, bar_, kind) in enumerate(ctrls):
+    ctrls = [('ANOTAR', '5', AZUL, 'icones/ctrl_anotar', None, 'normal', None), ('COBRAR', 'R$12', OURO, 'icones/ctrl_cobrar', None, 'normal', None),
+             ('VASSOURA', '11%', ACO_P, 'icones/ctrl_vassoura', 0.0, 'normal', None), ('CARNE', '65', '#b4412b', 'itens/pastel_salgado_ponto', None, 'selecionado', 'carne'),
+             ('QUEIJO', '82', OURO, 'itens/pastel_salgado_ponto', None, 'normal', 'queijo'), ('ROMEU', '90', '#e58bb7', 'itens/pastel_doce_ponto', None, 'normal', 'romeu-julieta'),
+             ('CALDO', 'PURO', CANA, 'icones/ctrl_caldo_puro', None, 'normal', None)]
+    for i, (lab, sub, fill, icon, bar_, kind, sab) in enumerate(ctrls):
         cx, cy = 8 + i * 78, 326
         im.alpha_composite(nine(SAIDA[f'ui/slot_{kind}'], 4, 72, 72), (cx, cy))
         R(p, cx + 4, cy + 4, 64, 3, fill)
         ic = SAIDA[icon]
         if ic.width < 20: ic = ic.resize((ic.width * 2, ic.height * 2), Image.NEAREST)
-        im.alpha_composite(ic, (cx + 36 - ic.width // 2, cy + 22 - ic.height // 2))
+        if sab: com_selo(im, ic, cx + 36 - ic.width // 2 - 4, cy + 22 - ic.height // 2 + 2, sab, 0, 1)
+        else: im.alpha_composite(ic, (cx + 36 - ic.width // 2, cy + 22 - ic.height // 2))
         texto(im, lab, cx + 36 - tw(lab, 2) // 2, cy + 38, TXT, 2)
         texto(im, sub, cx + 36 - tw(sub, 2) // 2, cy + 51, TXT_2, 2)
         if bar_ is not None: barra(im, cx + 6, cy + 63, 60, 6, bar_, AZUL)
@@ -983,6 +1105,8 @@ def main():
     for k, (forma, c, d) in INGREDIENTES.items(): save(ingrediente(forma, c, d), f'itens/ing_{k}')
 
     for k in CTRL: save(icone_ctrl(k), f'icones/ctrl_{k}')
+    for k in SABORES: save(selo(k), f'icones/sabor_{k}')
+    save(selo_versao(), 'ui/selo_versao')
     save(moldura(), 'ui/moldura'); save(aba(), 'ui/aba')
     for k in ('normal', 'selecionado', 'desligado'): save(slot(k), f'ui/slot_{k}')
     save(balao(), 'ui/balao'); save(balao_rabo(), 'ui/balao_rabo')
@@ -998,6 +1122,7 @@ def main():
         os.makedirs(previa, exist_ok=True)
         previa_dia(caes).save(os.path.join(previa, 'dia-de-feira.png'))
         folha().save(os.path.join(previa, 'folha-de-sprites.png'))
+        previa_selos().save(os.path.join(previa, 'selos-de-sabor.png'))
         scale2x(SAIDA['capa']).save(os.path.join(previa, 'capa.png'))
     print(f'{len(SAIDA)} PNGs em {OUT}' + (f'; prévias em {previa}' if previa else ''))
 

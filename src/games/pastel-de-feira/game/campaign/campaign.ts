@@ -20,21 +20,32 @@ export const CAMPAIGN_DAYS = 20;
 
 export const round2 = (v: number): number => Math.round(v * 100) / 100;
 
+/** Capital padrão do perfil (RN-55): R$ 200, mais R$ 100 para o Tradicional. */
+export const defaultStartCash = (profile: NewCampaignOptions['profile']): number => START_CASH + (profile === 'tradicional' ? TRADITIONAL_CASH_BONUS : 0);
+/** Teto do capital inicial escolhido na nova campanha (RN-55a). */
+export const MAX_START_CASH = 100000;
+
+/** Ainda não chegou o dia mínimo desta compra? Com "liberar melhorias" (RN-55a) nada fica travado por dia. */
+export const lockedByDay = (c: Campaign, minDay: number): boolean => !c.settings.unlockAll && c.day < minDay;
+
 export function newCampaign(opts: NewCampaignOptions): Campaign {
+  const day = Math.max(1, Math.min(CAMPAIGN_DAYS, Math.round(opts.startDay ?? 1)));
+  const base = defaultStartCash(opts.profile);
   const items: ItemId[] = ['carne', 'queijo', 'caldo-puro'];
   const prices: Record<ItemId, number> = {};
   for (const id of items) prices[id] = defaultPrice(id);
   return {
     seed: opts.seed,
-    day: 1,
-    calendar: 1,
+    day,
+    calendar: day,
     freeMode: false,
-    cash: START_CASH + (opts.profile === 'tradicional' ? TRADITIONAL_CASH_BONUS : 0),
+    cash: Math.max(base, Math.min(MAX_START_CASH, Math.round(opts.startCash ?? base))),
     reputation: START_REPUTATION,
     profile: opts.profile,
     theme: null,
     eventsOn: opts.eventsOn,
-    tutorial: opts.tutorial,
+    tutorial: opts.tutorial && day === 1,
+    settings: { staffFatigue: opts.staffFatigue ?? true, unlockAll: opts.unlockAll ?? false },
     inventory: [],
     consumables: { copo: 0, saquinho: 0, embalagem: 0 },
     owned: {
@@ -171,6 +182,7 @@ export function toDayConfig(c: Campaign): DayConfig {
     season: seasonOf(c.day),
     forecast: c.forecast,
     eventsOn: c.eventsOn && c.day >= EVENTS_FIRST_DAY,
+    staffFatigue: c.settings.staffFatigue,
     annulFine: c.roles.includes('despachante') && c.calendar - c.lastAnnul >= SURPRISE.annulEveryDays,
     claimRefused: c.claim === 'recusada',
     orders: c.orders.map((o) => ({ id: o.dayId, item: o.item, qty: o.qty, pickupAt: Math.round((o.hour - 7) * (240 / 7) * 100) / 100, pay: o.pay, fine: o.fine })),

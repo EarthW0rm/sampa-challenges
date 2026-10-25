@@ -23,24 +23,53 @@ import { unmetItems } from './demand';
 
 const EPS = 1e-9;
 
-/** Estação que a posição ocupa: o pasteleiro nessa estação toma o lugar de quem está lá (JA-01). */
+/**
+ * Estação fixa da posição: o pasteleiro nessa estação toma o lugar de quem está lá (JA-01). O Fritador não
+ * tem tacho fixo (assume um tacho livre, `fryerTachos`) e a Troca de óleo é volante.
+ */
 export function homeStation(pos: PositionId): StationId | null {
   if (pos === 'balcao') return 'balcao';
-  if (pos.startsWith('colocador')) return 'bancada';
-  if (pos.startsWith('fritador')) return `tacho${pos.slice('fritador'.length)}` as StationId;
+  if (pos.startsWith('montagem')) return 'bancada';
   if (pos === 'moenda') return 'moenda';
   if (pos === 'garcom' || pos === 'ajudante') return 'mesas';
   if (pos === 'expedicao') return 'expedicao';
-  return null; // trocador de óleo é volante
+  return null;
 }
 
 const pasteleiroStation = (s: DayState): StationId | null => (s.pasteleiro.to === null ? s.pasteleiro.at : null);
+
+const tachoStation = (i: number): StationId => `tacho${i + 1}` as StationId;
+
+/**
+ * Tacho de cada Fritador (RN-40): os tachos sem o pasteleiro e sem fogo, em ordem, vão para os Fritadores em
+ * ordem de posição. Fritador sem tacho livre fica parado.
+ */
+export function fryerTachos(s: DayState): Map<number, number> {
+  const pst = pasteleiroStation(s);
+  const free = s.tachos.map((_, i) => i).filter((i) => pst !== tachoStation(i) && s.tachos[i].fireLeft <= 0);
+  const fryers = s.workers.filter((w) => w.position?.startsWith('fritador')).sort((a, b) => a.position!.localeCompare(b.position!));
+  const out = new Map<number, number>();
+  fryers.forEach((w, k) => {
+    if (k < free.length) out.set(w.id, free[k]);
+  });
+  return out;
+}
+
+/** Onde o funcionário aparece agora: o tacho do Fritador, o tacho da troca de óleo ou a estação da posição. */
+export function workerStation(s: DayState, w: Worker): StationId | null {
+  if (!w.position) return null;
+  if (w.position.startsWith('fritador')) {
+    const t = fryerTachos(s).get(w.id);
+    return t === undefined ? null : tachoStation(t);
+  }
+  if (w.position === 'trocador') return tachoStation(w.task?.kind === 'trocar' && w.task.tacho !== undefined ? w.task.tacho : 0);
+  return homeStation(w.position);
+}
 
 const holderOf = (s: DayState, pos: PositionId): Worker | undefined => s.workers.find((w) => w.position === pos);
 
 function vacant(s: DayState, pos: PositionId): boolean {
   if (!s.config.positions.includes(pos) || holderOf(s, pos)) return false;
-  if (pos.startsWith('fritador') && (s.tachos[tachoNumber(pos)]?.fireLeft ?? 0) > 0) return false; // tacho em chamas
   const home = homeStation(pos);
   return home === null || home !== pasteleiroStation(s);
 }
@@ -55,8 +84,6 @@ export function speedFactor(w: Worker): number {
   else if (w.energy < ENERGY.tiredBelow) f *= ENERGY.tiredFactor;
   return f;
 }
-
-const tachoNumber = (pos: PositionId): number => Number(pos.slice(-1)) - 1;
 
 /** Bônus de nota de quem tira do óleo: Caprichoso e curso de Fritura (RN-114, RN-118). */
 const fryBonus = (w: Worker): number => (w.traits.includes('caprichoso') ? CARE_BONUS : 0) + (w.courses.includes('fritura') ? FRY_COURSE_BONUS : 0);
@@ -110,6 +137,7 @@ function updateEnergy(s: DayState, w: Worker, dt: number): void {
     }
     return;
   }
+  if (!s.config.staffFatigue) return; // sem cansaço (RN-55a): a energia não cai e ninguém precisa descansar
   if (w.position) {
     const mult = w.traits.includes('resistente') ? RESISTANT_FATIGUE : 1;
     w.energy = Math.max(0, w.energy - ENERGY.drainPerSecond * mult * fatigueRate(s) * dt);
@@ -140,7 +168,6 @@ function assign(s: DayState): void {
   const pst = pasteleiroStation(s);
   for (const w of s.workers) {
     if (w.position && homeStation(w.position) === pst && pst !== null) release(w, s); // o pasteleiro entra na posição (JA-01)
-    if (w.position?.startsWith('fritador') && (s.tachos[tachoNumber(w.position)]?.fireLeft ?? 0) > 0) release(w, s); // fogo: sai da posição
   }
   const reserved = new Set<PositionId>();
   for (const w of s.workers) if (w.mode === 'fixo' && w.fixedPosition) reserved.add(w.fixedPosition);
@@ -152,6 +179,11 @@ function assign(s: DayState): void {
     if (w.position || w.resting || w.away > 0 || w.mode !== 'auto') continue;
     const pos = AUTO_PRIORITY.find((p) => eligible(w, p) && vacant(s, p) && !reserved.has(p));
     if (pos) w.position = pos;
+  }
+  // Fritador que perdeu o tacho (o pasteleiro chegou ou pegou fogo) larga a colocação que fazia nele (JA-01)
+  const map = fryerTachos(s);
+  for (const w of s.workers) {
+    if (w.position?.startsWith('fritador') && w.task?.kind === 'colocar' && w.task.tacho !== map.get(w.id)) w.task = null;
   }
 }
 
@@ -256,6 +288,10 @@ function pickPlace(s: DayState, w: Worker, tachoIndex: number): boolean {
   return true;
 }
 
+/** Montagem: o pastel montado vai para qualquer tacho com cesto livre, do primeiro para o último (RN-40). */
+const pickPlaceAny = (s: DayState, w: Worker): boolean => s.tachos.some((_, i) => pickPlace(s, w, i));
+
+/** Monta o próximo pastel que falta (só a Montagem monta: o Fritador frita pastéis já montados, RN-44). */
 function pickAssemble(s: DayState, w: Worker): boolean {
   if (s.assembled.length >= BENCH_CAPACITY) return false;
   const inProgress = s.workers.filter((o) => o.task?.kind === 'montar').map((o) => o.task!.item as ItemId);
@@ -275,12 +311,15 @@ function pickCaldo(s: DayState, w: Worker): boolean {
   return true;
 }
 
-/** Tacho que precisa de troca: óleo sujo, parado por ninguém, sem o pasteleiro lá (RN-45, RN-46). */
-function pickOil(s: DayState, w: Worker): boolean {
+/**
+ * Tacho que precisa de troca: óleo sujo, parado por ninguém, sem o pasteleiro lá (RN-45, RN-46). `only`: o
+ * Fritador cuida só do tacho dele; a Troca de óleo atende todos.
+ */
+function pickOil(s: DayState, w: Worker, only?: number): boolean {
   const pst = pasteleiroStation(s);
   let best = -1;
   s.tachos.forEach((t, i) => {
-    if (t.dirt < OIL_DIRTY_THRESHOLD - EPS || isChanging(t) || pst === `tacho${i + 1}`) return;
+    if ((only !== undefined && i !== only) || t.dirt < OIL_DIRTY_THRESHOLD - EPS || isChanging(t) || pst === `tacho${i + 1}`) return;
     if (best < 0 || t.dirt > s.tachos[best].dirt) best = i;
   });
   if (best < 0) return false;
@@ -317,23 +356,20 @@ function fryerTakes(s: DayState, w: Worker, tachoIndex: number): boolean {
 function pickTask(s: DayState, w: Worker): void {
   const pos = w.position;
   if (!pos) return;
-  // Fritador automático vira Trocador quando um tacho chega a 70% e não há trocador (RN-45)
-  if (w.mode === 'auto' && w.kind === 'fritador' && pos !== 'trocador' && !holderOf(s, 'trocador') && pickOil(s, w)) return;
   if (pos === 'balcao') pickBalcao(s, w);
   else if (pos === 'trocador') pickOil(s, w);
   else if (pos === 'moenda') pickCaldo(s, w);
   else if (pos === 'garcom') pickWaiter(s, w);
   else if (pos === 'ajudante') pickHelper(s, w);
   else if (pos === 'expedicao') pickDispatch(s, w);
-  else if (pos.startsWith('colocador')) {
-    if (!pickPlace(s, w, tachoNumber(pos))) pickAssemble(s, w);
+  else if (pos.startsWith('montagem')) {
+    if (!pickPlaceAny(s, w)) pickAssemble(s, w);
   } else if (pos.startsWith('fritador')) {
-    const n = tachoNumber(pos);
-    if (fryerTakes(s, w, n)) return;
-    // Fritador sem Colocador no mesmo tacho acumula as duas funções (RN-44)
-    if (!holderOf(s, `colocador${n + 1}` as PositionId)) {
-      if (!pickPlace(s, w, n)) pickAssemble(s, w);
-    }
+    const n = fryerTachos(s).get(w.id);
+    if (n === undefined) return; // nenhum tacho livre para ele
+    // o Fritador cuida de tudo no tacho dele: tira no ponto, troca o óleo e coloca os pastéis já montados (RN-44)
+    if (fryerTakes(s, w, n) || pickOil(s, w, n)) return;
+    pickPlace(s, w, n);
   }
 }
 

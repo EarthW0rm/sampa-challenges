@@ -42,7 +42,10 @@ export const TACHO = {
   extraPrice: 350,
   extraSpace: 2,
   max: 3,
-  largePrice: 400,
+  /** Cesto avulso (RN-73): +1 cesto no primeiro tacho com menos de `maxBaskets`. */
+  basketPrice: 200,
+  baseBaskets: 2,
+  maxBaskets: 4,
   alarmPrice: 60,
   thermostatPrice: 350,
   timerPrice: 600,

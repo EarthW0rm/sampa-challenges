@@ -136,6 +136,8 @@ export interface Campaign {
   theme: Theme | null;
   eventsOn: boolean;
   tutorial: boolean;
+  /** Opções escolhidas ao criar a campanha (RN-55a). */
+  settings: CampaignSettings;
   inventory: InvLot[];
   consumables: Record<ConsumableId, number>;
   owned: Owned;
@@ -187,11 +189,25 @@ export const REFUSAL_TEXT: Readonly<Record<Refusal, string>> = {
   semEspaco: 'Sem espaço na barraca',
 };
 
+/** Opções da campanha (RN-55a): cansaço da equipe e compras sem esperar o dia mínimo. */
+export interface CampaignSettings {
+  /** Funcionários cansam (energia, descanso, RN-115). Desligado: a energia não cai. */
+  staffFatigue: boolean;
+  /** Melhorias, receitas e áreas à venda desde o início, sem o "a partir do dia N". */
+  unlockAll: boolean;
+}
+
 export interface NewCampaignOptions {
   profile: PastryProfile;
   eventsOn: boolean;
   tutorial: boolean;
   seed: number;
+  /** Capital inicial; nunca abaixo do padrão do perfil (RN-55a). */
+  startCash?: number;
+  /** Dia em que a campanha começa (1 a 20, RN-55a). */
+  startDay?: number;
+  staffFatigue?: boolean;
+  unlockAll?: boolean;
 }
 
 /** Linha do balanço do dia (tela de Fechamento). */

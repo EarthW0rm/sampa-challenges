@@ -7,6 +7,7 @@ import { ingredientsCost } from '../../game/data/catalog';
 import { ITEMS, itemIngredients, type Item } from '../../game/data/recipes';
 import { BRINDE_MAX_N, BRINDE_MIN_N, CHORINHO_MAX, PRICE_STEP, XEPA_DISCOUNTS } from '../../game/constants';
 import { money } from '../format';
+import { flavorIcon } from '../icons';
 
 interface Props {
   campaign: Campaign;
@@ -121,6 +122,7 @@ export function MenuTab({ campaign: c, onChange }: Props) {
                   <li className="item" key={it.id}>
                     <label className="check">
                       <input type="checkbox" checked={onMenu(it)} onChange={() => toggle(it)} />
+                      {flavorIcon(it.kind === 'bebida' ? it.id : it.base) && <img className="item-icon" src={flavorIcon(it.kind === 'bebida' ? it.id : it.base)} alt="" aria-hidden="true" width={24} height={24} />}
                       <span className="item-main">
                         <strong>{it.name}</strong>
                         <span>

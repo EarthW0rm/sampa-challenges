@@ -12,6 +12,7 @@ import { hire, rollCandidates } from '../../../src/games/pastel-de-feira/game/ca
 import { capacityFree } from '../../../src/games/pastel-de-feira/game/campaign/campaign';
 import { clampPrice } from '../../../src/games/pastel-de-feira/game/campaign/pricing';
 import { offers } from '../../../src/games/pastel-de-feira/game/campaign/shop';
+import { findOffer } from '../../../src/games/pastel-de-feira/sim/bots';
 import { showSuggestion, suggestPurchase } from '../../../src/games/pastel-de-feira/game/campaign/suggest';
 import type { Campaign } from '../../../src/games/pastel-de-feira/game/campaign/types';
 import { PRICE_STEP } from '../../../src/games/pastel-de-feira/game/constants';
@@ -35,7 +36,7 @@ export interface LastDay {
 }
 
 /** Ordem de compra do robô equilibrado (sem mesas nem delivery: o piloto só atende o balcão). */
-export const BOT_ORDER = ['alarme0', 'grande0', 'caixa-termica', 'estufa', 'placa-salgado', 'frango', 'calabresa', 'tacho-extra', 'caixa-termica', 'm2', 'especial', 'termostato0', 'estufa-grande'];
+export const BOT_ORDER = ['alarme0', 'cesto0', 'cesto0', 'caixa-termica', 'estufa', 'placa-salgado', 'frango', 'calabresa', 'tacho-extra', 'caixa-termica', 'm2', 'especial', 'termostato0', 'estufa-grande'];
 
 /** Parâmetros da estratégia. O padrão é mais agressivo que o robô de calibração, para a campanha fechar sem ficar presa nos dias 16–20. */
 export interface StrategyOptions {
@@ -50,7 +51,7 @@ export interface StrategyOptions {
 
 export const ROBOT: StrategyOptions = { order: BOT_ORDER, maxBuys: 2, hireOnMiss: false, staffCap: (d) => 1 + Math.floor(d / 4), premiumMenu: false };
 /** Receitas caras (tíquete maior) e as placas para caberem. */
-const PREMIUM_ORDER = ['alarme0', 'grande0', 'estufa', 'placa-salgado', 'especial', 'palmito', 'carne-seca', 'caixa-termica', 'tacho-extra', 'camarao', 'placa-salgado', 'bacalhau', 'm2', 'm2', 'alarme1', 'grande1', 'escorredor', 'termostato0', 'termostato1', 'caixa-termica', 'estufa-grande', 'moenda-motorizada'];
+const PREMIUM_ORDER = ['alarme0', 'cesto0', 'cesto0', 'estufa', 'placa-salgado', 'especial', 'palmito', 'carne-seca', 'caixa-termica', 'tacho-extra', 'camarao', 'placa-salgado', 'bacalhau', 'm2', 'm2', 'alarme1', 'cesto1', 'cesto1', 'escorredor', 'termostato0', 'termostato1', 'caixa-termica', 'estufa-grande', 'moenda-motorizada'];
 export const DEFAULT_STRATEGY: StrategyOptions = { order: PREMIUM_ORDER, maxBuys: 3, hireOnMiss: false, staffCap: (d) => 1 + Math.floor(d / 4), premiumMenu: true };
 
 export function planPrep(start: Campaign, last?: LastDay, opts: StrategyOptions = DEFAULT_STRATEGY): { steps: PrepStep[]; expected: Campaign } {
@@ -63,7 +64,7 @@ export function planPrep(start: Campaign, last?: LastDay, opts: StrategyOptions 
   let bought = 0;
   for (const id of opts.order) {
     if (bought >= opts.maxBuys) break;
-    const o = offers(c).find((x) => x.id === id && !picked.has(x.id));
+    const o = findOffer(offers(c), c, id, picked);
     if (!o) continue;
     const r = o.buy(c);
     if (r.ok && r.campaign.cash >= reserve) {

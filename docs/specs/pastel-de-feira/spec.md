@@ -42,7 +42,8 @@
 ### Jornada Principal — um dia de campanha
 
 0. **Nova campanha** (uma vez): o jogador escolhe o **perfil do pasteleiro** (RN-110), se os
-   **eventos** ficam ligados (RN-150) e se faz o **tutorial** (RN-170).
+   **eventos** ficam ligados (RN-150), se faz o **tutorial** (RN-170) e as **opções** (RN-55a): capital
+   inicial, dia inicial, cansaço dos funcionários e melhorias liberadas desde o início.
 1. **Preparo** (fora do relógio): o jogador vê caixa, reputação, dia, estação, previsão do dia
    (eventos previstos) e a **meta do dia**.
    - Compra **insumos** e **consumíveis** dentro da capacidade de estoque. Nos dias 1 a 3 (ou
@@ -163,12 +164,12 @@
 | Categoria | Receita | Insumos (1 unidade cada) | Etapas | Fritura no ponto | Queima após | Ref. | Desbloqueio |
 |---|---|---|---|---|---|---|---|
 | Tradicional | Carne | massa + carne | 1 | 5–8 s | 10 s | R$ 8,00 | inicial |
-| Tradicional | Queijo | massa + muçarela + orégano | 1 | 5–8 s | 10 s | R$ 8,00 | inicial |
+| Tradicional | Queijo | massa + muçarela | 1 | 5–8 s | 10 s | R$ 8,00 | inicial |
 | Tradicional | Frango | massa + frango | 1 | 5–8 s | 10 s | R$ 8,00 | R$ 80 |
 | Tradicional | Calabresa | massa + calabresa + cebola | 2 | 5–8 s | 10 s | R$ 8,50 | R$ 80 |
-| Tradicional | Bauru | massa + presunto + muçarela | 2 | 6–9 s | 11 s | R$ 11,00 | R$ 150 |
+| Tradicional | Bauru | massa + muçarela + presunto + tomate | 3 | 6–9 s | 11 s | R$ 11,00 | R$ 150 |
 | Tradicional | Frango com Catupiry | massa + frango + catupiry | 2 | 6–9 s | 11 s | R$ 11,00 | R$ 150 |
-| Tradicional | Pizza | massa + muçarela + presunto + tomate + orégano | 3 | 6–9 s | 11 s | R$ 12,00 | R$ 150 |
+| Tradicional | Pizza | massa + tomate + muçarela + orégano | 2 | 6–9 s | 11 s | R$ 12,00 | R$ 150 |
 | Nobre | Palmito | massa + palmito + catupiry | 2 | 9–10,5 s | 11,5 s | R$ 16,00 | R$ 400, dia 6 |
 | Nobre | Carne Seca | massa + carne seca + queijo coalho | 2 | 9–10,5 s | 11,5 s | R$ 17,00 | R$ 450, dia 8 |
 | Nobre | Camarão | massa + camarão + catupiry | 2 | 9–10,5 s | 11,5 s | R$ 20,00 | R$ 600, dia 11 |
@@ -216,16 +217,16 @@
 
 | # | Regra | Tipo |
 |---|---|---|
-| RN-40 | Posições da barraca (cada uma comporta **uma** pessoa): **Balcão** (anotar, entregar, cobrar), **Colocador** do tacho N (montar + colocar no óleo), **Fritador** do tacho N (tirar no ponto e pôr na estufa), **Trocador de óleo** (volante, atende todos os tachos), **Moenda** (caldo), **Garçom** (só com mesas), **Ajudante** (limpa mesas e barraca), **Expedição** (só com delivery: embalar e entregar ao motoboy), **Escritório** (só o pasteleiro e os cargos de gestão) | Obrigatória |
+| RN-40 | Posições da barraca (cada uma comporta **uma** pessoa): **Balcão** (anotar, entregar, cobrar), **Montagem** N (monta na bancada e coloca o pastel montado em qualquer tacho com cesto livre, do primeiro para o último), **Fritador** N (cuida de tudo no tacho dele: coloca os pastéis já montados, tira no ponto, põe na estufa e troca o óleo; não monta; os Fritadores assumem, em ordem de posição, os tachos livres — sem o pasteleiro e sem fogo — em ordem; Fritador sem tacho livre fica parado), **Troca de óleo** (volante, troca o óleo de qualquer tacho), **Moenda** (caldo), **Garçom** (só com mesas), **Ajudante** (limpa mesas e barraca), **Expedição** (só com delivery: embalar e entregar ao motoboy), **Escritório** (só o pasteleiro e os cargos de gestão) | Obrigatória |
 | RN-41 | O pasteleiro ocupa uma posição por vez. Clicar numa estação o desloca até ela: 0,4 s entre estações vizinhas e 0,2 s por estação a mais no caminho **(P)**. Ele só age onde está | Obrigatória |
 | RN-42 | Ações manuais do pasteleiro: anotar = clicar no cliente da frente; montar = clicar em cada ingrediente e depois em "fechar"; colocar = clicar num cesto livre; tirar = clicar no cesto; estufa = arrastar ou clicar o pastel pronto até a estufa; caldo = segurar a moenda (6 s manual, 2,5 s motorizada **(P)**); entregar = clicar no item pronto e depois no cliente; cobrar = clicar nas moedas; trocar óleo = segurar o tacho por 8 s **(P)**; limpar = segurar a mesa (3 s) ou a vassoura (4 s, −25 de sujeira) **(P)** | Obrigatória |
 | RN-43 | Tempos dos funcionários, com energia ≥ 40 e sem traços **(P)**: anotar 1,5 s; montar 0,5 s + 1,5 s por etapa (1 etapa = 2 s; 4 etapas = 6,5 s); colocar 0,8 s; tirar no meio da janela do ponto (nunca queima); caldo pelo tempo da moenda + 0,5 s; entregar e cobrar 1,5 s; troca de óleo 10 s; limpar mesa 3 s | Obrigatória |
-| RN-44 | Fritador sem colocador no mesmo tacho acumula as duas funções: monta, coloca e tira, com o tempo de montagem e de colocação somado ao ciclo | Condicional |
-| RN-45 | Funcionário **fixo** fica só na posição escolhida. Funcionário em **automático** ocupa a posição vaga de maior prioridade **que o tipo dele permite** (RN-49): Fritador > Balcão > Colocador > Moenda > Expedição > Garçom > Ajudante. Um Fritador em automático vira Trocador de óleo quando um tacho chega a 70% de sujeira e não há trocador | Obrigatória |
+| RN-44 | **O Fritador não monta pastel**: frita pastéis já montados (pela Montagem ou pelo pasteleiro). No tacho dele, coloca, tira no ponto e troca o óleo quando passa de 70%. Sem ninguém na Montagem, a montagem fica com o pasteleiro | Condicional |
+| RN-45 | Funcionário **fixo** fica só na posição escolhida. Funcionário em **automático** ocupa a posição vaga de maior prioridade **que o tipo dele permite** (RN-49): Fritador > Balcão > Montagem > Troca de óleo > Moenda > Expedição > Garçom > Ajudante. O óleo é trocado pelo Fritador do tacho ou pela Troca de óleo (volante); as outras posições não trocam | Obrigatória |
 | RN-46 | Óleo: +4% de sujeira por pastel frito (+3% com Óleo de Algodão) **(P)**. A partir de 70% conta como sujo (RN-24). Em 100% o tacho trava até a troca. A troca custa R$ 25 (comum) ou R$ 45 (algodão) **(P)** e deixa o tacho parado durante a operação | Obrigatória |
 | RN-47 | Salário diário base **(P)**: **Fritador R$ 75** (o maior), **Geral R$ 55**. Os traços modificam o salário (RN-114). Debitado no fechamento | Obrigatória |
 | RN-48 | Contratar e dispensar só no Preparo e sem custo extra, entre os candidatos do dia (RN-113). O número de funcionários não pode passar o número de posições existentes | Restritiva |
-| RN-49 | Existem **dois tipos de contratação**. **Fritador**: perfil único do tacho, o único que pode ocupar as posições de **Fritador** (tirar do óleo) e **Trocador de óleo**. Também pode ocupar qualquer outra posição. **Geral**: ocupa qualquer posição operacional, exceto Fritador e Trocador de óleo. O Colocador (montar + colocar) aceita os dois tipos | Obrigatória |
+| RN-49 | Existem **dois tipos de contratação**. **Fritador**: perfil único do tacho, o único que pode ocupar as posições de **Fritador** (tirar do óleo) e **Troca de óleo**. Também pode ocupar qualquer outra posição. **Geral**: ocupa qualquer posição operacional, exceto Fritador e Troca de óleo. A Montagem (montar + colocar) aceita os dois tipos | Obrigatória |
 
 ### 3.6 Metas, campanha e economia
 
@@ -237,6 +238,7 @@
 | RN-53 | No Preparo nenhuma compra pode deixar o caixa negativo | Restritiva |
 | RN-54 | Campanha de 20 metas. Cumprida a do dia 20, a campanha está zerada e entra em **modo livre** (dias sem meta; recorde = maior caixa) | Obrigatória |
 | RN-55 | O progresso é salvo no Preparo, no início do Dia de Feira (checkpoint) e no fechamento. Só existe uma campanha salva, e "Nova campanha" pede confirmação antes de apagar a atual | Obrigatória |
+| RN-55a | **Opções da nova campanha:** capital inicial (o padrão do perfil, R$ 200 ou R$ 300 no Tradicional, aumentável de R$ 100 em R$ 100 até R$ 100.000; nunca abaixo do padrão); dia em que a campanha começa (1 a 20; o tutorial só existe no dia 1); cansaço dos funcionários ligado ou desligado (desligado: a energia não cai, RN-115 e RN-116 não se aplicam); e liberar as melhorias, receitas e áreas desde o início, sem o dia mínimo de compra. As opções ficam salvas na campanha | Opcional |
 | RN-56 | O card do hub mostra como recorde o maior dia concluído e, em modo livre, o maior caixa | Obrigatória |
 | RN-57 | **Passar o ponto:** disponível no Preparo só depois de zerar. Valor do ponto = caixa + 50% do que foi gasto em equipamentos, espaço, mesas e estruturas **(P)**. Encerra a campanha atual e abre uma nova com caixa inicial R$ 200 + 20% do valor do ponto **(P)**, novo perfil e reputação 3,0. O maior valor de ponto fica registrado como recorde secundário. **Na falência** (dia ≥ 10): valor do ponto = 25% do que foi gasto em equipamentos, espaço, mesas e estruturas, sem somar o caixa negativo **(P)** | Condicional |
 
@@ -257,7 +259,7 @@
 | RN-70 | A barraca inicial tem 6 m² com balcão, 1 tacho pequeno, bancada e moenda manual **(P)** | Obrigatória |
 | RN-71 | Metro quadrado extra: R$ 120 por m² na compra + R$ 8 por m² de taxa diária à associação, debitada no fechamento. Máximo 24 m² **(P)** | Obrigatória |
 | RN-72 | Espaço exigido **(P)**: tacho extra 2 m²; mesa com 4 cadeiras 2 m²; área de delivery 3 m²; escritório 4 m²; caixa térmica 1 m²; área de descanso 1 m². Estufa, escorredor e moenda motorizada não ocupam espaço extra | Restritiva |
-| RN-73 | Equipamentos **(P)**: Tacho grande (de 2 para 4 cestos) R$ 400 por tacho; tacho extra R$ 350 (máximo 3 tachos); moenda motorizada R$ 500; Óleo de Algodão R$ 300; Escorredor Profissional R$ 250; Embalagem Térmica R$ 250; Estufa de vidro R$ 300; Estufa grande (6 → 12 vagas, requer a estufa) R$ 350; Alarme do ponto R$ 60 por tacho (aviso visual e sonoro quando um pastel entra no ponto e 1 s antes de queimar); Termostato R$ 350 por tacho (janela do ponto +50% e "queima após" +3 s). Automação por equipamento na seção 3.19 | Obrigatória |
+| RN-73 | Equipamentos **(P)**: tacho extra R$ 350 (máximo 3 tachos; nasce com 2 cestos); **cesto extra** R$ 200 cada (+1 cesto no primeiro tacho, em ordem, com menos de 4; enche um tacho até 4 antes de passar ao próximo); moenda motorizada R$ 500; Óleo de Algodão R$ 300; Escorredor Profissional R$ 250; Embalagem Térmica R$ 250; Estufa de vidro R$ 300; Estufa grande (6 → 12 vagas, requer a estufa) R$ 350; Alarme do ponto R$ 60 por tacho (aviso visual e sonoro quando um pastel entra no ponto e 1 s antes de queimar); Termostato R$ 350 por tacho (janela do ponto +50% e "queima após" +3 s). Automação por equipamento na seção 3.19 | Obrigatória |
 | RN-74 | **Área de jogo de 640×480 unidades lógicas (4:3)**, com layout fixo e sem câmera móvel. A **visão geral** ocupa a área inteira e mostra cada espaço comprado como zona nova (tacho, mesas, delivery, escritório, estoque, descanso). **Painel retrátil da estação:** quando o pasteleiro chega à estação tocada (RN-41), um painel de ≈ 640×180 **(P)** sobe por cima da faixa inferior com os controles detalhados (cestos e barras de fritura, ingredientes, moenda, comandas). Ele recolhe ao tocar fora dele ou depois de 4 s sem interação **(P)** | Obrigatória |
 | RN-75 | A visão geral mostra o estado de todas as estações ao mesmo tempo (barra de fritura resumida por cesto, sujeira do óleo, fila, paciência, comandas do app, estufa), para o jogador acompanhar o que não está no painel. As zonas de uso mais frequente (fila, balcão, tachos, estufa) ficam acima da faixa que o painel cobre, e os avisos (oferta de comanda, eventos, alarme do ponto) ficam sempre visíveis, também com o painel aberto | Obrigatória |
 
@@ -472,7 +474,7 @@ parada em queda de energia.
       simulação de referência (a armadilha funciona).
 - [ ] Brinde com N = 2 e chorinho 3 todos os dias aumenta a reputação, mas reduz o lucro abaixo da
       meta na simulação de referência (o trade-off funciona).
-- [ ] Barraca cheia (3 tachos grandes, 4 mesas, delivery, escritório, 2 caixas térmicas, área de
+- [ ] Barraca cheia (3 tachos com 4 cestos, 4 mesas, delivery, escritório, 2 caixas térmicas, área de
       descanso, estufa grande) cabe na visão geral de 640×480 sem sobrepor zonas, com as zonas de
       uso frequente fora da faixa coberta pelo painel. O painel de qualquer estação cabe em ≈ 640×180.
 - [ ] Os valores (P) foram calibrados pela simulação sem tela até os critérios acima passarem, e
@@ -513,7 +515,7 @@ parada em queda de energia.
 | **Barraca** | Toda a área controlada pelo jogador na feira, medida em m² |
 | **Estação** | Ponto físico da barraca onde se faz uma ação (balcão, bancada, tacho, estufa, moenda, mesa, expedição, escritório, descanso) |
 | **Posição** | Vaga de trabalho numa estação. Comporta uma pessoa |
-| **Função** | Tipo de trabalho de uma posição (Balcão, Colocador, Fritador, Trocador de óleo, Moenda, Garçom, Ajudante, Expedição) |
+| **Função** | Tipo de trabalho de uma posição (Balcão, Montagem, Fritador, Troca de óleo, Moenda, Garçom, Ajudante, Expedição) |
 | **Tipo de contratação** | Fritador (único que tira do óleo e troca óleo, maior salário) ou Geral (demais posições) |
 | **Fila de pagamento** | Fila do balcão onde os grupos de mesa pagam ao sair |
 | **Caixa de encomenda** | Armazenamento próprio dos pastéis prontos de uma encomenda |
@@ -551,7 +553,7 @@ Premissas da revisão 3, validadas pelo utilizador. Nenhuma premissa está pende
 
 | # | Decisão | Regras |
 |---|---|---|
-| PA-01 | O **Colocador** monta e coloca no óleo. Não existe função Montador | RN-40 |
+| PA-01 | A **Montagem** monta e coloca no óleo (em qualquer tacho). Não existe função Colocador separada | RN-40 |
 | PA-02 | Existe a função **Expedição** (embalar e entregar ao motoboy) | RN-40 |
 | PA-03 | Dois tipos de contratação: **Fritador** (único no tirar do óleo e na troca de óleo, maior salário) e **Geral** | RN-47, RN-49 |
 | PA-04 | Bônus de aproveitamento = receita × max(0; 15% − % de desperdício) | RN-37 |

@@ -79,7 +79,7 @@ PNGs, ~190 MB, +35 s (2,4 → 3,0 min). Uma evidência que falha só gera aviso 
 | `clientes` | chegada, pedido, paciência por perfil e por posição, sujeira, fila cheia, toque no cliente |
 | `teclado` | números, Esc, setas, Enter/Espaço, auto-repeat, M, Ctrl |
 | `tutorial` | dicas, relógio parado, 2× bloqueado, primeiro pedido guiado |
-| `melhorias` | tacho grande/extra, termostato, alarme, escorredor, algodão, moenda motorizada, estufa, mesa, m² |
+| `melhorias` | cesto extra, tacho extra, termostato, alarme, escorredor, algodão, moenda motorizada, estufa, mesa, m² |
 | `equipe` | contratação, tipos, Fritador, energia, descanso, JA-01, salário |
 | `mesas-delivery` | grupo de mesa até o pagamento e a limpeza; oferta, expiração, cancelamento e retirada do app |
 | `escritorio` | escritório, encomenda completa/incompleta, caixa de encomenda |

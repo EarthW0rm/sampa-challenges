@@ -51,12 +51,12 @@ const U = (price: number, day = 1): Unlock => ({ price, day });
 // RN-30
 const RECIPE_LIST: readonly BaseRecipe[] = [
   rec('carne', 'Carne', 'tradicional', ['carne'], [], [5, 8], 10, 8, U(0)),
-  rec('queijo', 'Queijo', 'tradicional', ['mucarela'], ['oregano'], [5, 8], 10, 8, U(0)),
+  rec('queijo', 'Queijo', 'tradicional', ['mucarela'], [], [5, 8], 10, 8, U(0)),
   rec('frango', 'Frango', 'tradicional', ['frango'], [], [5, 8], 10, 8, U(80)),
   rec('calabresa', 'Calabresa', 'tradicional', ['calabresa', 'cebola'], [], [5, 8], 10, 8.5, U(80)),
-  rec('bauru', 'Bauru', 'tradicional', ['presunto', 'mucarela'], [], [6, 9], 11, 11, U(150)),
+  rec('bauru', 'Bauru', 'tradicional', ['mucarela', 'presunto', 'tomate'], [], [6, 9], 11, 11, U(150)),
   rec('frango-catupiry', 'Frango com Catupiry', 'tradicional', ['frango', 'catupiry'], [], [6, 9], 11, 11, U(150)),
-  rec('pizza', 'Pizza', 'tradicional', ['mucarela', 'presunto', 'tomate'], ['oregano'], [6, 9], 11, 12, U(150)),
+  rec('pizza', 'Pizza', 'tradicional', ['tomate', 'mucarela'], ['oregano'], [6, 9], 11, 12, U(150)),
   rec('palmito', 'Palmito', 'nobre', ['palmito', 'catupiry'], [], [9, 10.5], 11.5, 16, U(400, 6)),
   rec('carne-seca', 'Carne Seca', 'nobre', ['carne-seca', 'queijo-coalho'], [], [9, 10.5], 11.5, 17, U(450, 8)),
   rec('camarao', 'Camarão', 'nobre', ['camarao', 'catupiry'], [], [9, 10.5], 11.5, 20, U(600, 11)),

@@ -43,6 +43,28 @@ test.describe('Hub, título e campanha', () => {
     await expect(page.locator('.pastel-de-feira .prep-head')).toContainText('Caixa R$ 200,00');
   });
 
+  test('RN-55a: opções da nova campanha — capital maior, dia inicial, sem cansaço e melhorias liberadas', async ({ game, page }) => {
+    await game.boot({ campaign: null });
+    await page.getByRole('button', { name: 'Nova campanha' }).click();
+    const less = page.getByRole('button', { name: 'Diminuir o capital' });
+    await expect(less).toBeDisabled(); // nunca abaixo do padrão
+    for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Aumentar o capital' }).click();
+    await expect(page.getByRole('group', { name: 'Capital inicial' })).toContainText('R$ 800,00');
+    await page.getByRole('combobox', { name: /Começar no dia/ }).selectOption('6');
+    await expect(page.getByRole('checkbox', { name: /Tutorial/ })).toBeDisabled(); // tutorial só no dia 1
+    await page.getByRole('checkbox', { name: /Funcionários cansam/ }).uncheck();
+    await page.getByRole('checkbox', { name: /Liberar todas as melhorias/ }).check();
+    await page.getByRole('button', { name: 'Começar' }).click();
+    const head = page.locator('.pastel-de-feira .prep-head');
+    await expect(head).toContainText('Dia 6');
+    await expect(head).toContainText('Caixa R$ 800,00');
+    const saved = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), SAVE_KEY);
+    expect(saved.campaign.settings).toEqual({ staffFatigue: false, unlockAll: true });
+    // com as melhorias liberadas, a área de delivery (dia 5) e o escritório (dia 10) não mostram dia mínimo
+    await page.getByRole('tab', { name: 'Melhorias' }).click();
+    await expect(page.locator('.pastel-de-feira').getByText(/A partir do dia/)).toHaveCount(0);
+  });
+
   test('RN-55: a campanha é salva no Preparo e "Continuar (dia 1)" volta a ela depois de recarregar', async ({ game, page }) => {
     await game.boot({ campaign: null });
     await page.getByRole('button', { name: 'Nova campanha' }).click();

@@ -24,7 +24,8 @@ desenhados com `blitFeet` (largura do PNG ÷ 2). Nunca `ctx.drawImage(spriteEmAl
 Ajudantes de desenho (`game/render/draw.ts`): `drawArt` (sprite no tamanho lógico), `drawThree` (peça
 3-slice `<nome>_esq|_meio|_dir`: bordas de 8 px — 10 no tacho —, meio de 16 px repetido até a largura),
 `drawNine` (9-slice esticado: cantos de 8 em `ui/moldura`, 4 em `ui/aba` e `ui/slot_*`, 3 em `ui/balao`) e
-`drawPlaque` (placa de madeira com o nome da zona). Texto escuro (`PAL.ink`, `PAL.ink2`) vai sem sombra
+`drawPlaque` (placa de madeira com o nome da zona), `drawFlavor`/`drawPastelFlavor` (selo do sabor
+`icones/sabor_<base>` com os pontinhos da versão `ui/selo_versao`; o `flavor` de `Control` põe o selo no ícone do painel). Texto escuro (`PAL.ink`, `PAL.ink2`) vai sem sombra
 (`shadow = null`); `PAL.text` é claro, para faixas vermelhas e fogo. O `icon` de `Control` (`render/panel.ts`)
 é só apresentação. No DOM, os ícones do HUD e dos insumos vêm de `components/icons.ts` e a moldura de
 madeira é a classe `.moldura` (`border-image` com `--pf-moldura`, definida na raiz em `Game.tsx`).

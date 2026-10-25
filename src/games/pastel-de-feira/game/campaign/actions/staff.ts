@@ -64,7 +64,7 @@ export function fire(c: Campaign, staffId: number): ActionResult {
   return { ok: true, campaign: next };
 }
 
-/** Fixo numa posição ou automático (RN-45). Fritador e Trocador de óleo só para o tipo Fritador (RN-49). */
+/** Fixo numa posição ou automático (RN-45). Fritador e Troca de óleo só para o tipo Fritador (RN-49). */
 export function setMode(c: Campaign, staffId: number, mode: 'fixo' | 'auto', position?: PositionId): ActionResult {
   const s = c.staff.find((x) => x.id === staffId);
   if (!s) return no('requer');

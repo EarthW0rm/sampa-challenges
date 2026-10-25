@@ -14,7 +14,7 @@ export function appConfig(patch: Partial<DayConfig> = {}): DayConfig {
   return devConfig({
     delivery: { on: true, auto: false, partner: false },
     stations: ['balcao', 'bancada', 'tacho1', 'estufa', 'moenda', 'expedicao', 'escritorio'],
-    positions: ['balcao', 'colocador1', 'fritador1', 'trocador', 'moenda', 'expedicao'],
+    positions: ['balcao', 'montagem1', 'fritador1', 'trocador', 'moenda', 'expedicao'],
     equipment: { ...base.equipment, warmer: 6 },
     consumables: { copo: 40, saquinho: 100, embalagem: 20 },
     ...patch,

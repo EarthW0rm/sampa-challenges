@@ -40,8 +40,8 @@ test.describe('Pedido de balcão de ponta a ponta', () => {
     expect(s1).toEqual({ ...s0, massa: s0.massa - 1, carne: s0.carne - 1 });
     await assemble(game, 'queijo');
     const s2 = await stock();
-    // o orégano é tempero: entra sozinho ao fechar (RN-30)
-    expect(s2).toEqual({ ...s1, massa: s1.massa - 1, mucarela: s1.mucarela - 1, oregano: s1.oregano - 1 });
+    // Queijo é só queijo e massa: não gasta orégano (RN-30)
+    expect(s2).toEqual({ ...s1, massa: s1.massa - 1, mucarela: s1.mucarela - 1 });
   });
 
   test('RN-42: LIMPAR esvazia a bandeja sem consumir insumo', async ({ game }) => {

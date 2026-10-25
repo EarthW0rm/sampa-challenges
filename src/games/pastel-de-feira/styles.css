@@ -192,6 +192,10 @@
 .pastel-de-feira .choice input { grid-row: span 2; align-self: center; }
 .pastel-de-feira .choice-name { font-weight: 700; }
 .pastel-de-feira .choice-text { color: var(--ink-2); font-size: 13px; }
+.pastel-de-feira fieldset.options { border: 0; padding: 0; margin: 0; width: 100%; display: grid; gap: 8px; text-align: left; }
+.pastel-de-feira fieldset.options legend { padding: 0; margin-bottom: 8px; color: var(--muted); }
+.pastel-de-feira .option { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }
+.pastel-de-feira .option .stepper span { min-width: 120px; }
 .pastel-de-feira .check { display: flex; align-items: center; gap: 10px; text-align: left; min-height: 44px; }
 .pastel-de-feira .check input { width: 22px; height: 22px; flex: none; accent-color: var(--wood-lo); }
 

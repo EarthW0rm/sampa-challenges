@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import type { LoadWarning, SaveV1 } from '../game/campaign/save';
+import type { LoadWarning, SaveV2 } from '../game/campaign/save';
 
 interface Props {
-  save: SaveV1 | null;
+  save: SaveV2 | null;
   warning?: LoadWarning;
   record: number;
   onContinue: () => void;

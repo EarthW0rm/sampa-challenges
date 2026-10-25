@@ -26,10 +26,12 @@ test.describe('Melhorias compradas e o efeito no Dia de Feira', () => {
     expect(await game.hook((pf) => pf.sim.state.tachos[0].baskets.length)).toBe(2);
   });
 
-  test('RN-73: Tacho grande passa de 2 para 4 cestos', async ({ game }) => {
+  test('RN-73: cesto avulso (R$ 200) — dois cestos levam o tacho 1 de 2 para 4', async ({ game }) => {
     await game.boot({ campaign: RICH });
     await game.continueToPrep();
-    await buy(game, 'Tacho 1 grande', 400);
+    await buy(game, 'Cesto extra no tacho 1', 200);
+    await buy(game, 'Cesto extra no tacho 1', 200);
+    await expect(game.page.locator('.pastel-de-feira li.item strong', { hasText: 'Cesto extra' })).toHaveCount(0); // um tacho só, já com 4
     await game.openFair();
     await game.goTo('tacho1');
     expect((await game.controls()).filter((c) => c.label.startsWith('CESTO')).length).toBe(4);

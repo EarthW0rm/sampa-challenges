@@ -45,8 +45,9 @@ export function StaffTab({ campaign: c, onChange }: Props) {
   return (
     <section className="tab" aria-label="Equipe">
       <p className="hint">
-        {c.staff.length} de {positions.length} posições. Fritador (R$ 75) é o único que tira do óleo e troca o óleo; Geral (R$ 55) ocupa as
-        outras posições. Salários saem no fechamento. O automático ocupa a posição vaga de maior prioridade.
+        {c.staff.length} de {positions.length} posições. Fritador (R$ 75) é o único que tira do óleo e, na posição Troca de óleo, troca o
+        óleo; Geral (R$ 55) ocupa as outras posições. A Montagem coloca em qualquer tacho; sem ela, o Fritador vai até a bancada montar.
+        Salários saem no fechamento. O automático ocupa a posição vaga de maior prioridade.
       </p>
 
       <h3 className="group">Candidatos de hoje</h3>

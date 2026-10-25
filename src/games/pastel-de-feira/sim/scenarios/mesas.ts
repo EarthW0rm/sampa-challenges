@@ -17,7 +17,7 @@ export function tableConfig(tables = 2, patch: Partial<DayConfig> = {}): DayConf
   return devConfig({
     tables,
     stations: ['balcao', 'bancada', 'tacho1', 'moenda', 'mesas', 'escritorio'],
-    positions: ['balcao', 'colocador1', 'fritador1', 'trocador', 'moenda', 'garcom', 'ajudante'],
+    positions: ['balcao', 'montagem1', 'fritador1', 'trocador', 'moenda', 'garcom', 'ajudante'],
     menu: [{ item: 'carne', price: 6 }, { item: 'queijo', price: 6 }, { item: 'caldo-puro', price: 5 }],
     stock: [
       { ingredient: 'massa', qty: 9999, daysLeft: 3 },

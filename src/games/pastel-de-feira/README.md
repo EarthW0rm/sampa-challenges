@@ -37,7 +37,8 @@ spec, vale o código: os valores marcados com **(P)** foram calibrados pela simu
 
 ## 1. Início rápido
 
-1. **Nova campanha**: escolha o perfil do pasteleiro, se quer eventos e o tutorial do dia 1.
+1. **Nova campanha**: escolha o perfil do pasteleiro, se quer eventos e o tutorial do dia 1 e, nas opções,
+   o capital inicial, o dia em que começa, se os funcionários cansam e se as melhorias ficam liberadas desde já.
 2. **Preparo**: na aba Insumos, use **Usar sugerida** e **Comprar tudo** (dias 1 a 3). Confira o
    cardápio e os preços. Toque em **Abrir a feira**.
 3. **Dia de Feira**: quando um cliente chegar, vá ao **balcão** e toque em **ANOTAR**. Vá à
@@ -83,7 +84,7 @@ insumo e cada pastel tem rótulo próprio de até 8 letras: `C.seca`, `Q.minas`,
 | Tela | O que acontece |
 |---|---|
 | **Título** | Continuar (com save), Nova campanha (pede confirmação se há save), Sair. Mostra o recorde |
-| **Nova campanha** | Perfil do pasteleiro, eventos liga/desliga, tutorial do dia 1 |
+| **Nova campanha** | Perfil do pasteleiro, eventos liga/desliga, tutorial do dia 1. Opções (RN-55a): capital inicial (padrão do perfil, +R$ 100 por toque, até R$ 100.000), dia inicial (1 a 20), cansaço dos funcionários liga/desliga e liberar melhorias, receitas e áreas sem esperar o dia mínimo |
 | **Preparo** | Fora do relógio. Abas: Insumos, Cardápio, Melhorias, Equipe (dia 2), Escritório (com escritório), Associação (dia 3). Previsão do dia, meta, balões de novidade e tema (dia 5) |
 | **Dia de Feira** | Canvas 640×480 lógico + HUD (relógio, caixa, fila, estrelas, som, música, 1×/2×, pausa) |
 | **Fechamento** | Balanço, meta, reputação, pedidos, desperdício. Salva e volta ao Preparo |
@@ -145,6 +146,12 @@ sorteio** de clientes, ofertas e eventos surpresa (JA-06).
 
 `anotar` (balcão) → `montar` (bancada) → `colocar` (tacho) → `tirar no ponto` (tacho) →
 [`estufa`] → [`caldo`] (moenda) → `entregar` (balcão) → `cobrar` (balcão).
+
+**Selo do sabor:** cada pedido no balão, pastel no balcão, na bancada, na estufa e no tacho, e controle de
+pastel no painel mostra um selo redondo com o desenho do sabor (bife, queijo com furos, fatia de pizza…),
+para reconhecer o sabor pela forma e não só pela cor. Os pontinhos dourados no selo indicam a versão
+melhorada (+1, +2). No balão, a linha já entregue fica clara com um visto. No Cardápio, o selo aparece ao
+lado de cada receita.
 
 | Ação | Como |
 |---|---|
@@ -213,12 +220,12 @@ Montagem = 1 etapa por recheio (temperos não contam). Tempos de fritura em segu
 | Categoria | Receita | Recheio (+ massa) | Ponto | Queima | Ref. | Desbloqueio |
 |---|---|---|---|---|---|---|
 | Tradicional | Carne | carne | 5–8 | 10 | R$ 8,00 | inicial |
-| Tradicional | Queijo | muçarela + orégano | 5–8 | 10 | R$ 8,00 | inicial |
+| Tradicional | Queijo | muçarela | 5–8 | 10 | R$ 8,00 | inicial |
 | Tradicional | Frango | frango | 5–8 | 10 | R$ 8,00 | R$ 80 |
 | Tradicional | Calabresa | calabresa + cebola | 5–8 | 10 | R$ 8,50 | R$ 80 |
-| Tradicional | Bauru | presunto + muçarela | 6–9 | 11 | R$ 11,00 | R$ 150 |
+| Tradicional | Bauru | muçarela + presunto + tomate | 6–9 | 11 | R$ 11,00 | R$ 150 |
 | Tradicional | Frango com Catupiry | frango + catupiry | 6–9 | 11 | R$ 11,00 | R$ 150 |
-| Tradicional | Pizza | muçarela + presunto + tomate + orégano | 6–9 | 11 | R$ 12,00 | R$ 150 |
+| Tradicional | Pizza | tomate + muçarela + orégano | 6–9 | 11 | R$ 12,00 | R$ 150 |
 | Nobre | Palmito | palmito + catupiry | 9–10,5 | 11,5 | R$ 16,00 | R$ 400, dia 6 |
 | Nobre | Carne Seca | carne seca + queijo coalho | 9–10,5 | 11,5 | R$ 17,00 | R$ 450, dia 8 |
 | Nobre | Camarão | camarão + catupiry | 9–10,5 | 11,5 | R$ 20,00 | R$ 600, dia 11 |
@@ -284,7 +291,7 @@ A barraca inicial tem 6 m² com balcão, bancada, 1 tacho pequeno (2 cestos) e m
 |---|---|---|---|
 | m² extra | R$ 120 | — | +R$ 8/dia de taxa no fechamento. Máx. 24 m² |
 | Tacho extra | R$ 350 | 2 m² | máx. 3 tachos |
-| Tacho grande | R$ 400 por tacho | — | 2 → 4 cestos |
+| Cesto extra | R$ 200 por cesto | — | +1 cesto no primeiro tacho com menos de 4 (enche os tachos em ordem); tacho novo nasce com 2 |
 | Termostato | R$ 350 por tacho | — | janela do ponto +50%, queima +3 s |
 | Alarme do ponto | R$ 60 por tacho | — | pisca no ponto e 1 s antes de queimar |
 | Cesto com timer | R$ 600 por tacho | — | tira sozinho no meio do ponto (nota 80 + equipamento) |
@@ -321,7 +328,7 @@ Equipamentos de automação param na queda de energia e não somam com funcioná
 ### 7.1 Funcionários (RN-40 a RN-49, RN-113 a RN-118)
 
 - **Tipos:** Fritador (R$ 75/dia, o único que tira do óleo e troca o óleo; pode ocupar qualquer
-  posição) e Geral (R$ 55/dia, todas as posições menos Fritador e Trocador).
+  posição) e Geral (R$ 55/dia, todas as posições menos Fritador e Troca de óleo).
 - Até 3 candidatos de cada tipo por dia, com 0 a 2 traços. Contratar e dispensar só no Preparo, sem
   passar do número de posições.
 - **Traços:** Rápido (tempos −15%, salário +15%), Caprichoso (nota +5, +10%), Resistente (cansa 40%
@@ -329,14 +336,20 @@ Equipamentos de automação param na queda de energia e não somam com funcioná
 - **Cursos** (1 por funcionário por dia): Boas Práticas de Fritura R$ 120 (nota +5, troca de óleo 30%
   mais rápida, sem fogo na troca); Atendimento R$ 100 (balcão, garçom e expedição 20% mais rápidos,
   +5% de paciência); Higiene R$ 80 (sujeira −30%, limpeza 30% mais rápida).
-- **Posições:** Balcão, Colocador N, Fritador N, Trocador de óleo, Moenda, Garçom, Ajudante, Expedição.
+- **Posições:** Fritador N, Balcão, Montagem N, Troca de óleo, Moenda e, com mesas e delivery, Garçom,
+  Ajudante e Expedição (uma Montagem e um Fritador por tacho).
+  - **Montagem:** monta na bancada e coloca o pastel em qualquer tacho com cesto livre, do primeiro para o último.
+  - **Fritador:** cuida de tudo no tacho dele — coloca os pastéis já montados, tira no ponto, põe na estufa
+    e troca o óleo quando passa de 70% —, mas **não monta**: sem ninguém na Montagem, quem monta é você. Os
+    Fritadores assumem, em ordem, os tachos livres (sem o pasteleiro e sem fogo); sem tacho livre, fica parado.
+  - **Troca de óleo:** só Fritador; volante, troca o óleo de qualquer tacho.
 - **Fixo** fica só na posição escolhida; **Automático** ocupa a vaga de maior prioridade: Fritador >
-  Balcão > Colocador > Moenda > Expedição > Garçom > Ajudante.
+  Balcão > Montagem > Troca de óleo > Moenda > Expedição > Garçom > Ajudante.
 - O pasteleiro entra na posição da estação onde está: o funcionário dali cede o lugar (JA-01).
 - **Tempos** (energia ≥ 40, sem traço): anotar 1,5 s; montar 0,5 s + 1,5 s por etapa; colocar 0,8 s;
   tirar no meio do ponto (nunca queima); caldo = moenda + 0,5 s; entregar e cobrar 1,5 s; troca de
   óleo 10 s; limpar mesa 3 s.
-- **Energia:** começa em 100 e cai 0,5/s trabalhando (+25% no verão e no calor forte). Abaixo de 40,
+- **Energia** (desligável na nova campanha: sem cansaço, fica em 100): começa em 100 e cai 0,5/s trabalhando (+25% no verão e no calor forte). Abaixo de 40,
   tempos +25%; abaixo de 15, +60%. Automático vai descansar abaixo de 25; fixo só quando mandado
   (toque nele) ou em 0. Descansa até 80: 4/s na área de descanso, 1/s parado.
 
@@ -572,6 +585,7 @@ vêm da biblioteca compartilhada (`caes_pe`). Referência visual: `docs/specs/pa
 | `decor/*` | enfeites: rolo, potes, sacos de farinha, caixotes de cana e limão, garrafa de café, migalhas, assento |
 | `itens/pastel_{salgado,doce,especial}_{cru,ponto,passado,queimado}`, `copo`, `moeda` | pastéis por estado, caldo e moedas |
 | `itens/ing_<insumo>` | um ícone por insumo (bancada, painel e Preparo) |
+| `icones/sabor_<receita ou caldo>`, `ui/selo_versao` | selo do sabor (um por receita base e caldo) e o pontinho da versão |
 | `icones/ctrl_*` | ícones dos controles do painel |
 | `icones/{fiscal,energia,excursao,fogo,queimado,chuva,calor}`, `icones/perfil_*` | eventos e perfis de cliente |
 | `ui/moldura`, `ui/aba`, `ui/slot_{normal,selecionado,desligado}`, `ui/balao*` | molduras 9-slice do painel, das telas e do balão de pedido |

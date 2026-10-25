@@ -81,7 +81,7 @@ export const balcao: Scenario[] = [
       checkEq(s.assembled.length, 1, 'pastel montado');
       checkEq(s.assembled[0].item, 'queijo', 'reconheceu a receita');
       checkEq(stockQty(s, 'massa'), 79, 'consumiu 1 massa');
-      checkEq(stockQty(s, 'oregano'), 39, 'consumiu o tempero');
+      checkEq(stockQty(s, 'oregano'), 40, 'Queijo é só queijo e massa: não gasta orégano');
       // fritura simulada (TF-110-07): o pastel sai no ponto e chega ao balcão
       s.ready.push({ id: 500, item: 'queijo', quality: 80, readyAt: s.tick * STEP });
       go(sim, 'balcao');
