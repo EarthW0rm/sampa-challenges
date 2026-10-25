@@ -84,7 +84,7 @@ insumo e cada pastel tem rótulo próprio de até 8 letras: `C.seca`, `Q.minas`,
 | Tela | O que acontece |
 |---|---|
 | **Título** | Continuar (com save), Nova campanha (pede confirmação se há save), Sair. Mostra o recorde |
-| **Nova campanha** | Perfil do pasteleiro, eventos liga/desliga, tutorial do dia 1. Opções (RN-55a): capital inicial (padrão do perfil, +R$ 100 por toque, até R$ 100.000), dia inicial (1 a 20), cansaço dos funcionários liga/desliga e liberar melhorias, receitas e áreas sem esperar o dia mínimo |
+| **Nova campanha** | Perfil do pasteleiro, eventos liga/desliga, tutorial do dia 1. Opções (RN-55a): capital inicial (padrão do perfil, +R$ 100 por toque, até R$ 100.000), dia inicial (1 a 20), cansaço dos funcionários liga/desliga e liberar, sem esperar o dia mínimo, melhorias, receitas, áreas, a aba Equipe e a Associação (desafios) |
 | **Preparo** | Fora do relógio. Abas: Insumos, Cardápio, Melhorias, Equipe (dia 2), Escritório (com escritório), Associação (dia 3). Previsão do dia, meta, balões de novidade e tema (dia 5) |
 | **Dia de Feira** | Canvas 640×480 lógico + HUD (relógio, caixa, fila, estrelas, som, música, 1×/2×, pausa) |
 | **Fechamento** | Balanço, meta, reputação, pedidos, desperdício. Salva e volta ao Preparo |

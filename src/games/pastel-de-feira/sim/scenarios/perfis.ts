@@ -4,6 +4,8 @@ import { payroll } from '../../game/campaign/actions/staff';
 import { CAMPAIGN_DAYS, MAX_START_CASH, newCampaign, toDayConfig } from '../../game/campaign/campaign';
 import { buyRecipe } from '../../game/campaign/actions/upgrades';
 import { offers } from '../../game/campaign/shop';
+import { acceptChallenge, rollChallenges } from '../../game/campaign/actions/challenges';
+import { pendingUnlock } from '../../game/unlocks';
 import { crewSim, member } from './posicoes';
 import type { Campaign, PastryProfile } from '../../game/campaign/types';
 import { addCustomer } from '../../game/sim/customers';
@@ -111,6 +113,14 @@ export const perfis: Scenario[] = [
       const livre = newCampaign({ ...base, unlockAll: true });
       check(buyRecipe(livre, 'palmito').ok, 'com a opção: Palmito no dia 1');
       check(offers(livre).every((o) => o.minDay === undefined), 'nenhuma oferta travada por dia');
+      // equipe e Associação também: desafios desde o dia 1 e os balões do que foi liberado (o tema segue o dia 5)
+      checkEq(rollChallenges(travada).length, 0, 'sem a opção: desafios só a partir do dia 3');
+      check(rollChallenges(livre).length > 0, 'com a opção: desafios no dia 1');
+      check(acceptChallenge(livre, rollChallenges(livre)[0].id).ok, 'e dá para aceitar');
+      checkEq(pendingUnlock(1, []), null, 'sem a opção: nenhum balão no dia 1');
+      const seen: string[] = [];
+      for (let u = pendingUnlock(1, seen, true); u; u = pendingUnlock(1, seen, true)) seen.push(u.id);
+      checkEq(seen.join(','), 'equipe,associacao,delivery,especial,escritorio', 'com a opção: balões do que foi liberado, sem o tema');
     },
   },
   {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { loadSeen, pendingUnlock, saveSeen } from '../../game/unlocks';
+import { loadSeen, pendingUnlock, saveSeen, unlockDay } from '../../game/unlocks';
 import { openWarning } from '../../game/campaign/warnings';
-import { canOpen, minReputation, profitGoal } from '../../game/campaign/campaign';
+import { canOpen, lockedByDay, minReputation, profitGoal } from '../../game/campaign/campaign';
 import { respondClaim } from '../../game/campaign/events';
 import { seasonOf } from '../../game/campaign/season';
 import { FORECAST_NAME, SEASON_EFFECTS, SEASON_NAME } from '../../game/data/events';
@@ -33,9 +33,9 @@ function visibleTabs(c: Campaign): { id: TabId; label: string }[] {
     { id: 'cardapio', label: 'Cardápio' },
     { id: 'melhorias', label: 'Melhorias' },
   ];
-  if (c.day >= 2 || c.staff.length > 0) tabs.push({ id: 'equipe', label: 'Equipe' });
+  if (!lockedByDay(c, unlockDay('equipe')) || c.staff.length > 0) tabs.push({ id: 'equipe', label: 'Equipe' });
   if (c.owned.office) tabs.push({ id: 'escritorio', label: 'Escritório' });
-  if (c.day >= 3 || c.challenges.length > 0) tabs.push({ id: 'associacao', label: 'Associação' });
+  if (!lockedByDay(c, unlockDay('associacao')) || c.challenges.length > 0) tabs.push({ id: 'associacao', label: 'Associação' });
   return tabs;
 }
 
@@ -54,7 +54,7 @@ export function PrepScreen({ campaign: c, onChange, onOpen, onExit, onHandover }
   const [confirmOpen, setConfirmOpen] = useState(false);
   const tabs = visibleTabs(c);
   const [seen, setSeen] = useState<string[]>(() => loadSeen(safeStorage()));
-  const unlock = pendingUnlock(c.day, seen);
+  const unlock = pendingUnlock(c.day, seen, c.settings.unlockAll);
   const dismissUnlock = () => {
     if (!unlock) return;
     const next = [...seen, unlock.id];

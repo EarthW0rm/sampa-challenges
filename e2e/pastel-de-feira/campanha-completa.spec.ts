@@ -58,7 +58,7 @@ async function checkPrep(game: GamePage, c: Campaign, seen: string[]): Promise<v
   await expect(page.getByRole('region', { name: 'Previsão do dia' })).toContainText(SEASON_NAME[seasonOf(c.day)]); // RN-140
   expect(await page.getByRole('tab').allTextContents()).toEqual(expectedTabs(c)); // RN-171
   // balões de novidade: um por vez, na ordem, uma única vez (RN-171)
-  for (let u = pendingUnlock(c.day, seen); u; u = pendingUnlock(c.day, seen)) {
+  for (let u = pendingUnlock(c.day, seen, c.settings.unlockAll); u; u = pendingUnlock(c.day, seen, c.settings.unlockAll)) {
     const aside = page.getByRole('status', { name: `Novidade: ${u.title}` });
     await expect(aside).toBeVisible();
     await aside.getByRole('button', { name: 'Entendi' }).click();

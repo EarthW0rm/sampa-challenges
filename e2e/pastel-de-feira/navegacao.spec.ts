@@ -65,6 +65,18 @@ test.describe('Hub, título e campanha', () => {
     await expect(page.locator('.pastel-de-feira').getByText(/A partir do dia/)).toHaveCount(0);
   });
 
+  test('RN-55a: liberar melhorias também abre Equipe e Associação no dia 1', async ({ game, page }) => {
+    await game.boot({ campaign: null });
+    await page.getByRole('button', { name: 'Nova campanha' }).click();
+    await page.getByRole('checkbox', { name: /Tutorial/ }).uncheck();
+    await page.getByRole('checkbox', { name: /Liberar todas as melhorias/ }).check();
+    await page.getByRole('button', { name: 'Começar' }).click();
+    await expect(page.locator('.pastel-de-feira .prep-head')).toContainText('Dia 1');
+    await expect(page.getByRole('tab', { name: 'Equipe' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Associação' }).click();
+    await expect(page.getByRole('button', { name: 'Aceitar' }).first()).toBeVisible(); // desafios oferecidos já no dia 1
+  });
+
   test('RN-55: a campanha é salva no Preparo e "Continuar (dia 1)" volta a ela depois de recarregar', async ({ game, page }) => {
     await game.boot({ campaign: null });
     await page.getByRole('button', { name: 'Nova campanha' }).click();
