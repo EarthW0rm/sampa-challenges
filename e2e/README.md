@@ -91,6 +91,10 @@ PNGs, ~190 MB, +35 s (2,4 → 3,0 min). Uma evidência que falha só gera aviso 
 | `dia-completo` | um dia inteiro jogado pela tela e a conta do caixa fechando |
 | `responsivo` | 390 px: sem rolagem lateral, toque mapeado, HUD |
 | `bancada` | rótulos dos ingredientes do painel da bancada distinguíveis |
+| `tachos-equipe` | Montagem coloca em qualquer tacho (tacho 1 cheio → tacho 2), Fritador assume o tacho livre (pasteleiro no tacho 1 → tacho 2), Fritador não monta e coloca o montado, troca o óleo do tacho dele, Troca de óleo em qualquer tacho, sem cansaço |
+| `receitas-selos` | recheios de Queijo, Pizza e Bauru (consumo do estoque), bancada sem orégano, selo do sabor nos controles do painel e no Cardápio |
+| `opcoes-save` | melhorias liberadas (delivery no dia 1) e travadas, cestos extras em ordem entre os tachos, save v1 com Colocador migrado para Montagem |
+| `jornada-equipe` | dia inteiro com Balcão, Montagem e Fritador atendendo sozinhos e o fechamento batendo; fila cheia sem ninguém anotar e sem desistência por paciência |
 | `progressao` | dias 1–20 e modo livre: meta, reputação mínima, estação, balões e tema por dia; desbloqueios da aba Melhorias; dia repetido; validade da massa |
 | `campanha-completa` | campanha inteira do "Nova campanha" ao dia 20, 2 dias de modo livre e "Passar o ponto"; por dia: Preparo pelas abas, dia pelo piloto, fechamento e save comparados com o `closeDay` do jogo, recarga no meio da campanha e saída no meio do dia |
 
