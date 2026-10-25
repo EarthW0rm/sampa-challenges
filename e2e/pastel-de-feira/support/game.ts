@@ -1,7 +1,8 @@
-import { test as base, expect, type Locator, type Page } from '@playwright/test';
+import { test as base, expect, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import type { E2EHook } from '../../../src/games/pastel-de-feira/game/e2eHook';
 import type { StationId } from '../../../src/games/pastel-de-feira/game/types';
 import { buildCampaign, SAVE_KEY, saveText, type CampaignSpec } from './campaign';
+import { Evidence, evidenceLevel, wrapPage, type Composer, type EvidenceLevel } from './evidence';
 
 export { expect };
 
@@ -31,7 +32,21 @@ type HookFn<A, R> = (pf: E2EHook, arg: A) => R;
  * simulação por quadro). O resto da página (React, imagens) segue normal.
  */
 export class GamePage {
-  constructor(readonly page: Page) {}
+  /** `page` registra evidência a cada ação (ver `evidence.ts`); os gestos daqui registram uma só, já descrita. */
+  constructor(
+    readonly page: Page,
+    readonly ev: Evidence,
+  ) {}
+
+  /** Registra uma evidência (captura com cabeçalho) do momento atual. */
+  evidence(description: string): Promise<void> {
+    return this.ev.milestone(description);
+  }
+
+  /** Passo nomeado: aparece no relatório e no cabeçalho das evidências tiradas dentro dele. */
+  step<T>(label: string, fn: () => Promise<T>): Promise<T> {
+    return this.ev.step(label, fn);
+  }
 
   get canvas(): Locator {
     return this.page.locator('.pastel-de-feira canvas');
@@ -97,6 +112,7 @@ export class GamePage {
     );
     await this.page.goto(`./${ROUTE}`);
     await expect(this.page.locator('.pastel-de-feira h1, .pastel-de-feira .prep')).toBeVisible();
+    await this.ev.milestone(`Jogo aberto em ${ROUTE}${opts.phase ? ` (save na fase ${opts.phase})` : ''}`);
   }
 
   /** Do título, com save em preparo: Continuar → Preparo. */
@@ -112,6 +128,7 @@ export class GamePage {
     const anyway = this.page.getByRole('button', { name: 'Abrir mesmo assim' });
     if (await anyway.isVisible().catch(() => false)) await anyway.click();
     await this.waitForDay();
+    await this.ev.milestone('Dia de feira aberto');
   }
 
   async waitForDay(): Promise<void> {
@@ -162,6 +179,7 @@ export class GamePage {
       await this.frames(1200);
     }
     await expect(this.page.getByRole('heading', { name: 'Fim da feira' })).toBeVisible();
+    await this.ev.milestone('Corte das 14h: tela de fechamento');
   }
 
   /** Roda `n` quadros de 1/60 s. */
@@ -213,18 +231,24 @@ export class GamePage {
   /** Toque (botão abaixa e solta) num ponto lógico do canvas. */
   async tapAt(x: number, y: number): Promise<void> {
     const p = await this.toClient(x, y);
-    await this.page.mouse.move(p.x, p.y);
-    await this.page.mouse.down();
-    await this.page.mouse.up();
+    await this.ev.quiet(async () => {
+      await this.page.mouse.move(p.x, p.y);
+      await this.page.mouse.down();
+      await this.page.mouse.up();
+    });
+    await this.ev.action(`Toque no canvas em (${Math.round(x)}, ${Math.round(y)}) lógico`);
   }
 
   /** Segura o botão num ponto lógico por `seconds` de jogo e solta. */
   async holdAt(x: number, y: number, seconds: number): Promise<void> {
     const p = await this.toClient(x, y);
-    await this.page.mouse.move(p.x, p.y);
-    await this.page.mouse.down();
-    await this.frames(Math.round(seconds * FPS));
-    await this.page.mouse.up();
+    await this.ev.quiet(async () => {
+      await this.page.mouse.move(p.x, p.y);
+      await this.page.mouse.down();
+      await this.frames(Math.round(seconds * FPS));
+      await this.page.mouse.up();
+    });
+    await this.ev.action(`Segurar o canvas em (${Math.round(x)}, ${Math.round(y)}) lógico por ${seconds} s e soltar`);
   }
 
   async zone(id: string): Promise<{ x: number; y: number; w: number; h: number }> {
@@ -238,6 +262,11 @@ export class GamePage {
 
   /** Toca no centro da zona de uma estação (o pasteleiro começa a andar). */
   async tapStation(id: StationId): Promise<void> {
+    await this.ev.quiet(() => this.tapZone(id));
+    await this.ev.action(`Toque na estação ${id}`);
+  }
+
+  private async tapZone(id: StationId): Promise<void> {
     const z = await this.zone(id);
     // Zona coberta pelo painel aberto (mesas, expedição…): o jogador recolhe o painel antes (Esc), senão o toque cai num controle.
     const covered = await this.hook((pf, zz) => pf.env.ui.panel !== null && zz.y + zz.h > 300, z);
@@ -250,8 +279,11 @@ export class GamePage {
 
   /** Vai até a estação e espera chegar e o painel abrir. */
   async goTo(id: StationId): Promise<void> {
-    await this.tapStation(id);
-    await this.advanceUntil((pf, s) => pf.sim.state.pasteleiro.to === null && pf.sim.state.pasteleiro.at === s && pf.env.ui.panel === s, 5, id, 1);
+    await this.ev.quiet(async () => {
+      await this.tapZone(id);
+      await this.advanceUntil((pf, s) => pf.sim.state.pasteleiro.to === null && pf.sim.state.pasteleiro.at === s && pf.env.ui.panel === s, 5, id, 1);
+    });
+    await this.ev.action(`Ir até a estação ${id} (chegou e o painel abriu)`);
   }
 
   /** Controles do painel aberto. */
@@ -270,15 +302,21 @@ export class GamePage {
   /** Toca num controle do painel e roda 1 quadro (o comando entra no próximo passo). */
   async tapControl(label: string | RegExp, nth = 0): Promise<void> {
     const c = await this.findControl(label, nth);
-    await this.tapAt(c.x + c.w / 2, c.y + c.h / 2);
-    await this.frames(1);
+    await this.ev.quiet(async () => {
+      await this.tapAt(c.x + c.w / 2, c.y + c.h / 2);
+      await this.frames(1);
+    });
+    await this.ev.action(`Toque no controle "${c.label}"${nth ? ` [${nth}]` : ''} do painel`);
   }
 
   /** Segura um controle do painel por `seconds` de jogo. */
   async holdControl(label: string | RegExp, seconds: number, nth = 0): Promise<void> {
     const c = await this.findControl(label, nth);
-    await this.holdAt(c.x + c.w / 2, c.y + c.h / 2, seconds);
-    await this.frames(1);
+    await this.ev.quiet(async () => {
+      await this.holdAt(c.x + c.w / 2, c.y + c.h / 2, seconds);
+      await this.frames(1);
+    });
+    await this.ev.action(`Segurar o controle "${c.label}"${nth ? ` [${nth}]` : ''} do painel por ${+seconds.toFixed(2)} s e soltar`);
   }
 
   /** Espera um cliente chegar à fila (no máximo `maxSeconds` de jogo). */
@@ -291,18 +329,55 @@ export class GamePage {
     const q = await this.hook((pf) => pf.queue());
     const c = q[i];
     if (!c) throw new Error(`não há cliente na posição ${i} da fila`);
-    await this.tapAt(c.x, c.y - 20);
-    await this.frames(1);
+    await this.ev.quiet(async () => {
+      await this.tapAt(c.x, c.y - 20);
+      await this.frames(1);
+    });
+    await this.ev.action(`Toque no cliente #${c.id} (posição ${i} da fila)`);
   }
 
   /** Erros de página coletados (exceções não tratadas e console.error). */
   readonly errors: string[] = [];
 }
 
-/** Fixture `game`: página com o gancho E2E e coleta de erros do console. */
-export const test = base.extend<{ game: GamePage }>({
+export interface EvidenceOptions {
+  /** Nível das evidências do projeto (`PF_EVIDENCIAS` tem prioridade). */
+  evidencias: EvidenceLevel;
+}
+
+const evidenceOf = new WeakMap<Page, Evidence>();
+
+/**
+ * Fixtures: `page` registra evidência a cada ação e tira a captura final (resultado e erro);
+ * `game` é a página com o gancho E2E e coleta de erros do console.
+ */
+export const test = base.extend<EvidenceOptions & { game: GamePage }, { composer: Composer }>({
+  evidencias: ['acoes', { option: true }],
+  // página que monta as evidências: contexto próprio, por worker (não mexe no foco da página do jogo), criada na primeira evidência
+  composer: [
+    async ({ browser }, use) => {
+      let ctx: BrowserContext | null = null;
+      let p: Promise<Page> | null = null;
+      await use(() => {
+        p ??= browser.newContext({ deviceScaleFactor: 1 }).then((c) => {
+          ctx = c;
+          return c.newPage();
+        });
+        return p;
+      });
+      await (ctx as BrowserContext | null)?.close();
+    },
+    { scope: 'worker' },
+  ],
+  page: async ({ page: raw, evidencias, composer }, use, testInfo) => {
+    const ev = new Evidence(raw, testInfo, evidenceLevel(evidencias), composer);
+    const page = wrapPage(raw, ev);
+    evidenceOf.set(page, ev);
+    await use(page);
+    await ev.final();
+  },
   game: async ({ page }, use) => {
-    const g = new GamePage(page);
+    const g = new GamePage(page, evidenceOf.get(page)!);
     page.on('pageerror', (e) => g.errors.push(`pageerror: ${e.message}`));
     page.on('console', (m) => {
       if (m.type() === 'error') g.errors.push(`console: ${m.text()}`);

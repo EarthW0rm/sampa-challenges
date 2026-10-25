@@ -14,6 +14,7 @@ npm run test:e2e -- pastel-de-feira/fritura      # um arquivo
 npm run test:e2e -- -g "RN-41"                   # pelo nome
 npx playwright show-report playwright-report     # relatório HTML (traces das falhas)
 npm run typecheck:e2e
+PF_EVIDENCIAS=marcos npm run test:e2e             # evidências só dos marcos (ou `off`)
 ```
 
 ## Como funciona
@@ -26,6 +27,7 @@ npm run typecheck:e2e
 | Saves | `support/campaign.ts` | monta a campanha com as próprias ações do jogo (`newCampaign`, `buyIngredient`…) e injeta no `localStorage` antes de carregar; semente fixa |
 | Ações | `support/flow.ts` | anotar, montar, fritar, moer, entregar, cobrar, atender um cliente inteiro, tudo por toques |
 | Piloto | `support/pilot.ts`, `support/pilot.browser.ts` | joga um dia inteiro: o jogador automático de calibração (`sim/player.ts`) decide, e cada decisão vira toque, segurar ou soltar com o mouse real; gestos sem alvo são registrados e fazem o teste falhar |
+| Evidências | `support/evidence.ts` | cada ação e cada marco vira um PNG em `evidencias/` com cabeçalho: teste, ação, passo do fluxo e o que a tela mostrava (veja abaixo) |
 | Estratégia | `support/strategy.ts`, `support/prep.ts` | Preparo da campanha (parte do robô `equilibrado`, com receitas caras no cardápio para fechar os dias 16–20): compras, contratação, cardápio, preços e estoque viram cliques nas abas; o save resultante tem que ser idêntico ao das ações do jogo |
 
 Regra dos testes: **comandos só por toque/teclado**. O gancho serve para ler o estado e localizar os
@@ -34,6 +36,34 @@ sujeira em 60) e fica comentada no teste.
 
 Os números esperados vêm de `game/constants.ts` e `game/data/*` (os valores (P) calibrados), com a RN
 da spec no nome de cada teste.
+
+## Evidências
+
+Todo teste grava capturas de tela em `evidencias/<projeto>/pastel-de-feira/<arquivo>/<teste>/`
+(na raiz do repositório, fora do git), numeradas na ordem: `001-marco-…png`, `002-acao-…png`, …,
+e a última `NNN-fim-…png` ou `NNN-falha-…png`. A pasta de cada teste é apagada quando ele começa de novo.
+
+Cada PNG tem um cabeçalho em cima da captura com:
+
+| Campo | Conteúdo |
+|---|---|
+| Teste | describe › título, arquivo, projeto, número da evidência, data e hora |
+| Ação / Marco / Fim / Falha | o que acabou de ser feito (ex.: `Toque no controle "FECHAR" do painel`, `Clique em botão "Abrir a feira"`, `Tecla "KeyP"`) |
+| Passo do fluxo | os passos de `flow.ts` em andamento (ex.: `Atender o cliente #1 › Montar queijo na bancada`) |
+| Tela | rota, tela (título, Preparo e aba, Dia de feira, fechamento), diálogo e mensagem visíveis |
+| Dia | HUD (relógio, caixa, fila, reputação), passo da simulação e pausa, onde está o pasteleiro, painel aberto e seus controles, item selecionado, clientes, prontos |
+| Falha | a mensagem de erro do teste |
+
+O que vira evidência: cliques/teclas/preenchimentos feitos pela `page` (a fixture `page` é embrulhada),
+toques e seguradas do `GamePage` (`tapControl`, `holdControl`, `goTo`, `tapStation`, `tapCustomer`,
+`tapAt`, `holdAt`), os marcos (`boot`, `openFair`, `runToEnd`) e o fim do teste. Os gestos internos de
+um gesto descrito ficam de fora (`ev.quiet`), para cada toque gerar uma evidência só. Para registrar um
+momento à mão: `await game.evidence('descrição')`; para nomear um passo: `game.step('rótulo', fn)`.
+
+Níveis: `acoes` (padrão), `marcos` (abertura, início e fim do dia, fim do teste e `game.evidence`) e
+`off`, pela variável `PF_EVIDENCIAS` ou pela opção `evidencias` do projeto. A campanha completa usa
+`marcos` (com o piloto seriam dezenas de milhares de gestos). Custo medido na suíte rápida: ~2.400
+PNGs, ~190 MB, +35 s (2,4 → 3,0 min). Uma evidência que falha só gera aviso no console, nunca derruba o teste.
 
 ## Cobertura (por arquivo)
 

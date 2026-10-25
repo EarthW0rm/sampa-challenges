@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import type { EvidenceOptions } from './pastel-de-feira/support/game';
 
 /**
  * Testes de ponta a ponta no navegador (Playwright). Sobem o Vite em modo dev (StrictMode ligado,
@@ -7,7 +8,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 const PORT = 5199;
 
-export default defineConfig({
+export default defineConfig<EvidenceOptions>({
   testDir: '.',
   outputDir: '../test-results/e2e',
   timeout: 120_000,
@@ -36,7 +37,8 @@ export default defineConfig({
       // pasta própria: a suíte rápida limpa `test-results/e2e` ao começar e apagaria os registros dos dias
       outputDir: '../test-results/e2e-campanha',
       // sem trace: são dezenas de milhares de gestos e o trace deixaria a execução muito lenta
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 1000 }, trace: 'off' },
+      // evidências só dos marcos (início e fim de cada dia, fim do teste): uma por gesto seriam dezenas de milhares
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 1000 }, trace: 'off', evidencias: 'marcos' },
     },
     {
       name: 'celular',
