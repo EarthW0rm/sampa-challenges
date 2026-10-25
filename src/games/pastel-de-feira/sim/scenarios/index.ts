@@ -3,6 +3,7 @@ import { automacao } from './automacao';
 import { balcao } from './balcao';
 import { catalogo } from './catalogo';
 import { clientes } from './clientes';
+import { combinacoes } from './combinacoes';
 import { delivery } from './delivery';
 import { encomendas } from './encomendas';
 import { desafios } from './desafios';
@@ -68,6 +69,7 @@ export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   layout,
   tacho,
   replay,
+  combinacoes,
   tutorial,
   velocidade,
 };

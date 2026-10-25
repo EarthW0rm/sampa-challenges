@@ -64,7 +64,7 @@ encomendas, mundo (eventos) e automação. O tutorial (`game/tutorial.ts`) só o
 | `game/unlocks.ts` | balões de desbloqueio (`pastel-de-feira:visto`) |
 | `game/e2eHook.ts` | gancho dos testes E2E (`window.__pf`), só existe com `window.__PF_E2E__` definido pela página de teste |
 | `sim/run.ts` | `--scenario`, `--replay`, `--bots`, `--list` |
-| `sim/scenarios/*` | um grupo por conjunto de RN (269 cenários) |
+| `sim/scenarios/*` | um grupo por conjunto de RN (290 cenários; `combinacoes` cruza as regras novas entre si e com as antigas) |
 | `sim/player.ts`, `sim/bots.ts`, `sim/report.ts` | jogador automático e robôs de calibração |
 
 Arte: `tools/pixelart/pastel_de_feira.py`, script único (cenário, móveis 3-slice, equipamentos, enfeites,
