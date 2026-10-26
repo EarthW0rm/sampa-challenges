@@ -143,6 +143,13 @@ test.describe('relógio', () => {
     expect((await read())[1], 'recarga preserva o que o jogo gravou').toBe('9');
   });
 
+  test('ir para about:blank não gera erro na página', async ({ game, page }) => {
+    await game.boot();
+    await page.goto('about:blank');
+    await page.goBack();
+    await page.waitForFunction(() => !!(window as unknown as { __toy?: unknown }).__toy);
+  });
+
   test('storage bloqueado lança ao acessar', async ({ game, page }) => {
     await game.boot({ blockStorage: true });
     const msg = await page.evaluate(() => {
@@ -223,6 +230,18 @@ test.describe('página base', () => {
     await game.exposeToy();
     expect(await game.hook((t) => t.score)).toBe(0);
     await expect(game.advanceUntil((t) => t.score > 99, 0.5)).rejects.toThrow(/advanceUntil: condição não ocorreu em 0.5 s/);
+  });
+
+  test('expect sobre locator embrulhado mostra o erro real', async ({ game, page }) => {
+    await game.boot();
+    await page.evaluate(() => {
+      const i = document.createElement('input');
+      i.value = 'abc';
+      document.querySelector('.harness')!.append(i);
+    });
+    await expect(page.locator('.harness input')).toHaveValue('abc');
+    await expect(expect(page.locator('.harness input')).toHaveValue('xyz', { timeout: 300 })).rejects.toThrow(/toHaveValue/);
+    await expect(expect(page.locator('.harness h1')).toHaveText('Outro', { timeout: 300 })).rejects.toThrow(/toHaveText/);
   });
 
   test('erro no console falha o teste', async ({ game, page }) => {
