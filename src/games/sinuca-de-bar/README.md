@@ -448,13 +448,74 @@ IA fora da página.
 ## 15. Testes
 
 ```bash
-npm run test:e2e -- sinuca-de-bar/                       # suíte rápida (desktop)
-npm run test:e2e -- --project=celular sinuca-de-bar/     # 390 px
-npm run test:e2e:longa -- sinuca-de-bar/                 # piloto (partidas inteiras)
+npm run test:e2e -- e2e/sinuca-de-bar/                   # suíte rápida (desktop + celular)
+npx playwright test -c e2e/playwright.config.ts --project=celular e2e/sinuca-de-bar/  # só 390 px
+npm run test:e2e:longa -- e2e/sinuca-de-bar/             # piloto (partidas inteiras)
 npm run test:e2e:cobertura -- --jogo sinuca-de-bar       # RN do manual × testes
 ```
 
-(Cobertura por arquivo e tabela regra → teste preenchidas pela TF-132-08.)
+Os testes jogam pela tela (toque, clique, arraste e teclado) com o relógio controlado: nada anda
+sem o teste mandar, a semente fixa o `Math.random` da página e a semente vai no pedido ao worker da
+IA, então a mesma semente dá a mesma partida. O gancho `window.__e2e` (`game/e2eHook.ts`) só lê o
+estado; mesas raras (uma falta, a castigo na hora) são montadas pelo `prepare`, sempre comentado no
+teste. Cada ação vira um PNG em `evidencias/` com modalidade, vez, grupos, bolas, mira, força, bola
+na mão e a última tacada no cabeçalho.
+
+| Arquivo | Cobertura |
+|---|---|
+| `e2e/sinuca-de-bar/navegacao.spec.ts` | abre pelo hub, partida, ← Menu, volta ao hub |
+| `e2e/sinuca-de-bar/menu.spec.ts` | opções do menu, nomes, escolhas lembradas e inválidas, Som |
+| `e2e/sinuca-de-bar/mira-forca.spec.ts` | mira por toque/arraste, botões e teclado, linhas de mira, força, tacada e física |
+| `e2e/sinuca-de-bar/saida.spec.ts` | mesa armada, branca atrás da linha, saída que continua, castigo na saída, quem sai e alternância, Sorteio |
+| `e2e/sinuca-de-bar/grupos-vez.spec.ts` | grupos por modalidade, mesa aberta, continuar/passar a vez, aviso de matar a castigo |
+| `e2e/sinuca-de-bar/faltas-bola-na-mao.spec.ts` | cada falta e a bola na mão (arraste e W A S D) |
+| `e2e/sinuca-de-bar/castigo.spec.ts` | vitória e cada derrota pela castigo, diálogo do fim, Jogar de novo, Ver mesa, Menu, Nova partida com confirmação |
+| `e2e/sinuca-de-bar/computador.spec.ts` | vez do computador (tempos, controles travados) e erro de mira por nível |
+| `e2e/sinuca-de-bar/ia-worker.spec.ts` | mesma semente = mesma tacada, worker que falha (reserva), resposta atrasada descartada |
+| `e2e/sinuca-de-bar/bordas.spec.ts` | quadro negativo/gigante, foco, um laço só, sair pelo hub e voltar, storage bloqueado e config corrompida |
+| `e2e/sinuca-de-bar/responsivo.spec.ts` | 390 px (projeto `celular`): sem rolagem lateral, toque mira e arrasta a branca |
+| `e2e/sinuca-de-bar/piloto.spec.ts` | projeto `longa`: partidas inteiras (lisas e ímpares × pares contra o Pato, 2 jogadores) com cada tacada recalculada por `resolveShot`; mesma semente = mesmo `partida-<n>.json` |
+
+Regra → teste (gerada por `npm run test:e2e:cobertura -- --md sinuca-de-bar`):
+
+| Regra | Testes |
+|---|---|
+| SB-RN-01 | `menu.spec.ts` |
+| SB-RN-02 | `bordas.spec.ts`, `menu.spec.ts` |
+| SB-RN-03 | `menu.spec.ts`, `navegacao.spec.ts` |
+| SB-RN-04 | `mira-forca.spec.ts` |
+| SB-RN-05 | `mira-forca.spec.ts` |
+| SB-RN-06 | `mira-forca.spec.ts` |
+| SB-RN-07 | `mira-forca.spec.ts` |
+| SB-RN-08 | `mira-forca.spec.ts` |
+| SB-RN-09 | `mira-forca.spec.ts` |
+| SB-RN-10 | `saida.spec.ts` |
+| SB-RN-11 | `saida.spec.ts` |
+| SB-RN-12 | `saida.spec.ts` |
+| SB-RN-13 | `saida.spec.ts` |
+| SB-RN-14 | `saida.spec.ts` |
+| SB-RN-15 | `grupos-vez.spec.ts` |
+| SB-RN-16 | `grupos-vez.spec.ts` |
+| SB-RN-17 | `grupos-vez.spec.ts` |
+| SB-RN-18 | `grupos-vez.spec.ts` |
+| SB-RN-19 | `faltas-bola-na-mao.spec.ts` |
+| SB-RN-20 | `faltas-bola-na-mao.spec.ts` |
+| SB-RN-21 | `faltas-bola-na-mao.spec.ts` |
+| SB-RN-22 | `faltas-bola-na-mao.spec.ts` |
+| SB-RN-23 | `faltas-bola-na-mao.spec.ts` |
+| SB-RN-24 | `faltas-bola-na-mao.spec.ts` |
+| SB-RN-25 | `castigo.spec.ts` |
+| SB-RN-26 | `castigo.spec.ts` |
+| SB-RN-27 | `castigo.spec.ts` |
+| SB-RN-28 | `castigo.spec.ts` |
+| SB-RN-29 | `castigo.spec.ts`, `piloto.spec.ts` |
+| SB-RN-30 | `castigo.spec.ts` |
+| SB-RN-31 | `computador.spec.ts` |
+| SB-RN-32 | `computador.spec.ts` |
+| SB-RN-33 | `ia-worker.spec.ts`, `piloto.spec.ts` |
+| SB-RN-34 | `bordas.spec.ts` |
+| SB-RN-35 | `bordas.spec.ts` |
+| SB-RN-36 | `responsivo.spec.ts` |
 
 ---
 
