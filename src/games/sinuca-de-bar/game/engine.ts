@@ -1,3 +1,4 @@
+import { e2eSeed } from '../../../shared/e2e/hook';
 import { chooseShot, type Shot } from './ai';
 import type { AiRequest, AiResponse } from './ai.worker';
 import type { Assets } from './assets';
@@ -31,6 +32,7 @@ import type { SinucaE2EPrepareTurn, SinucaE2EState, SinucaE2ETargets } from './e
 import { blit, SCALE, upscaleAll } from './hires';
 import { anyMoving, type Ball, canPlaceCue, castRay, cloneBalls, newEvents, type PhysicsListener, type ShotEvents, step } from './physics';
 import { drawPixelText, textWidth } from './pixelFont';
+import { mulberry32 } from './random';
 import {
   footSpot,
   groupOf,
@@ -389,7 +391,7 @@ export class SinucaEngine {
 
   private requestAi() {
     this.aiStats.requests++;
-    const req: AiRequest = { id: ++this.aiId, balls: cloneBalls(this.balls), state: this.match, level: this.settings.level };
+    const req: AiRequest = { id: ++this.aiId, balls: cloneBalls(this.balls), state: this.match, level: this.settings.level, seed: e2eSeed() };
     if (this.worker) {
       this.worker.postMessage(req);
       return;
@@ -397,7 +399,9 @@ export class SinucaEngine {
     this.aiStats.fallback++;
     setTimeout(() => {
       if (req.id !== this.aiId) return;
-      this.onAiShot({ id: req.id, shot: chooseShot(req.balls, req.state, req.level) });
+      // reserva na própria página: mesma semente do pedido (testes), senão Math.random
+      const rnd = req.seed === undefined ? Math.random : mulberry32(req.seed);
+      this.onAiShot({ id: req.id, shot: chooseShot(req.balls, req.state, req.level, rnd) });
     }, 30);
   }
 
