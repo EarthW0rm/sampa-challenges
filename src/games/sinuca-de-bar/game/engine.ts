@@ -1,3 +1,4 @@
+import { e2eSeed } from '../../../shared/e2e/hook';
 import { chooseShot, type Shot } from './ai';
 import type { AiRequest, AiResponse } from './ai.worker';
 import type { Assets } from './assets';
@@ -15,19 +16,23 @@ import {
   DEFAULT_POWER,
   FELT_B,
   FELT_L,
+  FELT_R,
   FELT_T,
   HEAD_X,
   MAX_SPEED,
   MID_X,
   PHYS_DT,
+  POCKETS,
   POWER_STEP,
   SINK_S,
   STROKE_S,
   TOAST_S,
 } from './constants';
+import type { SinucaE2EPrepareTurn, SinucaE2EState, SinucaE2ETargets } from './e2eHook';
 import { blit, SCALE, upscaleAll } from './hires';
 import { anyMoving, type Ball, canPlaceCue, castRay, cloneBalls, newEvents, type PhysicsListener, type ShotEvents, step } from './physics';
 import { drawPixelText, textWidth } from './pixelFont';
+import { mulberry32 } from './random';
 import {
   footSpot,
   groupOf,
@@ -91,6 +96,12 @@ export class SinucaEngine {
   private breaker: 0 | 1;
   private time = 0;
   private hudKey = '';
+  /** Retrato da última tacada decidida (lido pelo gancho dos testes). */
+  private lastShot: SinucaE2EState['lastShot'] = null;
+  private shots = 0;
+  /** Contadores da IA (lidos pelo gancho dos testes). */
+  private aiStats = { requests: 0, received: 0, discarded: 0, fallback: 0 };
+  private lastCpuShot: Shot | null = null;
   private listener: PhysicsListener = {
     ballHit: (v) => sfx.clack(v / MAX_SPEED),
     cushionHit: (v) => sfx.cushion(v / MAX_SPEED),
@@ -141,6 +152,7 @@ export class SinucaEngine {
     this.draggingCue = false;
     this.lastValidCue = { x: this.cue.x, y: this.cue.y };
     this.aim = 0;
+    this.lastShot = null;
     this.toast(`${this.name(this.breaker)} dá a saída`);
     this.emitHud();
   }
@@ -212,11 +224,24 @@ export class SinucaEngine {
       Object.assign(c, { x: p.x, y: p.y, on: true });
     }
     if (res.foul) {
-      this.toast(`Falta: ${res.foul}`);
+      // `resolveShot` já põe o aviso da falta nas mensagens, menos quando a tacada encerra a partida
+      if (!res.messages.some((m) => m.startsWith('Falta:'))) this.toast(`Falta: ${res.foul}`);
       sfx.foul();
     }
     if (res.assigned) this.toast(`${this.name(prev.turn)}: ${RULES[prev.rules].names[res.assigned]}`);
     this.match = next;
+    this.shots++;
+    this.lastShot = {
+      by: prev.turn,
+      isBreak: prev.isBreak,
+      firstHit: this.events.firstHit,
+      pocketed: [...this.events.pocketed],
+      foul: res.foul,
+      again: res.again,
+      assigned: res.assigned,
+      respotCastigo: res.respotCastigo,
+      respotCue: res.respotCue,
+    };
 
     if (next.winner !== null) {
       this.wins[next.winner]++;
@@ -259,6 +284,8 @@ export class SinucaEngine {
   // ------------------------------------------------------------------ entrada
 
   setPower(p: number) {
+    // na vez do computador a força é dele (a barra fica desligada; isto protege de eventos atrasados)
+    if (this.isCpu(this.match.turn) && (this.phase === 'aim' || this.phase === 'stroke')) return;
     this.power = Math.max(0.05, Math.min(1, p));
     this.emitHud();
   }
@@ -366,19 +393,28 @@ export class SinucaEngine {
   }
 
   private requestAi() {
-    const req: AiRequest = { id: ++this.aiId, balls: cloneBalls(this.balls), state: this.match, level: this.settings.level };
+    this.aiStats.requests++;
+    const req: AiRequest = { id: ++this.aiId, balls: cloneBalls(this.balls), state: this.match, level: this.settings.level, seed: e2eSeed() };
     if (this.worker) {
       this.worker.postMessage(req);
       return;
     }
+    this.aiStats.fallback++;
     setTimeout(() => {
       if (req.id !== this.aiId) return;
-      this.onAiShot({ id: req.id, shot: chooseShot(req.balls, req.state, req.level) });
+      // reserva na própria página: mesma semente do pedido (testes), senão Math.random
+      const rnd = req.seed === undefined ? Math.random : mulberry32(req.seed);
+      this.onAiShot({ id: req.id, shot: chooseShot(req.balls, req.state, req.level, rnd) });
     }, 30);
   }
 
   private onAiShot(res: AiResponse) {
-    if (res.id !== this.aiId || !this.cpu) return;
+    if (res.id !== this.aiId || !this.cpu) {
+      this.aiStats.discarded++;
+      return;
+    }
+    this.aiStats.received++;
+    this.lastCpuShot = res.shot;
     this.cpu.shot = res.shot;
   }
 
@@ -476,6 +512,86 @@ export class SinucaEngine {
     if (key === this.hudKey) return;
     this.hudKey = key;
     this.onHud(hud);
+  }
+
+  // ------------------------------------------------------------------ testes de ponta a ponta
+
+  /** Retrato do estado para o gancho dos testes (`e2eHook.ts`); só leitura. */
+  e2eState(): SinucaE2EState {
+    const m = this.match;
+    const hit = this.cue.on ? castRay(this.balls, this.cue.x, this.cue.y, this.aim) : { dist: 0, ball: null };
+    return {
+      mode: this.settings.mode,
+      rules: m.rules,
+      level: this.settings.level,
+      castigo: RULES[m.rules].castigo,
+      names: [this.name(0), this.name(1)],
+      phase: this.phase,
+      turn: m.turn,
+      groups: [...m.groups],
+      isBreak: m.isBreak,
+      ballInHand: m.ballInHand,
+      onCastigo: [onCastigo(m, this.balls, 0), onCastigo(m, this.balls, 1)],
+      legal: legalTargets(m, this.balls),
+      winner: m.winner,
+      endReason: m.endReason,
+      wins: [...this.wins],
+      breaker: this.breaker,
+      balls: this.balls.map((b) => ({ n: b.n, x: b.x, y: b.y, on: b.on, moving: b.vx !== 0 || b.vy !== 0 })),
+      aim: this.aim,
+      power: this.power,
+      guide: { dist: hit.dist, ball: hit.ball ? hit.ball.n : null, legal: hit.ball ? legalTargets(m, this.balls).includes(hit.ball.n) : true },
+      draggingCue: this.draggingCue,
+      canPlace: this.canPlace(this.cue.x, this.cue.y),
+      cpu: this.cpu ? { stage: this.cpu.stage, t: this.cpu.t, ready: !!this.cpu.shot } : null,
+      thinking: this.phase === 'aim' && this.isCpu(m.turn),
+      shots: this.shots,
+      lastShot: this.lastShot,
+      toasts: this.toasts.map((t) => t.text),
+      ai: { worker: !!this.worker, ...this.aiStats, lastShot: this.lastCpuShot ? { ...this.lastCpuShot } : null },
+    };
+  }
+
+  /** Alvos em coordenadas lógicas (bolas, caçapas, linha de cabeceira). */
+  e2eTargets(): SinucaE2ETargets {
+    return {
+      balls: this.balls.filter((b) => b.on).map((b) => ({ n: b.n, x: b.x, y: b.y })),
+      pockets: POCKETS.map((p) => ({ x: p.x, y: p.y, r: p.r })),
+      headX: HEAD_X,
+      felt: { l: FELT_L, r: FELT_R, t: FELT_T, b: FELT_B },
+    };
+  }
+
+  /**
+   * Pré-condição rara dos testes: monta a mesa. Bolas fora da lista saem da mesa; a vez volta a
+   * `aim` com a mesa parada.
+   */
+  e2ePrepareBalls(list: readonly { n: number; x: number; y: number; on?: boolean }[]) {
+    this.cancelCpu();
+    for (const b of this.balls) {
+      const p = list.find((q) => q.n === b.n);
+      Object.assign(b, { vx: 0, vy: 0, on: p ? p.on !== false : false });
+      if (p) Object.assign(b, { x: p.x, y: p.y });
+    }
+    this.phase = 'aim';
+    this.lastValidCue = { x: this.cue.x, y: this.cue.y };
+    this.emitHud();
+  }
+
+  /** Pré-condição rara dos testes: de quem é a vez, grupos, saída e bola na mão. */
+  e2ePrepareTurn(p: 0 | 1, opts: SinucaE2EPrepareTurn = {}) {
+    this.cancelCpu();
+    this.match = {
+      ...this.match,
+      turn: p,
+      groups: opts.groups ?? this.match.groups,
+      isBreak: opts.isBreak ?? this.match.isBreak,
+      ballInHand: opts.ballInHand !== undefined ? opts.ballInHand : this.match.ballInHand,
+      winner: null,
+      endReason: null,
+    };
+    this.phase = 'aim';
+    this.emitHud();
   }
 
   // ------------------------------------------------------------------ desenho

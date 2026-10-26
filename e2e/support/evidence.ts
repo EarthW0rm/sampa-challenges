@@ -233,9 +233,10 @@ function wrapLocator(loc: Locator, ev: Evidence): Locator {
         const out = (v as (...a: unknown[]) => unknown).apply(target, args);
         if (isLocator(out)) return wrapLocator(out, ev);
         const verb = typeof prop === 'string' ? LOCATOR_ACTIONS[prop] : undefined;
-        if (!verb) return out;
+        // só ações assíncronas viram evidência (o `expect` do Playwright chama métodos síncronos com o mesmo nome)
+        if (!verb || !(out instanceof Promise)) return out;
         const extra = argText(args);
-        return (out as Promise<unknown>).then(async (r) => {
+        return out.then(async (r) => {
           await ev.action(`${verb} ${describeLocator(target)}${extra ? ` (${extra})` : ''}`);
           return r;
         });

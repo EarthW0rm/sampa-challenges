@@ -1,6 +1,6 @@
 import type { Assets } from './assets';
 import { SCALE, upscaleAll } from './hires';
-import { H, RIDER_SIZE, RIDER_WHEEL_ROW, W } from './constants';
+import { H, MAX_NEIGHBOR_RISE, MIN_RIDER_GAP, RIDER_SIZE, RIDER_WHEEL_ROW, W, ZONE_P1, ZONE_P2 } from './constants';
 import type { Point } from './types';
 
 export interface BuildingType {
@@ -63,12 +63,6 @@ function makeBuilding(rng: Rng, type: BuildingType, x: number, minH: number, max
   return { type, x, floors, height: type.topH + type.baseH + floors * type.floorH };
 }
 
-/** Faixas onde cada motoboy pode aparecer (centro do prédio, em px) e distância mínima entre eles. */
-const ZONE_P1: [number, number] = [28, 230];
-const ZONE_P2: [number, number] = [W - 230, W - 28];
-const MIN_RIDER_GAP = 260;
-/** Um vizinho mais alto que o telhado do motoboy por mais que isso o deixaria encurralado. */
-const MAX_NEIGHBOR_RISE = 110;
 
 interface Layout {
   buildings: PlacedBuilding[];
