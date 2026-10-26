@@ -98,7 +98,7 @@ test.describe('Pinball Paulista — bônus, bolas, fim de jogo e recorde', () =>
     await expect(root.locator('.record')).toHaveText(`Recorde: ${final}`);
   });
 
-  test('PP-RN-25 sair no meio da partida com recorde novo salva o recorde', async ({ game, page }) => {
+  test('PP-RN-25 recorde novo é gravado na hora e o título o mostra ao sair no meio da partida', async ({ game, page }) => {
     await game.open({ storage: { 'pinball-paulista:recorde': '50' } });
     const root = page.locator('.pinball-paulista');
     await expect(root.locator('.rec')).toHaveText('50');
@@ -109,7 +109,8 @@ test.describe('Pinball Paulista — bônus, bolas, fim de jogo e recorde', () =>
     expect(s.score).toBeGreaterThan(50);
     expect(s.newRecord).toBe(true);
     await expect(root.locator('.rec')).toHaveText('NOVO!');
-    await expectStored(page, 'pinball-paulista:recorde', '50');
+    // gravado na hora em que o placar passou o recorde
+    await expectStored(page, 'pinball-paulista:recorde', String(s.score));
     await root.getByRole('button', { name: '← Menu' }).click();
     await expectStored(page, 'pinball-paulista:recorde', String(s.score));
     await expect(root.locator('.record')).toHaveText(`Recorde: ${s.score}`);

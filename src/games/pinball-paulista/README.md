@@ -254,8 +254,8 @@ flippers param e, 1 s depois, aparece **FIM DE JOGO** com os pontos, **Novo reco
 ### PP-RN-25 Recorde
 
 O recorde fica em `localStorage['pinball-paulista:recorde']` e aparece no título e no card do hub.
-Quando o placar passa o recorde, o painel mostra **NOVO!** e o recorde é salvo no fim de jogo — ou ao
-sair da partida no meio (← Menu, barra do hub), se o placar já tiver passado. Valor ausente, inválido
+Quando o placar passa o recorde, o painel mostra **NOVO!** e o recorde é gravado na hora, a cada ponto
+(sair no meio da partida — ← Menu, barra do hub — já encontra o recorde salvo). Valor ausente, inválido
 ou ≤ 0 conta como sem recorde; com o armazenamento bloqueado o jogo funciona e só não guarda.
 
 ---

@@ -231,6 +231,8 @@ export class PinballEngine {
     if (this.score > this.record) {
       this.record = this.score;
       this.newRecord = true;
+      // grava na hora: o título e o card do hub leem o recorde ao renderizar, antes do cleanup deste motor
+      saveRecord(this.score);
     }
   }
 
