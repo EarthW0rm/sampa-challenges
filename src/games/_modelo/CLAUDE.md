@@ -69,7 +69,7 @@ Descreva o laço principal, os estados (menu, jogando, pausa, fim) e qualquer re
 ## Como verificar
 
 1. `npm run typecheck` e `npm run typecheck:e2e` na raiz.
-2. `npm run test:e2e -- __ID__/` (e `--project=celular __ID__/`).
+2. `npm run test:e2e -- e2e/__ID__/` (desktop + celular).
 3. Abra `#/jogos/__ID__`, jogue, volte ao hub pela barra e confira que nada mudou nos outros jogos.
 
 ## Testes de ponta a ponta
@@ -92,6 +92,6 @@ Base comum em `e2e/support/` (guia em `e2e/README.md`); a camada deste jogo fica
   do gancho e joga só por gestos de tela.
 
 ```bash
-npm run test:e2e -- __ID__/
-npm run test:e2e:longa -- __ID__/
+npm run test:e2e -- e2e/__ID__/
+npm run test:e2e:longa -- e2e/__ID__/
 ```
