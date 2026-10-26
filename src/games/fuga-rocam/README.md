@@ -504,7 +504,73 @@ TitleScreen ──onStart(mapa)──▶ GameScreen ──cria no useEffect─�
 
 ## 11. Testes
 
-Preenchida na TF-131-07.
+Testes de ponta a ponta no navegador (Playwright), na raiz do repositório. Guia geral em
+[`e2e/README.md`](../../../e2e/README.md); detalhes do gancho e do piloto no [`CLAUDE.md`](./CLAUDE.md).
+
+```bash
+npm run test:e2e -- e2e/fuga-rocam/                    # suíte rápida do jogo (desktop + 390 px)
+npm run test:e2e -- -g "FR-RN-14"                      # uma regra pelo número
+caffeinate -dimsu npm run test:e2e:longa -- e2e/fuga-rocam/   # piloto: os 3 mapas até o fim (~2–3 min)
+npm run test:e2e:cobertura -- --jogo fuga-rocam        # toda FR-RN tem teste?
+```
+
+Os testes jogam pela tela (setas, Espaço, X, P/Esc, cliques, toque no direcional, deslize no mapa). O relógio é
+controlado (1 quadro = 1/60 s, tempo virtual) e a semente do motor segue a do teste: mesma semente, mesma
+partida. Cada ação vira um PNG em `evidencias/` com o estado da partida no cabeçalho (mapa, pontos,
+vidas, estrelas/calor, pedido, itens, posição, viaturas). Pré-condições raras (calor, item, viatura ou
+tipo de pedido num lugar certo) usam o `prepare` do gancho, sempre comentado no teste.
+
+| Arquivo | Cobertura |
+|---|---|
+| `e2e/fuga-rocam/navegacao.spec.ts` | título, 3 mapas com recorde, escolha por clique e tecla, ← Mapas, volta ao hub |
+| `e2e/fuga-rocam/movimento.spec.ts` | tiles e garagens dos 3 mapas, PRONTO, velocidade e faixa rápida, direção guardada, parede, meia-volta, curva antecipada/tardia, becos |
+| `e2e/fuga-rocam/turbo-oleo.spec.ts` | turbo (velocidade, gasto, trava e recarga), óleo (mancha, derrapada, sem óleo) |
+| `e2e/fuga-rocam/pedidos.spec.ts` | coleta, entrega, distâncias, tipos liberados, pontos por estrela, frágil, urgente (prazo, bônus, atraso), pesado |
+| `e2e/fuga-rocam/procurado.spec.ts` | calor à vista e fora dela, estrelas, visão, viaturas por estrela, personas, helicóptero, saída do excedente, garagem |
+| `e2e/fuga-rocam/captura-escudo.spec.ts` | captura, vidas, PEGO!, recomeço, invulnerabilidade, capacete |
+| `e2e/fuga-rocam/itens.spec.ts` | surgimento, teto e duração dos itens; efeito de cada item |
+| `e2e/fuga-rocam/pausa.spec.ts` | P, Esc, botão, perda de foco, Continuar, Mapas |
+| `e2e/fuga-rocam/recorde.spec.ts` | fim de jogo, recorde por mapa, novo recorde, sair no meio, valor inválido, card do hub, som |
+| `e2e/fuga-rocam/bordas.spec.ts` | determinismo, quadro gigante, laço único, saída pelo hub e volta, storage bloqueado, dado corrompido, arraste de mouse |
+| `e2e/fuga-rocam/responsivo.spec.ts` | 390 px (projeto `celular`): sem rolagem lateral, HUD, direcional, deslize, TURBO, ÓLEO |
+| `e2e/fuga-rocam/piloto.spec.ts` | projeto `longa`: os 3 mapas até acabar as vidas (≥ 3 estrelas), placar recalculado, recorde, card do hub, mesma semente = mesma partida |
+
+Regra → teste (gerada por `npm run test:e2e:cobertura -- --md fuga-rocam`):
+
+| Regra | Testes |
+|---|---|
+| FR-RN-01 | `navegacao.spec.ts` |
+| FR-RN-02 | `movimento.spec.ts` |
+| FR-RN-03 | `movimento.spec.ts` |
+| FR-RN-04 | `movimento.spec.ts` |
+| FR-RN-05 | `movimento.spec.ts` |
+| FR-RN-06 | `movimento.spec.ts` |
+| FR-RN-07 | `movimento.spec.ts` |
+| FR-RN-08 | `bordas.spec.ts`, `responsivo.spec.ts` |
+| FR-RN-09 | `turbo-oleo.spec.ts` |
+| FR-RN-10 | `turbo-oleo.spec.ts` |
+| FR-RN-11 | `pedidos.spec.ts` |
+| FR-RN-12 | `pedidos.spec.ts` |
+| FR-RN-13 | `pedidos.spec.ts` |
+| FR-RN-14 | `pedidos.spec.ts` |
+| FR-RN-15 | `pedidos.spec.ts` |
+| FR-RN-16 | `pedidos.spec.ts` |
+| FR-RN-17 | `procurado.spec.ts` |
+| FR-RN-18 | `procurado.spec.ts` |
+| FR-RN-19 | `procurado.spec.ts` |
+| FR-RN-20 | `procurado.spec.ts` |
+| FR-RN-21 | `procurado.spec.ts` |
+| FR-RN-22 | `procurado.spec.ts` |
+| FR-RN-23 | `captura-escudo.spec.ts`, `piloto.spec.ts` |
+| FR-RN-24 | `captura-escudo.spec.ts` |
+| FR-RN-25 | `itens.spec.ts` |
+| FR-RN-26 | `itens.spec.ts` |
+| FR-RN-27 | `pausa.spec.ts` |
+| FR-RN-28 | `piloto.spec.ts`, `recorde.spec.ts` |
+| FR-RN-29 | `bordas.spec.ts`, `piloto.spec.ts`, `recorde.spec.ts` |
+| FR-RN-30 | `recorde.spec.ts` |
+| FR-RN-31 | `bordas.spec.ts` |
+| FR-RN-32 | `responsivo.spec.ts` |
 
 ---
 
