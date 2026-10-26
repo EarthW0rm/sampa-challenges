@@ -137,7 +137,7 @@ A moto anda `PLAYER_SPEED` px/s. Em faixa rápida (`f`) todos (cachorro e viatur
 A direção escolhida fica **guardada**: a moto segue em frente e, no primeiro centro de tile em que
 dá para virar para a direção guardada, vira. Sem saída à frente nem na direção guardada, a moto
 **para** e espera. A direção guardada continua valendo depois da curva (vira a direção atual).
-A direção **oposta** inverte na hora, mesmo no meio do tile.
+A direção **oposta** inverte na hora, mesmo no meio do tile (menos para dentro de uma garagem trancada).
 
 ### FR-RN-06 Curva antecipada e tardia
 
@@ -356,8 +356,8 @@ direcional e os botões TURBO/ÓLEO aparecem (FR-RN-08).
 
 ## 9. Parâmetros
 
-Valores de `game/constants.ts` (constantes exportadas), do topo de `game/engine.ts` e dos literais
-do motor e das telas. **Mudou um número? Atualize esta tabela.**
+Valores de `game/constants.ts` (constantes exportadas), do topo de `game/engine.ts` e dos poucos
+literais que ficaram no motor e nas telas. **Mudou um número? Atualize esta tabela.**
 
 ### 9.1 `game/constants.ts`
 
@@ -402,6 +402,24 @@ do motor e das telas. **Mudou um número? Atualize esta tabela.**
 | `POINTS` | normal 100, frágil 200, urgente 250, pesado 300 | pontos-base da entrega |
 | `PIZZA_POINTS` | 150 | pontos da pizza |
 | `TIME_BONUS_PER_SEC` | 12 | bônus por segundo que sobrou no urgente |
+| `JOB_RADIUS` | 9 px | alcance da coleta e da entrega (FR-RN-11) |
+| `JOB_PICKUP_DIST` | 12 a 40 tiles | distância de caminho do cachorro à coleta (60 tentativas; senão qualquer rua) |
+| `JOB_DROP_DIST` | 20 a 60 tiles | distância de caminho da coleta à entrega (80 tentativas; senão qualquer rua) |
+| `NEXT_JOB_DELAY` / `LATE_JOB_DELAY` | 1,2 s / 1,5 s | próximo pedido depois de entregar / de perder o urgente |
+| `JOB_UNLOCK` | frágil 2, urgente 3, pesado 4 entregas | a partir de quantas entregas o tipo entra no sorteio |
+| `URGENT_MIN` / `URGENT_FACTOR` / `URGENT_EXTRA` | 10 s / 1,4 / 8 s | prazo do urgente (FR-RN-14) |
+| `LATE_HEAT` | 8 | calor somado ao perder o urgente |
+| `HEAVY_HEAT` | 8 | calor extra da entrega pesada |
+| `STAR_POINTS` | 0,25 | pontos extras por estrela acima de 1 (fração) |
+| `OIL_START` / `OIL_MAX` | 1 / 3 | óleo no começo / máximo |
+| `OIL_BACK` / `OIL_RADIUS` | 6 px / 10 px | onde a mancha cai / alcance da derrapada |
+| `ITEM_FIRST` | 4,5 s (`ITEM_INTERVAL` × 0,5) | primeiro item |
+| `ITEM_MIN_DIST` / `ITEM_RADIUS` | 6 tiles / 10 px | onde o item nasce / alcance para pegar |
+| `SHIELD_INVULN` | 1 s | invulnerável depois do capacete |
+| `CAUGHT_PAUSE` | 1,5 s | duração do PEGO! |
+| `CATCH_HEAT_KEEP` | 0,5 | fração do calor que fica depois de ser pego |
+| `SPAWN_FIRST` / `SPAWN_AFTER_CATCH` | 1 s / 2 s | espera até a primeira viatura no começo / depois de ser pego |
+| `DT_MAX` | 0,05 s | teto do passo do motor por quadro (o laço da tela já corta em 0,1 s) |
 
 ### 9.2 Topo de `game/engine.ts`
 
@@ -418,6 +436,18 @@ do motor e das telas. **Mudou um número? Atualize esta tabela.**
 
 | Nome neste manual | Valor | Onde | Efeito |
 |---|---|---|---|
+| `JOB_WEIGHTS` | normal 3, frágil 2, urgente 2, pesado 2 | `engine.weightedKind` | pesos do sorteio do tipo |
+| `ITEM_WEIGHTS` | turbo 3, óleo 3, capacete 2, pizza 3, vida 1 | `engine.updateItems` | pesos do sorteio do item |
+| `COP_SEE_ALPHA` / `COP_CATCH_ALPHA` | 0,5 / 0,9 | `engine.updateCops`, `checkCaught` | visibilidade mínima da viatura para ver / para prender (aparece a +1 por s) |
+| `FAST_MOTO_MULT` | 1,06 | `engine.updateCops` | moto "rápida" |
+| `BLOCK_AHEAD` / `BLOCK_NEAR` / `AMBUSH_NEAR` | 4 / 5 / 6 tiles | `engine.copTarget` | alvos do bloqueador e da emboscada |
+| `LEAVE_DIST` | 14 tiles | `engine.manageQuota` | viatura excedente só sai se mais longe que isso (ou sem caminho) |
+| `SWIPE_MIN` | 18 px de tela | `GameScreen` | deslize mínimo |
+| `OVER_DELAY` | 900 ms | `GameScreen` | atraso da caixa de fim de jogo |
+| `SCALE` (`game/hires.ts`) | 2 | `hires.ts` | canvas 1280×800, sprites em alta (Scale2x) |
+| `MASTER_VOLUME` | 0,5 | `sound.ts` | volume geral do som |
+
+---|---|---|---|
 | `DT_MAX` | 0,05 s | `engine.update` | teto do passo por quadro (o laço da tela já corta em 0,1 s) |
 | `OIL_START` / `OIL_MAX` | 1 / 3 | `reset`, item óleo | óleo no começo / máximo |
 | `OIL_BACK` / `OIL_RADIUS` | 6 px / 10 px | `updateOil` | onde a mancha cai / alcance da derrapada |

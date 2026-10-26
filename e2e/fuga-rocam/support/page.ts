@@ -16,8 +16,30 @@ export interface GoOptions {
   until?: (s: FugaState) => boolean;
   /** Teto de quadros do trajeto (padrão 60 s de jogo). */
   maxFrames?: number;
-  /** Custo extra por tile (desvio de viaturas). */
-  extra?: (tx: number, ty: number) => number;
+  /** Desvia das viaturas (custo extra nos tiles perto delas, recalculado a cada decisão). */
+  avoidCops?: boolean;
+  /** Não passa pelos tiles com item (para não pegá-los). */
+  avoidItems?: boolean;
+  /** Quadros por decisão quando há `until` (padrão 6). */
+  step?: number;
+  /** Chamado com cada estado lido no trajeto (antes de decidir). */
+  trace?: (s: FugaState) => void;
+}
+
+/** Custo extra dos tiles perto das viaturas ativas (rota que desvia). */
+export function copPenalty(s: FugaState): ((tx: number, ty: number) => number) | undefined {
+  const cops = s.copList.filter((c) => !c.leaving && c.stun <= 0);
+  if (!cops.length) return undefined;
+  return (tx, ty) => {
+    let p = 0;
+    for (const c of cops) {
+      const d = Math.abs(c.tx - tx) + Math.abs(c.ty - ty);
+      if (d <= 1) p += 60;
+      else if (d <= 3) p += 20;
+      else if (d <= 5) p += 4;
+    }
+    return p;
+  };
 }
 
 /** Página da Fuga da Rocam: a base comum mais os gestos do jogo (lógico 640×400). */
@@ -123,21 +145,27 @@ export class FugaPage extends BaseGamePage<FugaE2E> {
     const target: Tile = [tx, ty];
     const max = opts.maxFrames ?? 3600;
     let s = await this.state();
-    const field = costField(s.map, target, opts.extra);
+    let field = costField(s.map, target);
     const c = tileCenter(target);
     let used = 0;
     await this.ev.quiet(async () => {
       if (opts.turbo) await this.page.keyboard.down('Space');
       try {
         for (;;) {
+          opts.trace?.(s);
           if (opts.until?.(s)) return;
           if (s.phase !== 'play' && s.phase !== 'ready') return;
           if (Math.hypot(s.player.x - c.x, s.player.y - c.y) <= 2.5) return;
           if (used >= max) throw new Error(`goToTile(${tx}, ${ty}): não chegou em ${max} quadros (em ${s.player.tx}, ${s.player.ty})`);
+          if (opts.avoidCops || opts.avoidItems) {
+            const cop = opts.avoidCops ? copPenalty(s) : undefined;
+            const items = opts.avoidItems ? new Set(s.itemList.map((i) => `${i.tx},${i.ty}`)) : null;
+            field = costField(s.map, target, (tx, ty) => (cop ? cop(tx, ty) : 0) + (items?.has(`${tx},${ty}`) ? 500 : 0));
+          }
           const heavy = s.job?.stage === 'drop' && s.job.kind === 'pesado';
           const step = routeStep(s.map, field, target, s.player, s.want, { turbo: opts.turbo, heavy });
           if (step.key) await this.page.keyboard.press(step.key);
-          const n = Math.min(step.frames, opts.until ? 6 : step.frames);
+          const n = Math.min(step.frames, opts.until ? (opts.step ?? 6) : step.frames);
           await this.frames(n);
           used += n;
           s = await this.state();
@@ -150,15 +178,53 @@ export class FugaPage extends BaseGamePage<FugaE2E> {
     return s;
   }
 
-  /** Busca e entrega o pedido atual pelas setas. */
-  async deliver(opts: GoOptions = {}): Promise<FugaState> {
+  /** Espera o PEGO! acabar (fase volta a PRONTO ou fim de jogo). */
+  async waitCaught(): Promise<FugaState> {
     let s = await this.state();
-    if (s.job?.stage === 'pickup') s = await this.goToTile(s.job.pickup[0], s.job.pickup[1], { ...opts, until: (x) => x.job?.stage === 'drop' || !!opts.until?.(x) });
-    if (s.job?.stage === 'drop') {
-      const d0 = s.deliveries;
-      s = await this.goToTile(s.job.drop[0], s.job.drop[1], { ...opts, until: (x) => x.deliveries > d0 || !!opts.until?.(x) });
+    while (s.phase === 'caught') {
+      await this.frames(10);
+      s = await this.state();
     }
     return s;
+  }
+
+  /**
+   * Busca o pedido atual (`stage: 'pickup'`) pelas setas, desviando das viaturas; atravessa capturas.
+   * Para com o pedido coletado, quando `until` valer ou no fim de jogo.
+   */
+  async pickup(opts: GoOptions = {}): Promise<FugaState> {
+    return this.leg('pickup', opts);
+  }
+
+  /** Leva o pedido coletado até o pino verde; para no quadro em que `near` vale (a até 24 px) se pedido. */
+  async drop(opts: GoOptions = {}): Promise<FugaState> {
+    return this.leg('drop', opts);
+  }
+
+  private async leg(stage: 'pickup' | 'drop', opts: GoOptions): Promise<FugaState> {
+    let s = await this.state();
+    const d0 = s.deliveries;
+    const done = (x: FugaState) => (stage === 'pickup' ? x.job?.stage !== 'pickup' : x.deliveries > d0 || !x.job) || !!opts.until?.(x);
+    for (let tries = 0; tries < 8 && !done(s) && s.phase !== 'over'; tries++) {
+      if (s.phase === 'caught') s = await this.waitCaught();
+      if (s.phase === 'paused' || s.phase === 'over' || !s.job) break;
+      const t = stage === 'pickup' ? s.job.pickup : s.job.drop;
+      s = await this.goToTile(t[0], t[1], { avoidCops: true, ...opts, until: done });
+    }
+    return s;
+  }
+
+  /** Busca e entrega o pedido atual pelas setas. */
+  async deliver(opts: GoOptions = {}): Promise<FugaState> {
+    const s = await this.pickup(opts);
+    if (s.job?.stage !== 'drop') return s;
+    return this.drop(opts);
+  }
+
+  /** Espera o próximo pedido chegar (jogando). */
+  async waitJob(): Promise<FugaState> {
+    await this.advanceUntil((h) => !!h.state().job || h.state().phase !== 'play', 5, undefined, 6);
+    return this.state();
   }
 
   /** Setas sem efeito de rota: nome legível. */

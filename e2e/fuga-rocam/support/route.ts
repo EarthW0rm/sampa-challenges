@@ -75,8 +75,8 @@ export function costField(mapId: MapId, target: Tile, extra?: (tx: number, ty: n
       const nx = x + DX[i];
       const ny = y + DY[i];
       if (!walkable(map, nx, ny, target)) continue;
-      // custo de entrar em (x, y) vindo de (nx, ny)
-      const nd = d + 1 + (extra ? extra(x, y) : 0);
+      // custo de (nx, ny) até o alvo: o passo mais o custo extra de estar em (nx, ny)
+      const nd = d + 1 + (extra ? extra(nx, ny) : 0);
       const nk = idx(nx, ny);
       if (nd < dist[nk]) {
         dist[nk] = nd;

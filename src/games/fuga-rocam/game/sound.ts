@@ -53,7 +53,13 @@ class Sfx {
         const len = this.ctx.sampleRate;
         this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
         const d = this.noiseBuf.getChannelData(0);
-        for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+        // ruído com gerador próprio: não consome o Math.random da página (a quantidade depende da taxa de
+        // amostragem e de o AudioContext abrir, o que mudava a semente da partida nos testes)
+        let seed = 0x9e3779b9;
+        for (let i = 0; i < len; i++) {
+          seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+          d[i] = (seed / 4294967296) * 2 - 1;
+        }
         this.startLoops();
       }
       if (this.ctx.state === 'suspended') void this.ctx.resume();

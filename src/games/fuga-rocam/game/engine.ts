@@ -4,6 +4,9 @@ import {
   HEAT_MAX, HEAT_PER_STAR, HEAT_SEEN, HEAVY_MULT, HELI_SPEED, HIDE_MAX, INVULN_TIME, ITEM_INTERVAL, ITEM_LIFETIME, MAX_ITEMS,
   MAX_LIVES, MOTO_SPEED, OIL_STUN, OIL_TIME, PIZZA_POINTS, PLAYER_SPEED, POINTS, RADIO_MEMORY, ROWS, SHIELD_STUN, SIGHT_TILES,
   START_LIVES, TILE, TIME_BONUS_PER_SEC, TURBO_DRAIN, TURBO_ITEM, TURBO_MIN_RESTART, TURBO_MULT, TURBO_RECHARGE, TURN_TOLERANCE, W,
+  OIL_START, OIL_MAX, OIL_BACK, OIL_RADIUS, JOB_RADIUS, JOB_PICKUP_DIST, JOB_DROP_DIST, NEXT_JOB_DELAY, LATE_JOB_DELAY, URGENT_MIN,
+  URGENT_FACTOR, URGENT_EXTRA, LATE_HEAT, HEAVY_HEAT, STAR_POINTS, JOB_UNLOCK, SHIELD_INVULN, CAUGHT_PAUSE, CATCH_HEAT_KEEP,
+  SPAWN_FIRST, SPAWN_AFTER_CATCH, ITEM_FIRST, ITEM_MIN_DIST, ITEM_RADIUS, DT_MAX,
 } from './constants';
 import { blit, SCALE, upscaleAll } from './hires';
 import type { Input } from './input';
@@ -147,7 +150,7 @@ export class FugaEngine {
   private popups: Popup[] = [];
   private lastSeen: { tx: number; ty: number; t: number } | null = null;
   private spawnCd = 0;
-  private itemCd = ITEM_INTERVAL * 0.5;
+  private itemCd = ITEM_FIRST;
   private nextId = 1;
   private trailCd = 0;
   private lastHud = '';
@@ -188,7 +191,7 @@ export class FugaEngine {
     this.turboLocked = false;
     this.turboOn = false;
     this.shield = false;
-    this.oil = 1;
+    this.oil = OIL_START;
     this.invuln = 0;
     this.garageCd = 0;
     this.hideT = 0;
@@ -205,8 +208,8 @@ export class FugaEngine {
     this.particles = [];
     this.popups = [];
     this.lastSeen = null;
-    this.spawnCd = 1;
-    this.itemCd = ITEM_INTERVAL * 0.5;
+    this.spawnCd = SPAWN_FIRST;
+    this.itemCd = ITEM_FIRST;
     this.nav.clear();
     this.placePlayer();
     this.input.clear();
@@ -341,6 +344,8 @@ export class FugaEngine {
     }
     if (want === null || p.off <= 0 || want === p.dir) return;
     if (want === opposite(p.dir)) {
+      // meia-volta só para um tile em que a moto pode entrar (garagem trancada não vale)
+      if (!this.canPlayer(p.tx, p.ty)) return;
       p.tx += DX[p.dir];
       p.ty += DY[p.dir];
       p.off = TILE - p.off;
@@ -612,9 +617,9 @@ export class FugaEngine {
 
   private weightedKind(): JobKind {
     const pool: JobKind[] = ['normal', 'normal', 'normal'];
-    if (this.deliveries >= 2) pool.push('fragil', 'fragil');
-    if (this.deliveries >= 3) pool.push('urgente', 'urgente');
-    if (this.deliveries >= 4) pool.push('pesado', 'pesado');
+    if (this.deliveries >= JOB_UNLOCK.fragil) pool.push('fragil', 'fragil');
+    if (this.deliveries >= JOB_UNLOCK.urgente) pool.push('urgente', 'urgente');
+    if (this.deliveries >= JOB_UNLOCK.pesado) pool.push('pesado', 'pesado');
     return pool[Math.floor(this.rand() * pool.length)];
   }
 
@@ -629,7 +634,7 @@ export class FugaEngine {
     for (let i = 0; i < 60 && !P; i++) {
       const t = list[Math.floor(this.rand() * list.length)];
       const d = f[t[1] * COLS + t[0]];
-      if (d >= 12 && d <= 40) P = t;
+      if (d >= JOB_PICKUP_DIST[0] && d <= JOB_PICKUP_DIST[1]) P = t;
     }
     P ??= list[Math.floor(this.rand() * list.length)];
     const fp = this.fieldFor('player', P);
@@ -637,7 +642,7 @@ export class FugaEngine {
     for (let i = 0; i < 80 && !D; i++) {
       const t = list[Math.floor(this.rand() * list.length)];
       const d = fp[t[1] * COLS + t[0]];
-      if (d >= 20 && d <= 60) D = t;
+      if (d >= JOB_DROP_DIST[0] && d <= JOB_DROP_DIST[1]) D = t;
     }
     D ??= list[Math.floor(this.rand() * list.length)];
     this.job = { kind: this.weightedKind(), stage: 'pickup', pickup: P, drop: D, timeLeft: null };
@@ -663,40 +668,45 @@ export class FugaEngine {
       if (job.timeLeft <= 0) {
         this.say('Atrasou! Pedido perdido', 2.5);
         sfx.starDown();
-        this.heat = Math.min(HEAT_MAX, this.heat + 8);
+        this.heat = Math.min(HEAT_MAX, this.heat + LATE_HEAT);
         this.job = null;
-        this.jobDelay = 1.5;
+        this.jobDelay = LATE_JOB_DELAY;
         return;
       }
     }
-    if (dx * dx + dy * dy > 9 * 9 || this.hidden) return;
+    if (dx * dx + dy * dy > JOB_RADIUS * JOB_RADIUS || this.hidden) return;
     if (job.stage === 'pickup') {
       job.stage = 'drop';
       if (job.kind === 'urgente') {
         const tiles = this.nav.dist('player', job.pickup, job.drop);
-        job.timeLeft = Math.max(10, ((tiles * TILE) / PLAYER_SPEED) * 1.4 + 8);
+        job.timeLeft = Math.max(URGENT_MIN, ((tiles * TILE) / PLAYER_SPEED) * URGENT_FACTOR + URGENT_EXTRA);
       }
       sfx.pickup();
       this.burst(cx, cy, 8, ['#ffd36b', '#fff2b8'], 50);
       this.say(job.kind === 'fragil' ? 'Frágil! Sem turbo' : job.kind === 'pesado' ? 'Pesado: mais lento' : job.kind === 'urgente' ? 'Urgente! Corre!' : 'Pedido coletado!', 2);
     } else {
-      const mult = 1 + 0.25 * (this.stars - 1);
+      const mult = 1 + STAR_POINTS * (this.stars - 1);
       let pts = POINTS[job.kind] * mult;
       if (job.timeLeft !== null) pts += Math.floor(job.timeLeft) * TIME_BONUS_PER_SEC;
       pts = Math.round(pts);
       this.score += pts;
       this.deliveries++;
-      this.heat = Math.min(HEAT_MAX, this.heat + HEAT_DELIVERY + (job.kind === 'pesado' ? 8 : 0));
+      this.heat = Math.min(HEAT_MAX, this.heat + HEAT_DELIVERY + (job.kind === 'pesado' ? HEAVY_HEAT : 0));
       sfx.deliver();
       this.burst(cx, cy, 14, ['#5fd17a', '#fff2b8', '#ffd36b'], 70, 0.7);
       this.pop(cx - 8, cy - 14, `+${pts}`, '#5fd17a');
       this.say(`Entrega feita! +${pts}`, 2.2);
       this.job = null;
-      this.jobDelay = 1.2;
-      if (this.score > this.record && !this.newRecord && this.record > 0) {
-        this.newRecord = true;
-        sfx.record();
-      }
+      this.jobDelay = NEXT_JOB_DELAY;
+      this.checkRecord();
+    }
+  }
+
+  /** Passou do recorde anterior (maior que 0)? Marca o novo recorde uma vez (entrega ou pizza). */
+  private checkRecord() {
+    if (this.score > this.record && !this.newRecord && this.record > 0) {
+      this.newRecord = true;
+      sfx.record();
     }
   }
 
@@ -714,7 +724,7 @@ export class FugaEngine {
         const t = list[Math.floor(this.rand() * list.length)];
         const tile = this.map.tiles[t[1]][t[0]];
         if (tile !== '.' && tile !== 'f') continue;
-        if (f[t[1] * COLS + t[0]] < 6) continue;
+        if (f[t[1] * COLS + t[0]] < ITEM_MIN_DIST) continue;
         if (this.items.some((o) => o.tx === t[0] && o.ty === t[1])) continue;
         const pool: ItemKind[] = ['turbo', 'turbo', 'turbo', 'oleo', 'oleo', 'oleo', 'capacete', 'capacete', 'pizza', 'pizza', 'pizza'];
         if (this.lives < MAX_LIVES) pool.push('vida');
@@ -727,7 +737,7 @@ export class FugaEngine {
     const ppy = py(this.player);
     this.items = this.items.filter((it) => {
       const [cx, cy] = center([it.tx, it.ty]);
-      if ((cx - ppx) ** 2 + (cy - ppy) ** 2 > 10 * 10) return true;
+      if ((cx - ppx) ** 2 + (cy - ppy) ** 2 > ITEM_RADIUS * ITEM_RADIUS) return true;
       switch (it.kind) {
         case 'turbo':
           this.turbo = Math.min(1, this.turbo + TURBO_ITEM);
@@ -735,7 +745,7 @@ export class FugaEngine {
           this.say('Turbo carregado!');
           break;
         case 'oleo':
-          this.oil = Math.min(3, this.oil + 1);
+          this.oil = Math.min(OIL_MAX, this.oil + 1);
           this.say('Óleo! Toque X para soltar');
           break;
         case 'capacete':
@@ -744,6 +754,7 @@ export class FugaEngine {
           break;
         case 'pizza':
           this.score += PIZZA_POINTS;
+          this.checkRecord();
           this.pop(cx - 8, cy - 12, `+${PIZZA_POINTS}`);
           this.say(`Pizza! +${PIZZA_POINTS}`);
           break;
@@ -762,7 +773,7 @@ export class FugaEngine {
     if (this.input.takeOil() && this.oil > 0 && !this.hidden) {
       this.oil--;
       const p = this.player;
-      this.puddles.push({ x: px(p) - DX[p.dir] * 6, y: py(p) - DY[p.dir] * 6, life: OIL_TIME });
+      this.puddles.push({ x: px(p) - DX[p.dir] * OIL_BACK, y: py(p) - DY[p.dir] * OIL_BACK, life: OIL_TIME });
       sfx.oil();
     }
     for (const o of this.puddles) o.life -= dt;
@@ -770,7 +781,7 @@ export class FugaEngine {
       if (o.life <= 0) return false;
       for (const c of this.cops) {
         if (c.stun > 0 || c.alpha < 0.5 || c.leaving) continue;
-        if ((px(c) - o.x) ** 2 + (py(c) - o.y) ** 2 < 10 * 10) {
+        if ((px(c) - o.x) ** 2 + (py(c) - o.y) ** 2 < OIL_RADIUS * OIL_RADIUS) {
           c.stun = OIL_STUN;
           sfx.skid();
           this.burst(o.x, o.y, 10, ['#2a2438', '#5e5870', '#fff2b8'], 50);
@@ -794,7 +805,7 @@ export class FugaEngine {
       if (this.shield) {
         this.shield = false;
         c.stun = SHIELD_STUN;
-        this.invuln = 1;
+        this.invuln = SHIELD_INVULN;
         sfx.shield();
         this.burst(ppx, ppy, 16, ['#7fe3ff', '#ffffff'], 80);
         this.say('O capacete salvou!');
@@ -823,10 +834,10 @@ export class FugaEngine {
     this.cops = [];
     this.heli = null;
     this.lastSeen = null;
-    this.heat *= 0.5;
+    this.heat *= CATCH_HEAT_KEEP;
     this.stars = 1 + Math.min(4, Math.floor(this.heat / HEAT_PER_STAR));
     this.puddles = [];
-    this.spawnCd = 2;
+    this.spawnCd = SPAWN_AFTER_CATCH;
     this.garageCd = 0;
     this.placePlayer();
     this.invuln = INVULN_TIME;
@@ -837,7 +848,7 @@ export class FugaEngine {
   // ------------------------------------------------------------------ laço
 
   update(rawDt: number) {
-    const dt = Math.max(0, Math.min(rawDt, 0.05));
+    const dt = Math.max(0, Math.min(rawDt, DT_MAX));
     if (this.phase === 'paused' || this.phase === 'over') {
       this.tickFx(dt);
       this.emit();
@@ -861,7 +872,7 @@ export class FugaEngine {
     if (this.phase === 'caught') {
       this.phaseT += dt;
       this.tickFx(dt);
-      if (this.phaseT > 1.5) this.afterCaught();
+      if (this.phaseT > CAUGHT_PAUSE) this.afterCaught();
       this.emit();
       return;
     }
