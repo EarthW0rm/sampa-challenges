@@ -275,6 +275,8 @@ export class CachorroLokoEngine {
     const catchRect = this.catchRect();
 
     for (const b of this.boxes) {
+      // o fim do turno vale na hora: os pacotes seguintes do mesmo quadro não pontuam nem tiram vida
+      if (this.phase === 'over') break;
       switch (b.state) {
         case 'chute': {
           b.vy += GRAVITY * dt;
@@ -388,7 +390,7 @@ export class CachorroLokoEngine {
       this.powers[b.kind] = POWER_DURATION[b.kind];
       this.popups.push({ text: POWER_LABEL[b.kind], x: cx, y: cy - 18, t: 0, color: '#9fe0ff' });
     }
-    this.log('catch', b, points);
+    this.log('catch', b, points, points === 2);
   }
 
   private onLand(b: Box) {
@@ -596,7 +598,7 @@ export class CachorroLokoEngine {
 
   // ------------------------------------------------------------ testes de ponta a ponta
 
-  private log(ev: CLEvent['ev'], b: Box, points?: number) {
+  private log(ev: CLEvent['ev'], b: Box, points?: number, dobro = false) {
     this.e2eLog?.push({
       t: this.time,
       ev,
@@ -604,7 +606,8 @@ export class CachorroLokoEngine {
       kind: b.kind,
       belt: b.belt,
       x: b.x,
-      ...(points === undefined ? {} : { points, dobro: this.powers.dobro > 0 }),
+      y: b.y,
+      ...(points === undefined ? {} : { points, dobro }),
       score: this.score,
       lives: this.lives,
     });

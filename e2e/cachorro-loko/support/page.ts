@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
-import { DOG_SPEED, DOG_TURBO_SPEED } from '../../../src/games/cachorro-loko/game/constants';
+import { BOX_SIZE, DOG_SPEED, DOG_TURBO_SPEED } from '../../../src/games/cachorro-loko/game/constants';
+import type { BoxKind } from '../../../src/games/cachorro-loko/game/types';
 import type { CachorroLokoE2E, CLEvent, CLRect, CLState } from '../../../src/games/cachorro-loko/game/e2eHook';
 import type { Evidence } from '../../support/evidence';
 import { BaseGamePage, FPS, type BaseBootOptions } from '../../support/game-page';
@@ -40,6 +41,40 @@ export class CachorroLokoPage extends BaseGamePage<CachorroLokoE2E> {
 
   events(from = 0): Promise<CLEvent[]> {
     return this.hook((h, f) => h.events(f), from);
+  }
+
+  /** Pré-condição: liga/desliga os pedidos automáticos do chapeiro (`prepare.chef`). */
+  chef(on: boolean): Promise<void> {
+    return this.hook((h, v) => h.prepare.chef(v), on);
+  }
+
+  /** Pré-condição: vidas (`prepare.lives`). */
+  setLives(n: number): Promise<void> {
+    return this.hook((h, v) => h.prepare.lives(v), n);
+  }
+
+  /** Pré-condição: placar (`prepare.score`). */
+  setScore(n: number): Promise<void> {
+    return this.hook((h, v) => h.prepare.score(v), n);
+  }
+
+  /** Pré-condição: pacote solto na rua em (x, y), parado (cai em linha reta) ou com `vx`. Devolve o id. */
+  dropAt(kind: BoxKind, x: number, y = 100, vx = 0): Promise<number> {
+    return this.hook((h, a) => h.prepare.spawn(a.kind, { state: 'street', belt: 3, x: a.x, y: a.y, vx: a.vx, vy: 0 }), { kind, x, y, vx });
+  }
+
+  /** Pré-condição: pacote solto na rua bem em cima do centro da área de pega atual. */
+  async dropOnDog(kind: BoxKind, y = 100): Promise<number> {
+    const r = (await this.state()).catchRect;
+    return this.dropAt(kind, r.x + r.w / 2 - BOX_SIZE / 2, y);
+  }
+
+  /** Avança até o pacote sair de cena (pego ou perdido) e devolve o evento final dele. */
+  async settle(id: number, maxSeconds = 5): Promise<CLEvent> {
+    await this.advanceUntil((h, i) => !h.state().boxes.some((b) => b.id === i), maxSeconds, id, 1);
+    const ev = (await this.events()).filter((e) => e.id === id && (e.ev === 'catch' || e.ev === 'land'));
+    if (!ev.length) throw new Error(`pacote ${id} sumiu sem evento`);
+    return ev[ev.length - 1];
   }
 
   /** Segura uma tecla de direção por `frames` quadros. */

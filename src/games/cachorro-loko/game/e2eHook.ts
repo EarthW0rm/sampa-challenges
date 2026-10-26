@@ -35,6 +35,7 @@ export interface CLEvent {
   kind: BoxKind;
   belt: number;
   x: number;
+  y: number;
   /** Só em `catch`: pontos ganhos (0 na bomba) e se o dobro estava ativo. */
   points?: number;
   dobro?: boolean;
