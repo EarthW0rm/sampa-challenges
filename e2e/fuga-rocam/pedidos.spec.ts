@@ -57,7 +57,7 @@ test.describe('Fuga da Rocam — pedidos', () => {
       s = await game.pickup();
       expect(s.job?.stage, 'coletado no pino amarelo').toBe('drop');
       const [before, after, pts] = await dropAndScore(game);
-      const bonus = job.kind === 'urgente' ? Math.floor(before.job!.timeLeft!) * TIME_BONUS_PER_SEC : 0;
+      const bonus = job.kind === 'urgente' ? Math.floor(before.job!.timeLeft! - 1 / 60) * TIME_BONUS_PER_SEC : 0;
       expect(pts, `pontos do pedido ${job.kind} com ${before.stars} estrela(s)`).toBe(base(job.kind, before.stars) + bonus);
       expect(after.score - before.score).toBe(pts);
       expect(after.deliveries).toBe(before.deliveries + 1);
@@ -96,7 +96,7 @@ test.describe('Fuga da Rocam — pedidos', () => {
     expect(s.job!.timeLeft!).toBeLessThanOrEqual(limit);
     expect(s.job!.timeLeft!).toBeGreaterThan(limit - 0.15);
     const [before, , pts] = await dropAndScore(game);
-    expect(pts).toBe(base('urgente', before.stars) + Math.floor(before.job!.timeLeft!) * TIME_BONUS_PER_SEC);
+    expect(pts).toBe(base('urgente', before.stars) + Math.floor(before.job!.timeLeft! - 1 / 60) * TIME_BONUS_PER_SEC);
 
     // segundo urgente: foge do pino verde até o prazo acabar
     s = await game.waitJob();
