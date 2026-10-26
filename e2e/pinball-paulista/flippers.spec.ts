@@ -1,7 +1,15 @@
-import { FLIPPER_OMEGA_DOWN, FLIPPER_OMEGA_UP, FLIPPER_REST, FLIPPER_UP } from '../../src/games/pinball-paulista/game/constants';
+import { FLIPPER_OMEGA_DOWN, FLIPPER_OMEGA_UP, FLIPPER_REST, FLIPPER_UP, STEP } from '../../src/games/pinball-paulista/game/constants';
 import { expect, test } from './support/test';
 
 const FRAME = 1 / 60;
+
+/**
+ * Um quadro de 1/60 s roda 8 subpassos de `STEP` (1/480 s), mas o acumulador é ponto flutuante: na
+ * fronteira o quadro pode rodar 7 ou 9. A tolerância é de 1 subpasso, como o `expectSteps` do Pastel.
+ */
+function expectOneFrame(angle: number, expected: number, omega: number): void {
+  expect(Math.abs(angle - expected), `ângulo ${angle}, esperado ${expected} ± 1 subpasso`).toBeLessThanOrEqual(omega * STEP + 1e-9);
+}
 
 test.describe('Pinball Paulista — flippers', () => {
   test('PP-RN-05 Z, ← e A sobem o esquerdo; /, → e D o direito; sobem a FLIPPER_OMEGA_UP e descem a FLIPPER_OMEGA_DOWN', async ({ game }) => {
@@ -17,15 +25,15 @@ test.describe('Pinball Paulista — flippers', () => {
     for (const [key, i] of keys) {
       await game.keyDown(key, 1);
       let s = await game.state();
-      // 1 quadro subindo: 8 subpassos a FLIPPER_OMEGA_UP
-      expect(s.flippers[i].angle).toBeCloseTo(FLIPPER_REST - FLIPPER_OMEGA_UP * FRAME, 6);
+      // 1 quadro subindo: 8 subpassos (±1) a FLIPPER_OMEGA_UP
+      expectOneFrame(s.flippers[i].angle, FLIPPER_REST - FLIPPER_OMEGA_UP * FRAME, FLIPPER_OMEGA_UP);
       expect(s.flippers[i].up).toBe(true);
       expect(s.flippers[1 - i].angle).toBe(FLIPPER_REST);
       await game.ev.quiet(() => game.frames(10));
       expect((await game.state()).flippers[i].angle).toBe(FLIPPER_UP);
       await game.keyUp(key, 1);
       s = await game.state();
-      expect(s.flippers[i].angle).toBeCloseTo(FLIPPER_UP + FLIPPER_OMEGA_DOWN * FRAME, 6);
+      expectOneFrame(s.flippers[i].angle, FLIPPER_UP + FLIPPER_OMEGA_DOWN * FRAME, FLIPPER_OMEGA_DOWN);
       await game.ev.quiet(() => game.frames(20));
       expect((await game.state()).flippers[i].angle).toBe(FLIPPER_REST);
     }
