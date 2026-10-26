@@ -45,10 +45,11 @@ export function installClock(o: ClockOptions): void {
 
   // Tempo virtual: o relógio da página só anda com os quadros e os saltos.
   let virt = 0;
-  const realPerf = performance.now.bind(performance);
   if (o.virtualTime) {
-    const perfBase = realPerf();
-    const dateBase = Date.now();
+    // bases fixas: o relógio é o mesmo em toda carga (com a hora real, os últimos bits do dt e as
+    // sementes derivadas de Date.now variavam entre execuções)
+    const perfBase = 1000;
+    const dateBase = Date.UTC(2026, 0, 1, 12);
     performance.now = () => perfBase + virt;
     Date.now = () => dateBase + virt;
   }

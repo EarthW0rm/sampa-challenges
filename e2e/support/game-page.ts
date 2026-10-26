@@ -122,7 +122,8 @@ export class BaseGamePage<H = unknown> {
 
   /** Espera o gancho aparecer (o jogo montou o motor). */
   async waitHook(): Promise<void> {
-    await this.page.waitForFunction((name) => !!(window as unknown as Record<string, unknown>)[name], this.cfg.hookName);
+    // polling por tempo: o padrão (`raf`) nunca dispara com o relógio manual
+    await this.page.waitForFunction((name) => !!(window as unknown as Record<string, unknown>)[name], this.cfg.hookName, { polling: 50 });
   }
 
   /** Roda uma função no navegador com o gancho (precisa ser autocontida). */
