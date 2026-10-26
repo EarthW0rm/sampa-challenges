@@ -12,9 +12,9 @@ import {
   SUN_POS,
   W,
 } from './constants';
-import { launch, riderBoxes, stepFlight, type Flight, type World } from './physics';
+import { launch, launchPoint, riderBoxes, riderBounds, stepFlight, type Flight, type FlightEvent, type World } from './physics';
 import { sfx } from './sound';
-import type { PlayerIndex, Settings, Shot } from './types';
+import type { PlayerIndex, Point, Rect, Settings, Shot } from './types';
 
 export type Phase = 'aiming' | 'thinking' | 'flying' | 'exploding' | 'roundOver' | 'gameOver';
 
@@ -35,6 +35,68 @@ export interface HudState {
   /** Treino: tiros e acertos. */
   practiceShots: number;
   practiceHits: number;
+}
+
+/** Fim de um voo (registro lido pelos testes de ponta a ponta). */
+export interface ShotOutcome {
+  /** Número do tiro na partida (1, 2, …). */
+  shot: number;
+  round: number;
+  by: PlayerIndex;
+  kind: Exclude<FlightEvent, { kind: 'none' }>['kind'];
+  /** Motoboy atingido (cabeça ou moto). */
+  index: PlayerIndex | null;
+  x: number;
+  y: number;
+  touchedSun: boolean;
+}
+
+/** Retrato do motor para os testes de ponta a ponta (`game/e2eHook.ts`). */
+export interface EngineE2EState {
+  mode: Settings['mode'];
+  difficulty: Settings['difficulty'];
+  names: [string, string];
+  pointsToWin: number;
+  gravity: number;
+  rain: boolean;
+  phase: Phase;
+  turn: PlayerIndex;
+  startingPlayer: PlayerIndex;
+  round: number;
+  scores: [number, number];
+  wind: number;
+  damage: [number, number];
+  knockedOut: [boolean, boolean];
+  roundWinner: PlayerIndex | null;
+  message: string | null;
+  computerShot: Shot | null;
+  computerShotsThisRound: number;
+  lastShots: [Shot | null, Shot | null];
+  practiceShots: number;
+  practiceHits: number;
+  sunShocked: boolean;
+  shotsFired: number;
+  outcomes: ShotOutcome[];
+  flight: { owner: PlayerIndex; x: number; y: number; x0: number; y0: number; vx: number; vy: number; step: number; touchedSun: boolean } | null;
+  explosion: { x: number; y: number; big: boolean; then: 'endTurn' | 'roundOver' } | null;
+  riders: [Point, Point];
+  buildings: { key: string; x: number; width: number; height: number }[];
+}
+
+export interface EngineE2ETargets {
+  riders: [{ pilot: Rect; moto: Rect; launch: Point }, { pilot: Rect; moto: Rect; launch: Point }];
+}
+
+/** Resultado de um tiro simulado sem disparar (mesma `stepFlight` do jogo e da IA). */
+export interface SimulatedShot {
+  kind: Exclude<FlightEvent, { kind: 'none' }>['kind'];
+  index: PlayerIndex | null;
+  x: number;
+  y: number;
+  steps: number;
+  touchedSun: boolean;
+  /** Menor distância do capacete ao centro do adversário. */
+  minDist: number;
 }
 
 interface Explosion {
@@ -100,6 +162,8 @@ export class CapaceteEngine {
   private practiceShots = 0;
   private practiceHits = 0;
   private practiceRoundStart = 0;
+  private shotsFired = 0;
+  private outcomes: ShotOutcome[] = [];
 
   constructor(
     private readonly assets: Assets,
@@ -156,6 +220,8 @@ export class CapaceteEngine {
     this.practiceHits = 0;
     this.practiceRoundStart = 0;
     this.lastShots = [null, null];
+    this.shotsFired = 0;
+    this.outcomes = [];
     this.newRound();
   }
 
@@ -189,6 +255,7 @@ export class CapaceteEngine {
 
   private fire(shot: Shot) {
     this.lastShots[this.turn] = shot;
+    this.shotsFired++;
     if (this.settings.mode === 'practice') this.practiceShots++;
     this.flight = launch(this.turn, this.city.riders[this.turn], shot);
     this.flightAcc = 0;
@@ -308,6 +375,7 @@ export class CapaceteEngine {
           if (f.touchedSun && !this.sunShocked) sfx.sun();
           if (f.touchedSun) this.sunShocked = true;
           if (ev.kind === 'none') continue;
+          this.record(f, ev);
           this.flight = null;
           sfx.flightStop();
           if (ev.kind === 'out') {
@@ -528,6 +596,103 @@ export class CapaceteEngine {
     const tip = x0 + dir * len;
     ctx.fillRect(tip - dir, y - 1, 1, 3);
     ctx.fillRect(tip - 2 * dir, y - 2, 1, 5);
+  }
+
+  // ----------------------------------------------------- testes (e2eHook)
+
+  private record(f: Flight, ev: Exclude<FlightEvent, { kind: 'none' }>) {
+    const hit = ev.kind === 'pilot' || ev.kind === 'moto';
+    this.outcomes.push({
+      shot: this.shotsFired,
+      round: this.round,
+      by: f.owner,
+      kind: ev.kind,
+      index: hit ? ev.index : null,
+      x: f.x,
+      y: f.y,
+      touchedSun: f.touchedSun,
+    });
+    if (this.outcomes.length > 200) this.outcomes.shift();
+  }
+
+  /** Retrato só de leitura do estado (cópias, não o objeto vivo). */
+  e2eState(): EngineE2EState {
+    const f = this.flight;
+    const e = this.explosion;
+    return {
+      mode: this.settings.mode,
+      difficulty: this.settings.difficulty,
+      names: [...this.settings.names] as [string, string],
+      pointsToWin: this.settings.pointsToWin,
+      gravity: this.settings.gravity,
+      rain: this.settings.rain,
+      phase: this.phase,
+      turn: this.turn,
+      startingPlayer: this.startingPlayer,
+      round: this.round,
+      scores: [...this.scores] as [number, number],
+      wind: this.wind,
+      damage: [...this.damage] as [number, number],
+      knockedOut: [...this.knockedOut] as [boolean, boolean],
+      roundWinner: this.roundWinner,
+      message: this.message,
+      computerShot: this.computerShot ? { ...this.computerShot } : null,
+      computerShotsThisRound: this.computerShotsThisRound,
+      lastShots: this.lastShots.map((s) => (s ? { ...s } : null)) as [Shot | null, Shot | null],
+      practiceShots: this.practiceShots,
+      practiceHits: this.practiceHits,
+      sunShocked: this.sunShocked,
+      shotsFired: this.shotsFired,
+      outcomes: this.outcomes.map((o) => ({ ...o })),
+      flight: f ? { owner: f.owner, x: f.x, y: f.y, x0: f.x0, y0: f.y0, vx: f.vx, vy: f.vy, step: f.step, touchedSun: f.touchedSun } : null,
+      explosion: e ? { x: e.x, y: e.y, big: e.big, then: e.then } : null,
+      riders: [{ ...this.city.riders[0] }, { ...this.city.riders[1] }],
+      buildings: this.city.buildings.map((b) => ({ key: b.type.key, x: b.x, width: b.clipRight ?? b.type.width, height: b.height })),
+    };
+  }
+
+  /** Áreas de acerto (cabeça e moto) e ponto de lançamento de cada motoboy, em pixels lógicos. */
+  e2eTargets(): EngineE2ETargets {
+    const w = this.world();
+    const at = (i: PlayerIndex) => {
+      return { pilot: { ...w.riders[i].pilot }, moto: { ...w.riders[i].moto }, launch: launchPoint(this.city.riders[i]) };
+    };
+    return { riders: [at(0), at(1)] };
+  }
+
+  /** Simula um tiro de `player` sem disparar, com a mesma `stepFlight` do jogo (não muda nada). */
+  e2eSimulate(shot: Shot, player: PlayerIndex = this.turn): SimulatedShot {
+    const w = this.world();
+    const target = riderBounds(w.riders[player === 0 ? 1 : 0]);
+    const cx = target.x + target.w / 2;
+    const cy = target.y + target.h / 2;
+    const f = launch(player, this.city.riders[player], shot);
+    let minDist = Infinity;
+    for (;;) {
+      const ev = stepFlight(f, w);
+      minDist = Math.min(minDist, Math.hypot(f.x - cx, f.y - cy));
+      if (ev.kind === 'none') continue;
+      const hit = ev.kind === 'pilot' || ev.kind === 'moto';
+      return { kind: ev.kind, index: hit ? ev.index : null, x: f.x, y: f.y, steps: f.step, touchedSun: f.touchedSun, minDist };
+    }
+  }
+
+  /** O pixel lógico (x, y) é prédio na máscara de colisão? */
+  e2eSolid(x: number, y: number): boolean {
+    if (x < 0 || x >= W || y < 0 || y >= H) return false;
+    return this.city.mask[(y | 0) * W + (x | 0)] === 1;
+  }
+
+  /** Pré-condição de teste: troca o vento da rodada. */
+  e2eSetWind(wind: number) {
+    this.wind = wind;
+    this.emit();
+  }
+
+  /** Pré-condição de teste: troca a cidade da rodada por uma gerada com `rng` (antes do 1º tiro). */
+  e2eSetCity(rng: () => number) {
+    this.city = generateCity(this.assets, rng);
+    this.emit();
   }
 
   // ------------------------------------------------------------------ hud
