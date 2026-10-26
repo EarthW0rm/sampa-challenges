@@ -387,4 +387,66 @@ Game.tsx ── TitleScreen (React)
 
 ## 13. Testes
 
-Preenchida na TF-127-07.
+Testes de ponta a ponta no navegador (Playwright, guia em [`e2e/README.md`](../../../e2e/README.md)). Eles
+jogam pela tela (teclado, toque, cliques) com o relógio controlado (1 quadro = 1/60 s) e a semente do
+sorteio fixa; o gancho `game/e2eHook.ts` só lê o estado e, em pré-condições raras e comentadas, prepara
+pacotes, vidas ou placar.
+
+```bash
+npm run test:e2e -- e2e/cachorro-loko/                    # suíte rápida do jogo (desktop + 390 px, ~45 s)
+npm run test:e2e -- -g "CL-RN-07"                         # uma regra pelo número
+npm run test:e2e -- --project=celular e2e/cachorro-loko/  # só 390 px
+caffeinate -dimsu npm run test:e2e:longa -- e2e/cachorro-loko/   # piloto: partidas inteiras (~1,5 min)
+npm run test:e2e:cobertura -- --jogo cachorro-loko        # cada CL-RN tem teste?
+```
+
+Use o caminho com `e2e/` no filtro: o filtro é uma expressão sobre o caminho completo, e `cachorro-loko/`
+sozinho também casa com a pasta do worktree `.worktrees/cachorro-loko/` (roda todos os testes).
+
+| Arquivo | Cobertura |
+|---|---|
+| `e2e/cachorro-loko/navegacao.spec.ts` | título (Enter, Espaço, Jogar), gancho só com a flag de teste, ← Menu, volta ao hub; fim do turno (diálogo, Pausar desabilitado, P ignorado), recorde salvo e exibido no título e no card do hub, Jogar de novo; nada pontua depois do fim (bug corrigido); sair no meio não salva |
+| `e2e/cachorro-loko/movimento.spec.ts` | `DOG_SPEED` com setas e A/D, virar, parar ao soltar, duas teclas se anulam, limites `DOG_MIN_X`/`DOG_MAX_X`; zonas de toque (mouse) |
+| `e2e/cachorro-loko/esteiras-desvios.spec.ts` | primeiro pedido, boca ocupada (0,25 s), intervalo ±15%; velocidade e sentido das esteiras; desvio alternando a cada pacote desde a posição sorteada, bomba incluída, última esteira sempre na rua; pisca de 0,5 s; arremesso (vx 18–28, vy −30, gravidade) |
+| `e2e/cachorro-loko/pega-vidas.spec.ts` | área de pega (baú, corpo, espelhada), ponto e HUD, pacote no asfalto e na lateral, bomba (vida, tontura sem andar mas pegando, explosão sem dano no chão) |
+| `e2e/cachorro-loko/poderes.spec.ts` | turbo (velocidade, duração, repegar reinicia, HUD em segundos), grau (`GRAU_LIFT`), ímã (alcance, puxa bomba, fora do alcance cai), vida até `MAX_LIVES`, dobro (a própria caixa vale 1, vida no dobro vale 2) |
+| `e2e/cachorro-loko/nivel.spec.ts` | nível a cada 10 pontos, curva e limites da velocidade e do intervalo, intervalo real no piso; bombas só a partir de `BOMBS_FROM_SCORE`, especial entre o 5º e o 11º comum, vida não sai com 5+ vidas |
+| `e2e/cachorro-loko/pausa.spec.ts` | P, Esc, Pausar/Continuar, Menu da pausa; nada anda na pausa; teclas soltas ao continuar; perda de foco |
+| `e2e/cachorro-loko/bordas.spec.ts` | quadro gigante (0,05 s), aba em segundo plano, armazenamento bloqueado, recorde corrompido/fração/negativo, StrictMode (1 laço, 1 listener), sair pelo hub no meio e voltar |
+| `e2e/cachorro-loko/responsivo.spec.ts` | 390 px: sem rolagem lateral, canvas na proporção, HUD e barra na largura; toque real (CDP) nas zonas e setas visíveis |
+| `e2e/cachorro-loko/piloto.spec.ts` | projeto `longa`: sementes 11, 23 e 37 até 0 vidas passando do nível 3; placar e vidas recalculados pelos eventos, recorde no diálogo, no título e no card do hub; semente 37 jogada 2× dá o mesmo `partida-<n>.json` |
+
+Regra → teste (gerada por `npm run test:e2e:cobertura -- --md cachorro-loko`):
+
+| Regra | Testes |
+|---|---|
+| CL-RN-01 | `navegacao.spec.ts`, `responsivo.spec.ts` |
+| CL-RN-02 | `movimento.spec.ts` |
+| CL-RN-03 | `movimento.spec.ts` |
+| CL-RN-04 | `movimento.spec.ts`, `responsivo.spec.ts` |
+| CL-RN-05 | `esteiras-desvios.spec.ts`, `pausa.spec.ts` |
+| CL-RN-06 | `esteiras-desvios.spec.ts` |
+| CL-RN-07 | `esteiras-desvios.spec.ts`, `piloto.spec.ts` |
+| CL-RN-08 | `esteiras-desvios.spec.ts` |
+| CL-RN-09 | `esteiras-desvios.spec.ts` |
+| CL-RN-10 | `pega-vidas.spec.ts` |
+| CL-RN-11 | `pega-vidas.spec.ts` |
+| CL-RN-12 | `pega-vidas.spec.ts` |
+| CL-RN-13 | `pega-vidas.spec.ts` |
+| CL-RN-14 | `nivel.spec.ts` |
+| CL-RN-15 | `nivel.spec.ts`, `piloto.spec.ts` |
+| CL-RN-16 | `poderes.spec.ts` |
+| CL-RN-17 | `poderes.spec.ts` |
+| CL-RN-18 | `poderes.spec.ts` |
+| CL-RN-19 | `poderes.spec.ts` |
+| CL-RN-20 | `poderes.spec.ts` |
+| CL-RN-21 | `poderes.spec.ts` |
+| CL-RN-22 | `nivel.spec.ts` |
+| CL-RN-23 | `nivel.spec.ts` |
+| CL-RN-24 | `bordas.spec.ts`, `pausa.spec.ts` |
+| CL-RN-25 | `pausa.spec.ts` |
+| CL-RN-26 | `navegacao.spec.ts`, `piloto.spec.ts` |
+| CL-RN-27 | `bordas.spec.ts`, `navegacao.spec.ts`, `piloto.spec.ts` |
+| CL-RN-28 | `bordas.spec.ts`, `navegacao.spec.ts` |
+| CL-RN-29 | `bordas.spec.ts` |
+| CL-RN-30 | `pega-vidas.spec.ts`, `poderes.spec.ts`, `responsivo.spec.ts` |
