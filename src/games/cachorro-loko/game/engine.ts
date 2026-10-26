@@ -26,9 +26,11 @@ import {
   W,
 } from './constants';
 import type { Input } from './input';
+import { isE2E } from '../../../shared/e2e/hook';
+import type { CLEvent, CLRect, CLState } from './e2eHook';
 import { drawPixelText, textWidth } from './pixelFont';
 import { loadRecord, saveRecord } from './record';
-import type { Box, BoxKind, HudState, NormalLook, PowerKind } from './types';
+import type { Box, BoxKind, BoxState, HudState, NormalLook, PowerKind } from './types';
 
 /**
  * Desvio no fim de uma esteira. Troca a cada pacote que passa: se o primeiro foi para a esteira de
@@ -92,6 +94,12 @@ export class CachorroLokoEngine {
   private fx: Fx[] = [];
   private popups: Popup[] = [];
   private lastHud = '';
+  /** Entregas (pacotes não-bomba pegos) da partida; o placar pode ser maior por causa do dobro. */
+  private delivered = 0;
+  /** Registro de eventos da partida, só na página de teste (`isE2E()`); `null` para o jogador. */
+  private e2eLog: CLEvent[] | null = isE2E() ? [] : null;
+  /** Chapeiro parado (pré-condição dos testes, `prepare.chef(false)`). */
+  private e2eChefOff = false;
   private readonly staticLayer: HTMLCanvasElement;
   /** Sprites em alta (Scale2x), usados só no desenho. */
   private readonly hi: Record<AssetKey, HTMLCanvasElement>;
@@ -138,6 +146,8 @@ export class CachorroLokoEngine {
     this.phase = 'playing';
     this.overTimer = 0;
     this.lastHud = '';
+    this.delivered = 0;
+    if (this.e2eLog) this.e2eLog = [];
     this.emit();
   }
 
@@ -172,7 +182,7 @@ export class CachorroLokoEngine {
     this.updateDesvios(dt);
 
     this.chefThrow -= dt;
-    this.spawnTimer -= dt;
+    if (!this.e2eChefOff) this.spawnTimer -= dt;
     if (this.spawnTimer <= 0) {
       if (this.canSpawn()) {
         this.spawn();
@@ -243,7 +253,7 @@ export class CachorroLokoEngine {
 
   private spawn() {
     const looks: NormalLook[] = ['caixa', 'caixa', 'pizza', 'sacola'];
-    this.boxes.push({
+    const box: Box = {
       id: this.nextId++,
       kind: this.pickKind(),
       look: looks[Math.floor(this.rng() * looks.length)],
@@ -253,8 +263,10 @@ export class CachorroLokoEngine {
       vy: 0,
       state: 'chute',
       belt: 0,
-    });
+    };
+    this.boxes.push(box);
     this.chefThrow = 0.3;
+    this.log('spawn', box);
   }
 
   private updateBoxes(dt: number) {
@@ -289,6 +301,7 @@ export class CachorroLokoEngine {
             desvio.state = goesDown ? 'rua' : 'desce';
             desvio.flash = FLASH_TIME;
           }
+          this.log(goesDown ? 'desce' : 'rua', b);
           if (goesDown) {
             b.state = 'drop';
             b.vx = belt.dir * 12;
@@ -358,10 +371,12 @@ export class CachorroLokoEngine {
       this.popups.push({ text: '-1', x: cx, y: cy - 10, t: 0, color: '#ff4d5e' });
       this.dog.dizzy = DIZZY_TIME;
       this.loseLife();
+      this.log('catch', b, 0);
       return;
     }
     const points = this.powers.dobro > 0 ? 2 : 1;
     this.score += points;
+    this.delivered++;
     if (this.score > this.record) this.record = this.score;
     this.fx.push({ kind: 'brilho', x: cx, y: cy, t: 0 });
     this.popups.push({ text: `+${points}`, x: cx, y: cy - 8, t: 0, color: '#ffd36b' });
@@ -373,17 +388,20 @@ export class CachorroLokoEngine {
       this.powers[b.kind] = POWER_DURATION[b.kind];
       this.popups.push({ text: POWER_LABEL[b.kind], x: cx, y: cy - 18, t: 0, color: '#9fe0ff' });
     }
+    this.log('catch', b, points);
   }
 
   private onLand(b: Box) {
     const cx = b.x + BOX_SIZE / 2;
     if (b.kind === 'bomba') {
       this.fx.push({ kind: 'explosao', x: cx, y: GROUND_Y - 6, t: 0 });
+      this.log('land', b);
       return;
     }
     this.fx.push({ kind: 'amassada', x: Math.max(0, Math.min(W - 14, cx - 7)), y: GROUND_Y - 6, t: 0 });
     this.popups.push({ text: '-1', x: cx, y: GROUND_Y - 20, t: 0, color: '#ff4d5e' });
     this.loseLife();
+    this.log('land', b);
   }
 
   private loseLife() {
@@ -574,6 +592,82 @@ export class CachorroLokoEngine {
     if (key === this.lastHud) return;
     this.lastHud = key;
     this.onHud(hud);
+  }
+
+  // ------------------------------------------------------------ testes de ponta a ponta
+
+  private log(ev: CLEvent['ev'], b: Box, points?: number) {
+    this.e2eLog?.push({
+      t: this.time,
+      ev,
+      id: b.id,
+      kind: b.kind,
+      belt: b.belt,
+      x: b.x,
+      ...(points === undefined ? {} : { points, dobro: this.powers.dobro > 0 }),
+      score: this.score,
+      lives: this.lives,
+    });
+  }
+
+  /** Estado para o gancho dos testes (cópia; só leitura). */
+  e2eState(): CLState {
+    return {
+      phase: this.phase,
+      score: this.score,
+      delivered: this.delivered,
+      lives: this.lives,
+      level: this.level,
+      record: this.record,
+      startRecord: this.startRecord,
+      time: this.time,
+      beltSpeed: this.beltSpeed,
+      spawnEvery: this.spawnEvery,
+      spawnTimer: this.spawnTimer,
+      sinceSpecial: this.sinceSpecial,
+      powers: { ...this.powers },
+      dog: { x: this.dog.x, facing: this.dog.facing, moving: this.dog.moving, dizzy: Math.max(0, this.dog.dizzy) },
+      catchRect: this.catchRect(),
+      boxes: this.boxes.map((b) => ({ id: b.id, kind: b.kind, x: b.x, y: b.y, vx: b.vx, vy: b.vy, state: b.state, belt: b.belt })),
+      desvios: this.desvios.map((d) => ({ state: d.state, flash: d.flash })),
+      events: this.e2eLog?.length ?? 0,
+    };
+  }
+
+  /** Eventos da partida a partir do índice `from` (só na página de teste). */
+  e2eEvents(from = 0): CLEvent[] {
+    return (this.e2eLog ?? []).slice(from).map((e) => ({ ...e }));
+  }
+
+  /** Alvos lógicos: a área de pega atual. */
+  e2eTargets(): { catchRect: CLRect } {
+    return { catchRect: this.catchRect() };
+  }
+
+  /** Pré-condição dos testes: põe um pacote (padrão: na boca da esteira 1, como o chapeiro). */
+  e2eSpawn(kind: BoxKind, at: { x?: number; y?: number; vx?: number; vy?: number; state?: BoxState; belt?: number } = {}): number {
+    const box: Box = { id: this.nextId++, kind, look: 'caixa', x: SPAWN_POS.x, y: SPAWN_POS.y, vx: 0, vy: 0, state: 'chute', belt: 0, ...at };
+    this.boxes.push(box);
+    this.log('spawn', box);
+    this.emit();
+    return box.id;
+  }
+
+  /** Pré-condição dos testes: vidas. */
+  e2eSetLives(n: number) {
+    this.lives = n;
+    this.emit();
+  }
+
+  /** Pré-condição dos testes: placar (e o nível que vem dele). */
+  e2eSetScore(n: number) {
+    this.score = n;
+    this.emit();
+  }
+
+  /** Pré-condição dos testes: liga/desliga o chapeiro (pedidos automáticos). */
+  e2eChef(on: boolean) {
+    this.e2eChefOff = !on;
   }
 
   /** Para o HUD saber quando já pode mostrar a tela de fim de jogo. */
