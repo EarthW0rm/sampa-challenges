@@ -5,7 +5,8 @@ import { MOVE_ANIM_S } from '../../../src/games/xadrez-paulistano/game/constants
 import type { Evidence } from '../../support/evidence';
 import { BaseGamePage, FPS, type BaseBootOptions } from '../../support/game-page';
 
-export type XState = XadrezE2EState;
+/** Estado do gancho mais o centro lógico de cada casa (para o piloto). */
+export type XState = XadrezE2EState & { squares: Record<string, { x: number; y: number }> };
 
 export interface MenuOptions {
   mode?: 'pvc' | 'pvp';
@@ -64,7 +65,7 @@ export class XadrezPage extends BaseGamePage<XadrezE2E> {
   }
 
   state(): Promise<XState> {
-    return this.hook((h) => h.state());
+    return this.hook((h) => ({ ...h.state(), squares: h.targets().squares }));
   }
 
   /** Centro lógico de uma casa (`e4`), respeitando o giro. */
