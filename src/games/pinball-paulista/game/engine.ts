@@ -62,7 +62,8 @@ import type { Input } from './input';
 import { drawPixelText, textWidth } from './pixelFont';
 import { loadRecord, saveRecord } from './record';
 import { sfx } from './sound';
-import type { HudState, Phase } from './types';
+import type { HudState, Phase, ScoreKind } from './types';
+import type { PinballE2EState, PinballPrepare, PinballTargets } from './e2eHook';
 
 const INK = '#1b1220';
 
@@ -161,6 +162,10 @@ export class PinballEngine {
   private sparks: Spark[] = [];
   private fxs: Fx[] = [];
   private lastHudKey = '';
+  /** Pontos do jogo atual por tipo de evento (lidos pelo gancho dos testes para recalcular o placar). */
+  private tally: Partial<Record<ScoreKind, { n: number; pts: number }>> = {};
+  /** Bônus de cada bola perdida neste jogo (base, multiplicador, total). */
+  private bonusLog: { base: number; mult: number; total: number }[] = [];
 
   constructor(
     assets: Assets,
@@ -187,6 +192,8 @@ export class PinballEngine {
 
   restart() {
     this.score = 0;
+    this.tally = {};
+    this.bonusLog = [];
     this.newRecord = false;
     this.record = loadRecord();
     this.ballNo = 1;
@@ -214,8 +221,11 @@ export class PinballEngine {
     this.msgT = secs;
   }
 
-  private addScore(n: number) {
+  private addScore(n: number, kind: ScoreKind, count = 1) {
     this.score += n;
+    const t = (this.tally[kind] ??= { n: 0, pts: 0 });
+    t.n += count;
+    t.pts += n;
     if (this.score > this.record) {
       this.record = this.score;
       this.newRecord = true;
@@ -258,7 +268,7 @@ export class PinballEngine {
     this.wave = WAVE_SECONDS;
     this.bumperHits = [0, 0, 0];
     this.greens = 0;
-    this.addScore(PTS.ondaVerde);
+    this.addScore(PTS.ondaVerde, 'ondaVerde');
     this.msg('ONDA VERDE! BUMPERS x2', 2.4);
     sfx.award();
   }
@@ -294,7 +304,7 @@ export class PinballEngine {
         this.msg(`MULTIPLICADOR X${this.mult}`, 2.2);
         break;
       case 'pontos':
-        this.addScore(PTS.premioPontos);
+        this.addScore(PTS.premioPontos, 'premioPontos');
         this.msg(`${PTS.premioPontos} PONTOS`, 2.2);
         break;
       case 'onda':
@@ -306,7 +316,7 @@ export class PinballEngine {
           this.letters[i] = true;
           this.msg('LETRA ACESA!', 2);
           if (this.letters.every(Boolean)) this.startMultiball();
-        } else this.addScore(PTS.premioLetraCheia);
+        } else this.addScore(PTS.premioLetraCheia, 'premioLetraCheia');
         break;
       }
       case 'extra':
@@ -319,7 +329,7 @@ export class PinballEngine {
   }
 
   private startMultiball() {
-    this.addScore(PTS.multiball);
+    this.addScore(PTS.multiball, 'multiball');
     this.letters = Array(7).fill(false);
     this.msg('MULTIBALL!', 2.6);
     sfx.multiball();
@@ -354,7 +364,8 @@ export class PinballEngine {
     this.bonusT = BONUS_SECONDS;
     const base = this.tilt ? 0 : this.bonusBase;
     this.bonusInfo = { base, mult: this.mult, total: base * this.mult };
-    this.addScore(this.bonusInfo.total);
+    this.bonusLog.push({ ...this.bonusInfo });
+    this.addScore(this.bonusInfo.total, 'bonus');
     this.phase = 'bonus';
   }
 
@@ -529,7 +540,7 @@ export class PinballEngine {
         }
         this.slingCd[i] = SLING_COOLDOWN;
         this.slingFlash[i] = 0.1;
-        this.addScore(PTS.estilingue);
+        this.addScore(PTS.estilingue, 'estilingue');
         this.bonusBase += BONUS_PTS.estilingue;
         sfx.sling(b.x);
       }
@@ -559,13 +570,13 @@ export class PinballEngine {
     ROLLOVERS.forEach((r, i) => {
       if (!this.rolls[i] && Math.abs(b.x - r.x) < 9 && Math.abs(b.y - r.y) < 6) {
         this.rolls[i] = true;
-        this.addScore(PTS.raia);
+        this.addScore(PTS.raia, 'raia');
         this.bonusBase += BONUS_PTS.raia;
         sfx.rollover(i);
         if (this.rolls.every(Boolean)) {
           this.rolls = [false, false, false];
           this.mult = Math.min(MAX_MULT, this.mult + 1);
-          this.addScore(PTS.raias);
+          this.addScore(PTS.raias, 'raias');
           this.msg(`MULTIPLICADOR X${this.mult}`, 2);
           sfx.award();
         }
@@ -584,7 +595,7 @@ export class PinballEngine {
       b.x = KICKOUT.x;
       b.y = KICKOUT.y;
       b.vx = b.vy = 0;
-      this.addScore(PTS.minhocao);
+      this.addScore(PTS.minhocao, 'minhocao');
       this.bonusBase += BONUS_PTS.minhocao;
       sfx.kickCapture(b.x);
     }
@@ -604,13 +615,13 @@ export class PinballEngine {
     this.bumperFlash[i] = 0.09;
     this.bumperHits[i] += 1;
     const stage = Math.min(2, Math.floor(this.bumperHits[i] / SEMAFORO_HITS));
-    this.addScore(this.bumperScore());
+    this.addScore(this.bumperScore(), 'bumper');
     this.bonusBase += BONUS_PTS.bumper;
     sfx.bumper(b.x, stage);
     this.bumpFx(bp.x, bp.y);
     this.spark(bp.x, bp.y, 4, ['#ffd36b', '#ffffff']);
     if (this.bumperHits[i] === 2 * SEMAFORO_HITS && this.wave <= 0) {
-      this.addScore(PTS.semaforoVerde);
+      this.addScore(PTS.semaforoVerde, 'semaforoVerde');
       this.msg(`SEMAFORO VERDE +${PTS.semaforoVerde}`, 1.4);
     }
     this.greens = this.bumperHits.filter((h) => h >= 2 * SEMAFORO_HITS).length;
@@ -624,11 +635,11 @@ export class PinballEngine {
     this.bonusBase += BONUS_PTS.alvo;
     this.spark(b.x, b.y, 4, ['#ffd36b', '#ff4d5e']);
     if (lit) {
-      this.addScore(PTS.letraAcesa);
+      this.addScore(PTS.letraAcesa, 'letraAcesa');
       return;
     }
     this.letters[i] = true;
-    this.addScore(PTS.letraNova);
+    this.addScore(PTS.letraNova, 'letraNova');
     if (this.letters.every(Boolean)) this.startMultiball();
   }
 
@@ -664,7 +675,7 @@ export class PinballEngine {
       s.w = Math.max(0, s.w - dt * 6);
       const ticks = Math.floor(s.acc) - before;
       if (ticks > 0) {
-        this.addScore(PTS.spinner * ticks);
+        this.addScore(PTS.spinner * ticks, 'spinner', ticks);
         sfx.spinner(LANE_X / 2);
       }
     }
@@ -789,10 +800,97 @@ export class PinballEngine {
     this.onHud(hud);
   }
 
-  /** Para os testes automáticos. */
-  debug() {
-    return { balls: this.balls.map((b) => ({ ...b })), flippers: this.flippers.map((f) => ({ ...f })) };
+  // ---------------------------------------------------------------- testes de ponta a ponta
+
+  /** Estado para o gancho dos testes (`game/e2eHook.ts`): cópia, só leitura. */
+  e2eState(): PinballE2EState {
+    const next = (() => {
+      let i = this.awardIdx;
+      for (let k = 0; k < AWARDS.length; k++) {
+        i = (i + 1) % AWARDS.length;
+        if (!(AWARDS[i] === 'extra' && this.extraGiven)) return AWARDS[i];
+      }
+      return AWARDS[i];
+    })();
+    return {
+      phase: this.phase,
+      prevPhase: this.prevPhase,
+      score: this.score,
+      record: this.record,
+      newRecord: this.newRecord,
+      ball: this.ballNo,
+      ballsTotal: BALLS_PER_GAME,
+      mult: this.mult,
+      letters: [...this.letters],
+      rolls: [...this.rolls],
+      bumperHits: [...this.bumperHits],
+      greens: this.greens,
+      wave: this.wave,
+      saver: this.saver,
+      tilt: this.tilt,
+      nudges: this.nudges,
+      extraPending: this.extraPending,
+      extraGiven: this.extraGiven,
+      kickCd: this.kickCd,
+      kickDir: this.kickDir,
+      nextAward: next,
+      bonusBase: this.bonusBase,
+      bonus: this.bonusInfo ? { ...this.bonusInfo } : null,
+      bonusLog: this.bonusLog.map((b) => ({ ...b })),
+      charge: this.charge,
+      launched: this.launched,
+      message: this.msgT > 0 ? this.message : '',
+      balls: this.balls.map((b) => ({ x: b.x, y: b.y, vx: b.vx, vy: b.vy, rest: b.rest, held: b.held })),
+      flippers: this.flippers.map((f) => ({ angle: f.angle, up: f.up })),
+      spin: this.spin.map((s) => ({ w: s.w, turns: s.acc })),
+      tally: Object.fromEntries(Object.entries(this.tally).map(([k, v]) => [k, { ...v }])),
+      time: this.time,
+    };
   }
+
+  /** Alvos em coordenadas lógicas do canvas (240×400) e seletores dos botões. */
+  e2eTargets(): PinballTargets {
+    return {
+      flipperLeft: { x: 0, y: 0, w: W / 2, h: H },
+      flipperRight: { x: W / 2, y: 0, w: W / 2, h: H },
+      launch: '.pinball-paulista .actions .launch',
+      nudge: '.pinball-paulista .actions button:not(.launch)',
+      flippers: this.flippers.map((f) => ({ x: f.px, y: f.py })),
+      bumpers: BUMPERS.map((b) => ({ x: b.x, y: b.y, r: BUMPER_R })),
+      rollovers: ROLLOVERS.map((r) => ({ x: r.x, y: r.y })),
+      targets: TARGETS.map((t) => ({ letter: t.letter, x: t.seg.ax, y1: t.seg.ay, y2: t.seg.by, nx: t.nx })),
+      spinners: SPINNERS.map((s) => ({ x: s.x, y: s.y, w: s.w })),
+      slings: SLINGS.map((s) => ({ a: { x: s.a[0], y: s.a[1] }, c: { x: s.c[0], y: s.c[1] } })),
+      kickout: { ...KICKOUT },
+      gate: { x: GATE.ax, y1: GATE.ay, y2: GATE.by },
+    };
+  }
+
+  /** Pré-condições raras dos testes (cada uso é comentado no teste). */
+  readonly e2ePrepare: PinballPrepare = {
+    ball: (x, y, vx, vy, i = 0) => {
+      const b = this.balls[i] ?? this.newRestBall();
+      Object.assign(b, { x, y, px: x, py: y, vx, vy, rest: false, held: 0, dead: false });
+      if (!this.balls.includes(b)) this.balls.push(b);
+      this.emit();
+    },
+    lights: (o) => {
+      if (o.letters) this.letters = [...o.letters];
+      if (o.rolls) this.rolls = [...o.rolls];
+      if (o.bumperHits) {
+        this.bumperHits = [...o.bumperHits];
+        this.greens = this.bumperHits.filter((h) => h >= 2 * SEMAFORO_HITS).length;
+      }
+      if (o.mult !== undefined) this.mult = o.mult;
+      if (o.nextAward !== undefined) {
+        // posiciona o ciclo para o próximo prêmio ser `nextAward`
+        const idx = AWARDS.indexOf(o.nextAward);
+        this.awardIdx = (idx - 1 + AWARDS.length) % AWARDS.length;
+      }
+      if (o.kickCd !== undefined) this.kickCd = o.kickCd;
+      this.emit();
+    },
+  };
 
   // ---------------------------------------------------------------- desenho
 
