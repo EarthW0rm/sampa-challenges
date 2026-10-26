@@ -12,8 +12,8 @@ pasta, manifest leve). Regras de jogo, níveis e tabela de parâmetros: `README.
 | `components/Menu.tsx` | modo, barra de nível 1–100 (com −/+), cor das peças, nomes, girar automático |
 | `components/GameScreen.tsx` | canvas + laço `requestAnimationFrame`, ponteiro (clique/arrasto), teclado, promoção, fim de partida, botões e lista de lances |
 | `game/chess.ts` | regras puras: `Position` (0x88, `make`/`unmake`, `genMoves`, `legalMoves`, `attacked`, repetição, material insuficiente), `gameOutcome`, `moveToSan` (português), UCI, Zobrist |
-| `game/ai.ts` | `Searcher.choose(pos, nível)` e `evaluate(pos)` |
-| `game/ai.worker.ts` | Web Worker: recebe FEN + lances UCI, devolve o lance do computador |
+| `game/ai.ts` | `Searcher.choose(pos, nível, random?, nodeBudget?)`, `evaluate(pos)` e `seededRandom(seed)` |
+| `game/ai.worker.ts` | Web Worker: recebe FEN + lances UCI (e, nos testes, `seed` e `nodeBudget`), devolve o lance do computador |
 | `game/levels.ts` | `levelProfile(nível)` (tempo, profundidade, ruído, lance aleatório, quiescente) e `levelLabel` |
 | `game/engine.ts` | `XadrezEngine`: estado da partida, entrada, vez do computador, animação, desenho, HUD |
 | `game/constants.ts` | layout do canvas, animação e curvas de dificuldade |
@@ -23,6 +23,23 @@ pasta, manifest leve). Regras de jogo, níveis e tabela de parâmetros: `README.
 | `game/pixelFont.ts` | fonte 3×5 (sem acentos: o motor passa os nomes por `plain()`) |
 | `game/sound.ts` | `sfx`: lance, captura, roque, xeque, vitória/derrota/empate (WebAudio; mute em `xadrez-paulistano:som`) |
 | `game/types.ts` | `Settings`, `HudState` |
+| `game/e2eHook.ts` | gancho dos testes de ponta a ponta (`window.__e2e`), inerte sem a flag da página de teste |
+| `styles.css` | estilos, todos prefixados com `.xadrez-paulistano` |
+| `assets/` | `capa.png`, `cenario/tabuleiro.png` (fundo com tabuleiro e painéis), `pecas/` (12 peças 20×20 e 12 minis 10×11) |
+
+## Resolução
+
+Lógica em **320×200** (`W`, `H`), canvas em **640×400** (`SCALE` = 2, `game/hires.ts`). O `render`
+começa com `ctx.setTransform(SCALE, …)` e desenha tudo em coordenadas lógicas; as peças passam por
+`upscaleAll` (Scale2x) e são desenhadas com `blit`. O ponteiro chega em CSS px e o `GameScreen`
+converte para a grade lógica (`toLogical`); o motor só conhece coordenadas lógicas. A posição das
+casas e do painel vem de `constants.ts` (igual ao gerador do fundo).
+
+## Sprites
+
+Tudo é próprio do jogo (`assets/`, gerado por `tools/pixelart/xadrez_paulistano.py`); nada vem da
+biblioteca `src/shared/sprites`. Chaves dos sprites: `pieceKey(cor, tipo, mini)` (`wk`, `bq`,
+`mini_wp`…) e `fundo`.
 
 ## Como o jogo funciona
 
@@ -72,6 +89,17 @@ pasta, manifest leve). Regras de jogo, níveis e tabela de parâmetros: `README.
   não mude para caminho em string (quebra com hash de build e `base: './'`).
 - `ctx.setTransform(SCALE, …)`: não use `drawImage(sprite, x, y)` direto em sprite em alta; use `blit`.
 
+## Armadilhas dos testes
+
+- O `e2eState()` devolve um retrato (cópias); não exponha o objeto vivo nem torne campos públicos.
+- `e2eSetFen` (o `prepare.fen` do gancho) muda o `startFen`, que vai no pedido ao computador: a IA
+  recebe `fen inicial + lances UCI`, não a posição atual.
+- O watcher do Vite ignora `.worktrees/`: rodando os testes de dentro de um worktree, reinicie o
+  servidor (`pkill -f "vite --port <porta>"`) depois de mudar código de produção, senão a página usa o
+  módulo antigo.
+- Num worktree em `.worktrees/xadrez-paulistano/`, o filtro `xadrez-paulistano/` casa com o caminho
+  absoluto de **todos** os specs; use `e2e/xadrez-paulistano/`.
+
 ## Como verificar
 
 1. `npm run typecheck` e `npm run build` (deve sair um `ai.worker-*.js` em `dist/assets/`).
@@ -82,3 +110,65 @@ pasta, manifest leve). Regras de jogo, níveis e tabela de parâmetros: `README.
    nível alto × nível baixo alternando cores (o mais alto deve vencer).
 4. Jogue: lance por clique e por arrasto, roque, en passant, promoção, xeque-mate, desfazer contra o
    computador jogando de pretas, girar, 2 jogadores com giro automático, tela de ≈390 px.
+5. `npm run typecheck:e2e`, a suíte do jogo e a cobertura (seção abaixo).
+
+## Testes de ponta a ponta
+
+Base comum em `e2e/support/` (guia em `e2e/README.md`); a camada deste jogo fica em
+`e2e/xadrez-paulistano/`. Cobertura por arquivo e tabela regra → teste: seção 16 do `README.md`.
+
+```bash
+npm run test:e2e -- e2e/xadrez-paulistano/                      # suíte rápida (desktop + 390 px), ~70 s com 2 workers
+npm run test:e2e -- e2e/xadrez-paulistano/ -g "XP-RN-15"        # uma regra
+caffeinate -dimsu npm run test:e2e:longa -- e2e/xadrez-paulistano/   # piloto, ~40 s
+npm run test:e2e:cobertura -- --jogo xadrez-paulistano
+```
+
+- **Gancho** (`game/e2eHook.ts`): `exposeGame(engine)` no efeito do `GameScreen` que cria o motor;
+  o `dispose` no cleanup. Publica `window.__e2e = { id: 'xadrez-paulistano', api }` só com a flag da
+  página de teste. A `api`:
+  - `state()` → `engine.e2eState()`: modo, nível, `fen`/`startFen`, lances (SAN pt-BR e UCI), vez,
+    xeque, resultado, selecionada, cursor, arrasto, lado de baixo, cor do humano, nomes, IA pensando
+    (`thinking`) e lance pronto (`aiPending`), animação, giro pendente, promoção aberta, `canUndo`,
+    `humanTurn` (tabuleiro aceita entrada), destinos da peça selecionada, worker vivo, número de
+    pedidos e o último pedido à IA (`level`, `seed`, `nodeBudget`), e o painel do canvas (texto do
+    status; caixas com nome, destaque, vantagem `+N` e capturadas).
+  - `targets()` → centro lógico de cada casa `a1`..`h8` (respeita o giro) e os botões da tela em
+    coordenadas de página.
+  - `prepare.fen(fen)` → `engine.e2eSetFen`: começa uma partida a partir de uma posição (finais,
+    roque proibido, promoção, material). Só para pré-condição rara, comentada no teste.
+- **Página** (`support/page.ts`, `XadrezPage`): `open`, `menu({ mode, level, color, names, autoFlip })`,
+  `play`, `start`, `clickSquare`, `move('e2', 'e4')` (clique-clique), `moves([...])`, `playUci`,
+  `drag(de, para | ponto)`, `keys([...])`, `promote(peça)`, `press(botão, confirmação?)`,
+  `waitComputer()` (espera a busca em tempo real e roda os quadros do atraso e da animação),
+  `listItems()`, `prepareFen`. Lógico 320×200.
+- **Cabeçalho das evidências** (`support/describe.ts`, spec RN-36): modo e nível, vez e lado de baixo,
+  último lance, xeque, selecionada, cursor, IA pensando, promoção e resultado.
+- **Determinismo da IA (RN-11).** O worker não recebe o relógio nem o `Math.random` da página. Só sob
+  `isE2E()`, `requestAi` põe no pedido:
+  - `seed`: `E2E_SEED_BASE ^ (meios-lances + 1)·0x9e3779b1`. `E2E_SEED_BASE = e2eSeed()` é tirado
+    quando o módulo `engine.ts` carrega (antes de qualquer gesto), porque o `sfx.unlock` consome um
+    `Math.random` por amostra de áudio (44,1 ou 48 kHz conforme a máquina) e mudaria a sequência.
+    O worker sorteia com `seededRandom(seed)` (mulberry32, `ai.ts`).
+  - `nodeBudget = round(levelProfile(nível).timeMs × E2E_NODES_PER_MS)`: com orçamento, `Searcher.choose`
+    para por nós (`nodes ≥ nodeBudget`, conferido a cada nó) e o corte de 55% do tempo vira 55% do
+    orçamento; sem orçamento, tudo como antes (`performance.now`).
+  - A reserva sem worker usa a mesma semente e o mesmo orçamento. O atraso mínimo (`AI_MIN_DELAY_MS`)
+    já usa o `performance.now` virtual da página de teste.
+  - Sem a flag, os campos não existem e nenhum sorteio extra é feito.
+- **Calibração de `E2E_NODES_PER_MS` (400).** Medição com esbuild + node (Apple Silicon, máquina
+  com outros 6 agentes rodando): 20 posições de partidas nível 20 × nível 20 (meios-lances 6 a 78),
+  `Searcher.choose` no nível 60 por tempo: **871 nós/ms** no total (mediana 958, mínimo 531, máximo
+  1606, 123 ms por busca). Adotado 400 (≈ metade) para o nível 100 (1,2 M nós) caber em ≤ 5 s de
+  parede por lance com a suíte rodando em paralelo (medido: 2,8 s no Node da posição inicial; o teste
+  `ia-worker` confere ≤ 5 s no navegador).
+- **Piloto** (`support/pilot.ts` + `piloto.spec.ts`, projeto `longa`): `NodeBrain` (o `Searcher` do
+  jogo no Node, nível `PILOT_LEVEL` = 85, `PILOT_NODES` = 30 000 nós por lance, semente fixa por
+  variante) decide pela posição lida no gancho; o lance vira toque na peça, toque na casa e, na
+  promoção, clique no botão. Enquanto o computador pensa, `read` espera em tempo real sem rodar
+  quadros. Partidas: contra os níveis 10 (brancas), 50 (pretas), 90 (brancas) e 2 jogadores, mais a
+  repetição do nível 10 (mesma semente → `partida-1.json` = `partida-2.json`). Ao fim (RN-22):
+  resultado e notação exibidos = recalculados aplicando os UCI num `Position` no Node, textos da
+  janela de fim e card do hub sem recorde. `MAX_MOVES` = 200 lances (passou = espera até
+  `MAX_FRAMES` = 30 min de jogo e a partida sai como `travou`).
+

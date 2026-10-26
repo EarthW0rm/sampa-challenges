@@ -244,6 +244,18 @@ interface RootMove {
   score: number;
 }
 
+/** Sorteio com semente (mulberry32), para a busca repetir os mesmos lances nos testes. */
+export function seededRandom(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 export class Searcher {
   private readonly mask = AI_TT_SIZE - 1;
   private readonly ttKey = new Int32Array(AI_TT_SIZE);
@@ -256,11 +268,16 @@ export class Searcher {
   private pos!: Position;
   private nodes = 0;
   private deadline = 0;
+  /** Orçamento de nós (testes): com ele os cortes por tempo passam a contar nós. 0 = por tempo. */
+  private nodeBudget = 0;
   private stopped = false;
   private quiescence = true;
 
-  /** Escolhe um lance para `pos` no nível 1–100 (0 se não houver lance legal). */
-  choose(pos: Position, level: number, random: () => number = Math.random): number {
+  /**
+   * Escolhe um lance para `pos` no nível 1–100 (0 se não houver lance legal).
+   * `nodeBudget` (só nos testes): a busca para por nós em vez de por tempo, para não depender da máquina.
+   */
+  choose(pos: Position, level: number, random: () => number = Math.random, nodeBudget?: number): number {
     const prof = levelProfile(level);
     const legal = pos.legalMoves();
     if (legal.length <= 1) return legal[0] ?? 0;
@@ -269,6 +286,7 @@ export class Searcher {
     this.pos = pos;
     this.quiescence = prof.quiescence;
     this.nodes = 0;
+    this.nodeBudget = nodeBudget && nodeBudget > 0 ? nodeBudget : 0;
     this.stopped = false;
     this.killers.fill(0);
     this.history.fill(0);
@@ -286,7 +304,7 @@ export class Searcher {
       root = done;
       if (this.stopped) break;
       if (Math.abs(root[0].score) > MATE - MAX_PLY) break;
-      if (performance.now() - start > prof.timeMs * 0.55) break;
+      if (this.nodeBudget ? this.nodes > this.nodeBudget * 0.55 : performance.now() - start > prof.timeMs * 0.55) break;
     }
 
     if (!prof.noise) return root[0].move;
@@ -342,7 +360,9 @@ export class Searcher {
   }
 
   private timeUp(): boolean {
-    if ((++this.nodes & 1023) === 0 && performance.now() > this.deadline) this.stopped = true;
+    if (this.nodeBudget) {
+      if (++this.nodes >= this.nodeBudget) this.stopped = true;
+    } else if ((++this.nodes & 1023) === 0 && performance.now() > this.deadline) this.stopped = true;
     return this.stopped;
   }
 
