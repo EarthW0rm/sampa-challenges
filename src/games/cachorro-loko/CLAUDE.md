@@ -102,7 +102,7 @@ A lógica continua toda em 320×200 (posições, colisões, constantes), mas o c
 - Em `updateBoxes`, o laço para assim que a fase vira `over`: sem isso um pacote pego no mesmo quadro
   em que outro tocava o asfalto pontuava depois do fim (bug corrigido na US-127, CL-RN-26).
 - O recorde só é gravado em `loseLife` (fim do turno). Sair no meio não salva (comportamento atual,
-  decisão pendente em `docs/specs/e2e-jogos/bugs/cachorro-loko.md`).
+  decisão pendente em `docs/specs/e2e-jogos/bugs.md`).
 - Os poderes terminam por subtração de `dt` em ponto flutuante: depois de exatamente `POWER_DURATION`
   segundos sobra ~1e-13 (o HUD mostra `1s` por um quadro). Nos testes, avance 1 quadro a mais.
 

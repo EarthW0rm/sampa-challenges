@@ -17,14 +17,20 @@ npm run dev         # servidor de desenvolvimento
 npm run typecheck   # tsc --noEmit (strict, noUnusedLocals, noUnusedParameters)
 npm run build       # typecheck + vite build -> dist/
 npm run novo-jogo -- <id> "<Título>"   # cria src/games/<id>/ a partir do _modelo
-npm run test:e2e    # testes de ponta a ponta no navegador (Playwright, e2e/), suíte rápida
-npm run test:e2e:campanha   # campanha inteira do Pastel de Feira pela tela (~10 min; no macOS use caffeinate -dimsu)
+npm run test:e2e    # testes de ponta a ponta no navegador (Playwright, e2e/), suíte rápida de todos os jogos e do hub
+npm run test:e2e -- <id>/   # só um jogo (ou -g "<SIGLA>-RN-07" para uma regra)
+npm run test:e2e:longa      # pilotos: partidas inteiras de cada jogo (no macOS use caffeinate -dimsu)
+npm run test:e2e:campanha   # campanha inteira do Pastel de Feira pela tela (~12 min; no macOS use caffeinate -dimsu)
+npm run test:e2e:cobertura  # cada regra numerada dos manuais tem teste? (exit 1 se faltar)
 npm run typecheck:e2e
 ```
 
-Sempre rode `npm run typecheck` depois de mudar código. Os testes de ponta a ponta ficam em `e2e/`
-(hoje só o Pastel de Feira; veja `e2e/README.md`). Cada teste grava evidências (capturas com
-cabeçalho: teste, ação, tela) em `evidencias/` (fora do git; `PF_EVIDENCIAS=marcos|off` reduz).
+Sempre rode `npm run typecheck` depois de mudar código. Os testes de ponta a ponta ficam em `e2e/`:
+base comum em `e2e/support/` (relógio controlado, semente, evidências, piloto), uma pasta por jogo e
+`e2e/hub/` (veja `e2e/README.md`). Cada jogo expõe um gancho de leitura só para a página de teste
+(`game/e2eHook.ts`, contrato em `src/shared/e2e/hook.ts`). Cada teste grava evidências (capturas com
+cabeçalho: teste, ação, tela, estado do jogo) em `evidencias/` (fora do git;
+`E2E_EVIDENCIAS=marcos|off` reduz; `PF_EVIDENCIAS` também vale).
 
 ## Arquitetura do hub (`src/hub/`)
 
@@ -73,9 +79,10 @@ Cada jogo concentra os números de equilíbrio em `game/constants.ts` e nas prim
 `game/engine.ts`. Os `CLAUDE.md` dos jogos listam cada parâmetro, o valor atual e o efeito.
 Mudou um número? Atualize a tabela no README/CLAUDE.md do jogo.
 
-**O `README.md` de cada jogo é o manual dele.** Toda alteração de regra ou de mecânica — adição,
-mudança ou remoção — atualiza o README do jogo no mesmo commit/PR (no Pastel de Feira, também a spec
-em `docs/specs/pastel-de-feira/`).
+**O `README.md` de cada jogo é o manual dele.** Toda regra ou mecânica tem um número `<SIGLA>-RN-NN`
+(no Pastel, `RN-NN`) e pelo menos um teste de ponta a ponta que cita o número no nome. Toda alteração
+de regra ou de mecânica — adição, mudança ou remoção — atualiza o README do jogo e o teste da regra no
+mesmo commit/PR (no Pastel de Feira, também a spec em `docs/specs/pastel-de-feira/`).
 
 ## Sprites
 
@@ -101,8 +108,10 @@ tamanho ou posição, confira as áreas de colisão/acerto nas constantes do jog
    `game/` para lógica pura em TypeScript (motor, física, IA, constantes), `components/` para
    React (menus, HUD), lógica em 320×200 e canvas em 640×400 (`game/hires.ts`, já no modelo)
    ampliado por CSS.
-4. Preencha o `README.md` e o `CLAUDE.md` do jogo (o modelo traz as seções).
-5. `npm run typecheck`, `npm run build`, teste no navegador e no celular.
+4. Preencha o `README.md` (manual com as regras numeradas) e o `CLAUDE.md` do jogo (o modelo traz as
+   seções). O `novo-jogo` também cria `e2e/<id>/` e o gancho `game/e2eHook.ts`: escreva um teste por regra.
+5. `npm run typecheck`, `npm run typecheck:e2e`, `npm run build`, `npm run test:e2e -- <id>/`,
+   `npm run test:e2e:cobertura`, teste no navegador e no celular.
 
 ## IA e workers
 
@@ -113,7 +122,8 @@ Regras, física e IA ficam em TypeScript puro para poderem ser testadas com esbu
 
 ## Checklist antes de entregar
 
-- [ ] `npm run typecheck` e `npm run build` sem erros.
+- [ ] `npm run typecheck`, `npm run typecheck:e2e` e `npm run build` sem erros.
+- [ ] Suíte do jogo verde (`npm run test:e2e -- <id>/`) e `npm run test:e2e:cobertura` sem pendência.
 - [ ] Hub abre, o card do jogo aparece, o jogo carrega, a barra "← Sampa Challenges" volta.
 - [ ] Nenhum estilo vazou (a home e os outros jogos continuam iguais).
 - [ ] Testado em ≈390 px de largura.

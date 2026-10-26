@@ -681,12 +681,15 @@ npm run test:e2e                    # suíte rápida: desktop + 390 px (~3 min)
 npm run test:e2e -- pastel-de-feira/fritura    # um arquivo
 npm run test:e2e -- -g "RN-41"                 # pelo nome
 npm run test:e2e:campanha           # campanha inteira pela tela (~10 min)
-npm run test:e2e:tudo               # as duas
+npm run test:e2e:tudo               # todas as suítes (rápida, pilotos e campanha)
 npx playwright show-report playwright-report   # relatório com traces das falhas
 ```
 
 - Os testes jogam pela tela: cliques reais no canvas e nas abas. O `requestAnimationFrame` é
   controlado pelo teste (1 quadro = 1 passo de 1/60 s), então os tempos não dependem da máquina.
+- O relógio, a semente, as evidências e as fixtures são a base comum de todos os jogos
+  (`e2e/support/`); a camada do Pastel (`e2e/pastel-de-feira/support/`) traz a `GamePage` com os gestos
+  do dia, o cabeçalho do dia nas evidências (`describe.ts`), as campanhas e o piloto do dia.
 - O gancho `window.__pf` (`game/e2eHook.ts`) expõe o estado do dia só para leitura e só existe
   quando a página de teste define `window.__PF_E2E__`.
 - A **campanha completa** joga do dia 1 ao 20, dois dias de modo livre e o passar o ponto: o Preparo

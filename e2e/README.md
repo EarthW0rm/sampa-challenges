@@ -1,33 +1,138 @@
 # Testes de ponta a ponta (Playwright)
 
-Testes que abrem o jogo no navegador e jogam **pela tela**: cliques no canvas, teclado e as telas
-React (título, Preparo, fechamento). Complementam os cenários sem tela de
-`src/games/pastel-de-feira/sim/` (regras puras): aqui o que se valida é a integração entrada → painel →
-simulação → HUD → fechamento → save.
+Testes que abrem os jogos no navegador e jogam **pela tela**: cliques e toques no canvas, teclado,
+arrastes e as telas React. Todo jogo do hub e o próprio hub têm suíte aqui; cada regra numerada do
+manual de um jogo (`src/games/<id>/README.md`, IDs `<SIGLA>-RN-NN`) tem pelo menos um teste que cita o
+número no nome.
 
 ```bash
 npx playwright install chromium   # uma vez
-npm run test:e2e                  # suíte rápida: desktop + celular (sobe o Vite na porta 5199)
-npm run test:e2e:campanha         # campanha inteira pela tela (longa, ~15 min)
-npm run test:e2e:tudo             # as duas
-npm run test:e2e -- pastel-de-feira/fritura      # um arquivo
-npm run test:e2e -- -g "RN-41"                   # pelo nome
-npx playwright show-report playwright-report     # relatório HTML (traces das falhas)
+npm run test:e2e                  # suíte rápida: todos os jogos + hub, desktop e celular (Vite na porta 5199)
+npm run test:e2e:longa            # pilotos: partidas inteiras de cada jogo (evidências só dos marcos)
+npm run test:e2e:campanha         # campanha inteira do Pastel de Feira pela tela
+npm run test:e2e:tudo             # as quatro
+npm run test:e2e -- cachorro-loko/                # um jogo
+npx playwright test -c e2e/playwright.config.ts --project=celular e2e/hub/  # só o celular (o script test:e2e já fixa desktop + celular)
+npm run test:e2e -- -g "CL-RN-07"                 # uma regra pelo número
+npm run test:e2e:cobertura                        # regra do manual × testes (exit 1 se faltar)
+npx playwright show-report playwright-report      # relatório HTML (traces das falhas)
 npm run typecheck:e2e
-PF_EVIDENCIAS=marcos npm run test:e2e             # evidências só dos marcos (ou `off`)
+E2E_EVIDENCIAS=marcos npm run test:e2e            # evidências só dos marcos (ou `off`; `PF_EVIDENCIAS` também vale)
 ```
 
-## Como funciona
+No macOS rode as suítes longas com `caffeinate -dimsu` antes do comando: com a máquina ociosa o
+Chrome é suspenso. `E2E_PORT=<porta>` troca a porta do Vite (duas cópias do repositório rodando ao
+mesmo tempo, como em worktrees, precisam de portas diferentes). Dentro de um worktree em
+`.worktrees/<id>/`, filtre por `e2e/<id>/` (o filtro `<id>/` casa com o caminho absoluto de todos os testes). O Vite da raiz
+ignora `.worktrees/` (`vite.config.ts`), então mudanças lá não recarregam a página de quem roda na raiz.
+
+## Projetos
+
+| Projeto | O que roda | Viewport | Evidências | Script |
+|---|---|---|---|---|
+| `desktop` | todos os `*.spec.ts`, menos `responsivo`, `piloto` e `campanha-completa` | 1280×1000 | `acoes` | `test:e2e` |
+| `celular` | `**/responsivo.spec.ts` (todos os jogos e o hub) | 390×844, toque | `acoes` | `test:e2e` |
+| `longa` | `**/piloto.spec.ts` (saída em `test-results/e2e-longa`) | 1280×1000 | `marcos` | `test:e2e:longa` |
+| `campanha` | `pastel-de-feira/campanha-completa.spec.ts` (saída em `test-results/e2e-campanha`) | 1280×1000 | `marcos` | `test:e2e:campanha` |
+
+O esqueleto `_modelo/` (copiado por `npm run novo-jogo`) não roda em nenhum projeto.
+
+## Base comum (`support/`)
 
 | Peça | Arquivo | Papel |
 |---|---|---|
-| Config | `playwright.config.ts` | Vite em modo dev (StrictMode ligado); projetos `desktop` (1280×1000) e `celular` (390×844, só `responsivo.spec.ts`) |
+| Relógio | `clock.ts` | init script injetado antes do jogo: troca o `requestAnimationFrame` por uma fila manual (nada anda sozinho; `__e2eFrames(n)` roda `n` quadros de 1/60 s, `__e2eJump(ms)` salta o relógio), semeia o `Math.random` (mulberry32), prepara o `localStorage` uma vez por teste (som desligado, chaves do teste, dado cru ou storage bloqueado) e, com `virtualTime` (padrão nos jogos; desligado no Pastel), faz `performance.now()` e `Date.now()` só andarem com os quadros. `setTimeout` continua real (Vite e React dependem dele) |
+| Página base | `game-page.ts` | `BaseGamePage`: `boot`, `frames`, `jump`, `hook`/`lastHook` (gancho do jogo), `advanceUntil`, `toClient` (lógico → página), gestos `tapAt`, `holdAt`, `dragFromTo`, `holdKey`, `pressKey`, `rafPending`. Cada jogo estende em `<id>/support/page.ts` |
+| Fixtures | `fixtures.ts` | `makeTest(factory, descritores)`: `page` registra evidência a cada ação, `composer` monta os PNGs, `game` é a página do jogo e falha o teste se houver erro no console |
+| Evidências | `evidence.ts`, `describe.ts` | PNG por ação e por marco com cabeçalho (ver abaixo); `screenDescriber(root)` é a parte genérica, cada jogo acrescenta a dele |
+| Piloto | `pilot.ts` | `runPilot(game, estratégia, { seed, variant, maxFrames })`: lê o estado, pede a decisão e executa gestos reais até o fim de jogo; estoura `maxFrames` como `travou`; gesto sem alvo falha o teste |
+| Diagnóstico | `diagnostics.ts` | `partida-<n>.json` (jogo, variante, semente, status, quadros, comandos, resultado, erros) na saída do teste |
+| Hub | `hub.ts` | `HubPage` (home, cards, abrir jogo, barra de volta) e descritor do hub |
+| Storage | `storage.ts` | `readStorage`, `expectStored` |
+| Autoverificação | `base.spec.ts` | prova o relógio, as evidências, a página base, o piloto e o gancho numa página de brinquedo, sem depender de jogo |
+
+**Gancho dos jogos.** Cada jogo publica, no efeito que cria o motor, `window.__e2e = { id, api }` por
+`exposeE2E` (`src/shared/e2e/hook.ts`) e chama o `dispose` no cleanup. Só existe quando a página de
+teste liga a flag (`window.__E2E__`, posta pelo `clock.ts`); para o jogador é inerte. A `api` é só
+leitura (`state()`, `targets()`); pré-condição rara vai por `prepare.*`, comentada no teste. O Pastel
+mantém o gancho próprio `window.__pf`. Para sorteios fora da página (worker de IA), `e2eSeed()` manda
+a semente no pedido.
+
+**Regras dos testes.** Comandos só pela tela (toque, clique, arraste, teclado). Números esperados vêm
+das constantes do jogo. O nome de cada teste começa pelo ID da regra. Erro no console falha o teste.
+
+## Evidências
+
+Todo teste grava capturas em `evidencias/<projeto>/<pasta do jogo>/<arquivo>/<teste>/` (na raiz do
+repositório, fora do git), numeradas na ordem: `001-marco-…png`, `002-acao-…png`, …, e a última
+`NNN-fim-…png` ou `NNN-falha-…png`. A pasta de cada teste é apagada quando ele começa de novo.
+
+| Campo do cabeçalho | Conteúdo |
+|---|---|
+| Teste | describe › título, arquivo, projeto, número da evidência, data e hora |
+| Ação / Marco / Fim / Falha | o que acabou de ser feito (ex.: `Segurar ArrowRight por 30 quadros (0.5 s) e soltar`, `Clique em botão "Jogar"`) |
+| Passo do fluxo | os `game.step(...)` em andamento |
+| Tela | rota, tela (título visível ou "Partida"), diálogo e mensagem visíveis |
+| Estado do jogo | campos próprios de cada jogo (spec 3.4: placar, vidas, nível, vez, mira…), lidos do gancho |
+| Falha | a mensagem de erro do teste |
+
+Níveis: `acoes` (padrão), `marcos` (abertura do jogo, início e fim de partida/dia, fim do teste e
+`game.evidence(...)`) e `off`, por `E2E_EVIDENCIAS` (ou `PF_EVIDENCIAS`) ou pela opção `evidencias` do
+projeto. Uma evidência que falha só gera aviso no console; nunca derruba o teste.
+
+## Pilotos (`<id>/piloto.spec.ts`)
+
+Cada jogo tem um jogador automático que joga partidas inteiras só por gestos de tela
+(`<id>/support/pilot.ts`). Ao fim de cada partida o teste confere o resultado exibido contra o
+recalculado, o recorde salvo e mostrado no card do hub e o console limpo, e grava `partida-<n>.json`
+em `test-results/e2e-longa/`. Mesma semente, mesmo arquivo. `E2E_PILOT_DEBUG=1` imprime o ritmo dos gestos.
+
+## Cobertura por jogo
+
+`npm run test:e2e:cobertura` compara os IDs `<SIGLA>-RN-NN` do manual de cada jogo com os títulos dos
+testes; `-- --md <id>` imprime a tabela regra → arquivo para a seção "Testes" do manual.
+
+| Jogo | Sigla | Pasta | Manual (seção Testes) |
+|---|---|---|---|
+| Cachorro Loko | CL | `cachorro-loko/` | [`src/games/cachorro-loko/README.md`](../src/games/cachorro-loko/README.md) |
+| Pinball Paulista | PP | `pinball-paulista/` | [`src/games/pinball-paulista/README.md`](../src/games/pinball-paulista/README.md) |
+| Capacete Voador | CV | `capacete-voador/` | [`src/games/capacete-voador/README.md`](../src/games/capacete-voador/README.md) |
+| Corredor SP | CS | `corredor-sp/` | [`src/games/corredor-sp/README.md`](../src/games/corredor-sp/README.md) |
+| Fuga da Rocam | FR | `fuga-rocam/` | [`src/games/fuga-rocam/README.md`](../src/games/fuga-rocam/README.md) |
+| Sinuca de Bar | SB | `sinuca-de-bar/` | [`src/games/sinuca-de-bar/README.md`](../src/games/sinuca-de-bar/README.md) |
+| Xadrez Paulistano | XP | `xadrez-paulistano/` | [`src/games/xadrez-paulistano/README.md`](../src/games/xadrez-paulistano/README.md) |
+| Pastel de Feira | RN-NN | `pastel-de-feira/` | [`src/games/pastel-de-feira/README.md`](../src/games/pastel-de-feira/README.md) (seção 15) e abaixo |
+| Hub | HUB | `hub/` | seção Hub abaixo |
+
+## Jogo novo
+
+`npm run novo-jogo -- <id> "<Título>"` cria também `e2e/<id>/` (página, descritor, navegação e
+responsivo) e o gancho em `src/games/<id>/game/e2eHook.ts`. Siga a seção "Testes de ponta a ponta" do
+`CLAUDE.md` do jogo gerado.
+
+## Tempos
+
+Medidos em 26/10/2026 num Mac de 12 núcleos (evidências em `acoes` na suíte rápida, `marcos` nas
+longas), com `caffeinate -dimsu`:
+
+| Suíte | Testes | Tempo de parede | Orçamento | Estabilidade |
+|---|---|---|---|---|
+| `test:e2e` (rápida: 8 jogos + hub + base, desktop e celular) | 510 | 6,5–6,6 min | ≤ 10 min | 3 execuções seguidas verdes, sem repetição automática |
+| `test:e2e:longa` (pilotos dos 7 jogos) | 27 | 3,3 min | ≤ 30 min | 2 execuções verdes; os 36 `partida-*.json` idênticos entre elas |
+| `test:e2e:campanha` (Pastel de Feira) | 1 | 12,3 min (25 dias de jogo) | — | verde |
+
+## Pastel de Feira (`pastel-de-feira/`)
+
+### Como funciona
+
+| Peça | Arquivo | Papel |
+|---|---|---|
 | Gancho do jogo | `src/games/pastel-de-feira/game/e2eHook.ts` | `window.__pf` com o `DaySim`, a UI e os alvos de toque (controles do painel, clientes, funcionários). Só existe quando a página define `window.__PF_E2E__` |
-| Relógio | `support/game.ts` | troca o `requestAnimationFrame` por uma fila manual: nada anda sozinho e `frames(n)` roda `n` quadros de 1/60 s (1 passo da simulação). Quando o jogo começa um laço (pedido de quadro fora de um quadro), o relógio parte de agora + meio quadro, para o acumulador do jogo ficar no meio do passo (sem isso, sob carga, quadros rodavam 0 passos). Os tempos (deslocamento, fritura, moenda) são medidos em passos, sem depender da máquina |
+| Relógio | `support/game.ts` (sobre `e2e/support/clock.ts`) | `GamePage` estende a página base com o gancho `window.__pf`, sem tempo virtual: `frames(n)` roda `n` quadros de 1/60 s (1 passo da simulação). Quando o jogo começa um laço (pedido de quadro fora de um quadro), o relógio parte de agora + meio quadro, para o acumulador do jogo ficar no meio do passo (sem isso, sob carga, quadros rodavam 0 passos). Os tempos (deslocamento, fritura, moenda) são medidos em passos, sem depender da máquina |
 | Saves | `support/campaign.ts` | monta a campanha com as próprias ações do jogo (`newCampaign`, `buyIngredient`…) e injeta no `localStorage` antes de carregar; semente fixa |
 | Ações | `support/flow.ts` | anotar, montar, fritar, moer, entregar, cobrar, atender um cliente inteiro, tudo por toques |
 | Piloto | `support/pilot.ts`, `support/pilot.browser.ts` | joga um dia inteiro: o jogador automático de calibração (`sim/player.ts`) decide, e cada decisão vira toque, segurar ou soltar com o mouse real; gestos sem alvo são registrados e fazem o teste falhar |
-| Evidências | `support/evidence.ts` | cada ação e cada marco vira um PNG em `evidencias/` com cabeçalho: teste, ação, passo do fluxo e o que a tela mostrava (veja abaixo) |
+| Evidências | `support/describe.ts` | cabeçalho do dia (HUD, passo da simulação e pausa, pasteleiro, painel e controles, selecionado, clientes, prontos) sobre a evidência comum |
 | Estratégia | `support/strategy.ts`, `support/prep.ts` | Preparo da campanha (parte do robô `equilibrado`, com receitas caras no cardápio para fechar os dias 16–20): compras, contratação, cardápio, preços e estoque viram cliques nas abas; o save resultante tem que ser idêntico ao das ações do jogo |
 
 Regra dos testes: **comandos só por toque/teclado**. O gancho serve para ler o estado e localizar os
@@ -37,35 +142,7 @@ sujeira em 60) e fica comentada no teste.
 Os números esperados vêm de `game/constants.ts` e `game/data/*` (os valores (P) calibrados), com a RN
 da spec no nome de cada teste.
 
-## Evidências
-
-Todo teste grava capturas de tela em `evidencias/<projeto>/pastel-de-feira/<arquivo>/<teste>/`
-(na raiz do repositório, fora do git), numeradas na ordem: `001-marco-…png`, `002-acao-…png`, …,
-e a última `NNN-fim-…png` ou `NNN-falha-…png`. A pasta de cada teste é apagada quando ele começa de novo.
-
-Cada PNG tem um cabeçalho em cima da captura com:
-
-| Campo | Conteúdo |
-|---|---|
-| Teste | describe › título, arquivo, projeto, número da evidência, data e hora |
-| Ação / Marco / Fim / Falha | o que acabou de ser feito (ex.: `Toque no controle "FECHAR" do painel`, `Clique em botão "Abrir a feira"`, `Tecla "KeyP"`) |
-| Passo do fluxo | os passos de `flow.ts` em andamento (ex.: `Atender o cliente #1 › Montar queijo na bancada`) |
-| Tela | rota, tela (título, Preparo e aba, Dia de feira, fechamento), diálogo e mensagem visíveis |
-| Dia | HUD (relógio, caixa, fila, reputação), passo da simulação e pausa, onde está o pasteleiro, painel aberto e seus controles, item selecionado, clientes, prontos |
-| Falha | a mensagem de erro do teste |
-
-O que vira evidência: cliques/teclas/preenchimentos feitos pela `page` (a fixture `page` é embrulhada),
-toques e seguradas do `GamePage` (`tapControl`, `holdControl`, `goTo`, `tapStation`, `tapCustomer`,
-`tapAt`, `holdAt`), os marcos (`boot`, `openFair`, `runToEnd`) e o fim do teste. Os gestos internos de
-um gesto descrito ficam de fora (`ev.quiet`), para cada toque gerar uma evidência só. Para registrar um
-momento à mão: `await game.evidence('descrição')`; para nomear um passo: `game.step('rótulo', fn)`.
-
-Níveis: `acoes` (padrão), `marcos` (abertura, início e fim do dia, fim do teste e `game.evidence`) e
-`off`, pela variável `PF_EVIDENCIAS` ou pela opção `evidencias` do projeto. A campanha completa usa
-`marcos` (com o piloto seriam dezenas de milhares de gestos). Custo medido na suíte rápida: ~2.400
-PNGs, ~190 MB, +35 s (2,4 → 3,0 min). Uma evidência que falha só gera aviso no console, nunca derruba o teste.
-
-## Cobertura (por arquivo)
+### Cobertura (por arquivo)
 
 | Arquivo | Regras |
 |---|---|
@@ -99,7 +176,7 @@ PNGs, ~190 MB, +35 s (2,4 → 3,0 min). Uma evidência que falha só gera aviso 
 | `progressao` | dias 1–20 e modo livre: meta, reputação mínima, estação, balões e tema por dia; desbloqueios da aba Melhorias; dia repetido; validade da massa |
 | `campanha-completa` | campanha inteira do "Nova campanha" ao dia 20, 2 dias de modo livre e "Passar o ponto"; por dia: Preparo pelas abas, dia pelo piloto, fechamento e save comparados com o `closeDay` do jogo, recarga no meio da campanha e saída no meio do dia |
 
-## Campanha completa: diagnóstico
+### Campanha completa: diagnóstico
 
 - Cada dia jogado grava `dia-cal<N>.json` (campanha do início do dia, comandos e `DayResult`) na pasta de
   saída do teste (`test-results/e2e/…`). Reproduzir os comandos sem tela dá o mesmo resultado (motor
