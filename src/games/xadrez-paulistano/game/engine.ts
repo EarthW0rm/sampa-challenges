@@ -1,4 +1,5 @@
-import { Searcher } from './ai';
+import { isE2E, e2eSeed } from '../../../shared/e2e/hook';
+import { Searcher, seededRandom } from './ai';
 import type { AiRequest, AiResponse } from './ai.worker';
 import { pieceKey, type Assets } from './assets';
 import {
@@ -37,6 +38,7 @@ import {
   BOX_TOP_Y,
   CAPTURED_PER_ROW,
   DRAG_THRESHOLD,
+  E2E_NODES_PER_MS,
   MOVE_ANIM_S,
   PANEL_W,
   PANEL_X,
@@ -45,9 +47,16 @@ import {
   STATUS_Y,
 } from './constants';
 import { blit, SCALE, upscaleAll } from './hires';
+import { levelProfile } from './levels';
 import { drawPixelText, textWidth } from './pixelFont';
 import { sfx } from './sound';
 import type { HudState, Settings } from './types';
+
+/**
+ * Base da semente da IA nos testes, tirada do `Math.random` semeado quando o módulo carrega (antes de
+ * qualquer gesto: o áudio, ao nascer, consome sorteios conforme a taxa de amostragem da máquina).
+ */
+const E2E_SEED_BASE = e2eSeed();
 
 /** Pontos de material para o "+N" do painel. */
 const POINTS = [0, 1, 3, 3, 5, 9, 0];
@@ -453,6 +462,11 @@ export class XadrezEngine {
     this.thinking = true;
     this.aiStarted = performance.now();
     const req: AiRequest = { id: ++this.aiId, fen: this.startFen, moves: [...this.ucis], level: this.settings.level };
+    if (isE2E()) {
+      // testes: sorteio com semente (a mesma para a mesma posição) e busca por nós, não por tempo
+      req.seed = ((E2E_SEED_BASE ?? 0) ^ Math.imul(this.pos.plyCount + 1, 0x9e3779b1)) >>> 0;
+      req.nodeBudget = Math.round(levelProfile(req.level).timeMs * E2E_NODES_PER_MS);
+    }
     this.lastAiRequest = req;
     this.aiRequests++;
     if (this.worker) {
@@ -462,7 +476,7 @@ export class XadrezEngine {
     setTimeout(() => {
       if (req.id !== this.aiId) return;
       this.fallback ??= new Searcher();
-      const m = this.fallback.choose(this.pos, req.level);
+      const m = this.fallback.choose(this.pos, req.level, req.seed === undefined ? Math.random : seededRandom(req.seed), req.nodeBudget);
       this.onAiMove({ id: req.id, move: m ? moveToUci(m) : '' });
     }, 30);
   }

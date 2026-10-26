@@ -446,6 +446,7 @@ a 1 no 100):
 | `AI_BLUNDER_MAX` | 0,35 | chance de lance aleatório no nível 1: `MAX·(1 − t)³` |
 | `AI_QUIESCENCE_FROM` | 15 | a partir deste nível a busca segue as trocas até o fim |
 | `AI_TT_SIZE` | 2¹⁹ | entradas da tabela de transposição (~7 MB no worker) |
+| `E2E_NODES_PER_MS` | 400 | **só nos testes**: a busca para em `tempo do nível × 400` nós em vez de pelo relógio (seção 16) |
 
 Números fixos no código (fora de `constants.ts`):
 
