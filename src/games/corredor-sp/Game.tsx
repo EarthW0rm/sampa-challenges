@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { GameProps } from '../../hub/types';
 import { loadAssets, type Assets } from './game/assets';
-import { COLORS, MODELS } from './game/data';
+import { BREEDS, COLORS, MODELS, TRACKS } from './game/data';
 import type { RaceConfig } from './game/engine';
 import { RaceScreen } from './components/RaceScreen';
 import { SetupScreen, type Choice } from './components/SetupScreen';
@@ -13,7 +13,15 @@ const DEFAULT_CHOICE: Choice = { track: '23-de-maio', breed: 'caramelo', categor
 function loadChoice(): Choice {
   try {
     const c = JSON.parse(localStorage.getItem(CHOICE_KEY) ?? 'null') as Choice | null;
-    if (c && MODELS.some((m) => m.id === c.modelId && m.category === c.category)) return c;
+    // escolha salva só vale se todos os campos existirem (um cachorro ou cor desconhecido quebrava a prévia da moto)
+    if (
+      c &&
+      TRACKS.some((t) => t.id === c.track) &&
+      BREEDS.some((b) => b.id === c.breed) &&
+      COLORS.some((k) => k.id === c.colorId) &&
+      MODELS.some((m) => m.id === c.modelId && m.category === c.category)
+    )
+      return c;
   } catch {
     /* sem escolha salva */
   }

@@ -2,7 +2,7 @@ import { START_LIVES } from '../../src/games/corredor-sp/game/constants';
 import { expect, test } from './support/test';
 
 test.describe('Corredor SP — navegação e gancho', () => {
-  test('CS-RN-04 abre a escolha, larga, mostra o estado e volta ao hub', async ({ game, page }) => {
+  test('CS-RN-04 CS-RN-07 abre a escolha, larga (sem aceleração automática nem botões de toque no desktop) e volta ao hub', async ({ game, page }) => {
     await game.open();
     await expect(game.setupTitle).toBeVisible();
     expect(await game.hasHook(), 'sem motor na tela de escolha não há gancho').toBe(false);
@@ -10,6 +10,8 @@ test.describe('Corredor SP — navegação e gancho', () => {
     let s = await game.state();
     expect(s.phase).toBe('countdown');
     expect(s.player.lives).toBe(START_LIVES);
+    expect(s.input.autoAccel, 'ponteiro fino: acelera só com a tecla').toBe(false);
+    await expect(game.touchButton('left'), 'botões de toque escondidos no desktop').toBeHidden();
     await game.frames(200);
     await game.accelerate(60);
     s = await game.state();

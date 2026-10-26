@@ -157,7 +157,8 @@ inicial (`TRAFFIC_START` veículos) já está espalhado à frente.
 
 Em telas de ponteiro grosso (`(pointer: coarse)`, celular/tablet) a moto **acelera sozinha** desde a
 largada e os botões aparecem abaixo da pista: ◀ ▶ (direção, enquanto pressionados), FREIO, GRAU
-(enquanto pressionados) e CAPACETE (um arremesso por toque). Tocar qualquer um desses botões também
+(enquanto pressionados) e CAPACETE (um arremesso por toque). Em telas estreitas (≈ 390 px) os botões
+de ação quebram em duas linhas, à direita. Tocar qualquer um desses botões também
 liga a aceleração automática. Soltar, cancelar ou arrastar o dedo para fora do botão solta o comando.
 
 ## 6. Vidas, batidas e colisão
