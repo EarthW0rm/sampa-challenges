@@ -406,7 +406,8 @@ animação de forma inválida nem quebra o jogo. Na montagem dupla do modo de de
 ### XP-RN-32 Armazenamento bloqueado
 
 Sem `localStorage` (modo privado ou bloqueado), o jogo abre e joga normalmente: o menu usa os
-padrões, o som começa ligado e nem as escolhas nem o som são gravados. Nenhum erro aparece.
+padrões, o som começa ligado e nem as escolhas nem o som são gravados (na mesma visita o menu
+ainda lembra as últimas escolhas, em memória). Nenhum erro aparece.
 
 ### XP-RN-33 Sair e voltar
 
