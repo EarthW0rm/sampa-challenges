@@ -212,6 +212,30 @@ export class CapacetePage extends BaseGamePage<CapaceteE2E> {
     throw new Error(`nenhum tiro ${JSON.stringify(q)} em ${tries} cidades`);
   }
 
+  /** Tiro que não acerta nenhum motoboy (prédio ou saída), para passar a vez. */
+  async harmless(p: PlayerIndex): Promise<{ angle: number; velocity: number; sim: Sim }> {
+    const b = (await this.findShot({ kind: 'building', player: p, angles: [30, 80] })) ?? (await this.findShot({ kind: 'out', player: p }));
+    if (!b) throw new Error(`sem tiro inofensivo para o jogador ${p + 1}`);
+    return b;
+  }
+
+  /** Mira e lança um tiro inofensivo do jogador `p` (humano) e espera o voo terminar. */
+  async passTurn(p: PlayerIndex): Promise<CVState> {
+    const b = await this.harmless(p);
+    return this.shoot(b.angle, b.velocity, p);
+  }
+
+  /** Texto da faixa de mensagem no meio do campo. */
+  banner(): Locator {
+    return this.page.locator('.capacete-voador .banner');
+  }
+
+  /** Volta ao menu pela barra da partida. */
+  async backToMenu(): Promise<void> {
+    await this.page.getByRole('button', { name: '← Menu' }).click();
+    await expect(this.startButton).toBeVisible();
+  }
+
   /** Botão "Reiniciar" da barra: placar zerado, cidade nova. */
   async restart(): Promise<void> {
     await this.page.getByRole('button', { name: 'Reiniciar' }).click();

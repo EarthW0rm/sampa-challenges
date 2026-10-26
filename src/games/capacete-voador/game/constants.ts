@@ -36,3 +36,16 @@ export const VELOCITY_MIN = 1;
 export const VELOCITY_MAX = 200;
 
 export const DEFAULT_GRAVITY = 9.8;
+
+/** Tempos do motor (ms de jogo). */
+export const EXPLOSION_FRAME_MS = 110;
+export const ROUND_OVER_MS = 2800;
+export const THINK_MS = 800;
+export const ANNOUNCE_MS = 900;
+
+/** Faixas onde cada motoboy pode aparecer (centro do prédio, em px) e distância mínima entre eles. */
+export const ZONE_P1: [number, number] = [28, 230];
+export const ZONE_P2: [number, number] = [W - 230, W - 28];
+export const MIN_RIDER_GAP = 260;
+/** Um vizinho mais alto que o telhado do motoboy por mais que isso o deixaria encurralado. */
+export const MAX_NEIGHBOR_RISE = 110;

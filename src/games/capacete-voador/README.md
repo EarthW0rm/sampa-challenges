@@ -112,11 +112,12 @@ Campo numérico de **0,5 a 50** em passos de **0,1**; atalhos **Terra 9.8**, **L
 
 | Entrada | Resultado |
 |---|---|
-| campo vazio | a partida começa com **9,8** |
+| apagar o campo | o campo passa a mostrar **0** e o **Jogar** é recusado (menor que 0,5) |
 | menor que 0,5, maior que 50 ou fora do passo de 0,1 (ex.: 2,55) | o navegador recusa o **Jogar** (balão de validação no campo) e a partida não começa |
 | letras | não entram no campo |
 
-A gravidade escolhida vale para os dois jogadores e para o computador.
+A gravidade escolhida vale para os dois jogadores e para o computador. (O código ainda troca uma
+gravidade ≤ 0 por 9,8 ao começar, mas a validação do campo não deixa chegar lá.)
 
 ### CV-RN-06 Garoa
 
@@ -155,7 +156,7 @@ balão de validação no campo; nada é lançado e o jogo continua na mira.
 
 | Entrada | Resultado |
 |---|---|
-| letras, vírgula e outros símbolos | não entram no campo (o navegador descarta a tecla) |
+| letras, vírgula e outros símbolos | não entram no campo (o navegador descarta a tecla); se o texto estava selecionado (como no ângulo, ao aparecer o formulário), a tecla apaga a seleção e o campo fica **vazio** |
 | velocidade vazia | mensagem "Velocidade entre 1 e 200" embaixo do botão; não lança |
 | ângulo vazio | **conta como 0°** (tiro na horizontal, para a frente) e lança |
 | valor válido depois de um erro | lança normalmente (a mensagem some com o formulário) |
@@ -257,7 +258,7 @@ perde a rodada** (o outro marca 1 ponto). A moto pode ficar "flutuando" sobre a 
 
 Acertar a cabeça (`PILOT_BOX`) derruba o piloto (sprite de nocaute) e **encerra a rodada na hora**:
 mensagem "Capacetada na cabeça de *Alvo*!" e 1 ponto para o outro jogador, qualquer que seja o dano
-das motos. Quando o caminho passa pela cabeça e pela moto no mesmo ponto, vale a cabeça.
+das motos. As áreas da cabeça e da moto não se sobrepõem; a cabeça é verificada primeiro.
 
 ### CV-RN-21 Acertar a si mesmo
 
@@ -413,18 +414,18 @@ Valores em `game/constants.ts`, salvo indicação.
 | `CRATER_RADIUS` | 6 | raio da cratera de capacete no prédio |
 | `DESTROY_CRATER_RADIUS` | 12 | raio da cratera sob a moto destruída |
 | `SUBSTEP_MS` (`engine.ts`) | 1000/120 ms | duração de um passo do voo |
-| `EXPLOSION_FRAME_MS` (`engine.ts`) | 110 ms | quadro de explosão (3 no prédio/moto, 5 na moto destruída) |
-| `ROUND_OVER_MS` (`engine.ts`) | 2800 ms | comemoração antes da próxima rodada |
-| `THINK_MS` (`engine.ts`) | 800 ms | computador "Mirando…" |
-| `ANNOUNCE_MS` (`engine.ts`) | 900 ms | computador mostrando o tiro antes de lançar |
+| `EXPLOSION_FRAME_MS` | 110 ms | quadro de explosão (3 no prédio/moto, 5 na moto destruída) |
+| `ROUND_OVER_MS` | 2800 ms | comemoração antes da próxima rodada |
+| `THINK_MS` | 800 ms | computador "Mirando…" |
+| `ANNOUNCE_MS` | 900 ms | computador mostrando o tiro antes de lançar |
 | `THROW_POSE_MS` (`engine.ts`) | 280 ms | pose de arremesso |
 | `PART_NAMES` (`engine.ts`) | baú; farol e roda | peça citada no 1º e 2º acerto |
 | `ANGLE_RANGE` (`ai.ts`) | 15–88 | ângulos que o computador considera |
 | `VELOCITY_RANGE` (`ai.ts`) | 10–160 | velocidades que o computador considera |
-| `ZONE_P1` (`city.ts`) | 28–230 | faixa do centro do prédio do jogador 1 |
-| `ZONE_P2` (`city.ts`) | 410–612 | faixa do centro do prédio do jogador 2 |
-| `MIN_RIDER_GAP` (`city.ts`) | 260 | distância mínima entre os centros dos dois prédios |
-| `MAX_NEIGHBOR_RISE` (`city.ts`) | 110 | vizinho mais alto que isso impede o motoboy no prédio |
+| `ZONE_P1` | 28–230 | faixa do centro do prédio do jogador 1 |
+| `ZONE_P2` | 410–612 | faixa do centro do prédio do jogador 2 |
+| `MIN_RIDER_GAP` | 260 | distância mínima entre os centros dos dois prédios |
+| `MAX_NEIGHBOR_RISE` | 110 | vizinho mais alto que isso impede o motoboy no prédio |
 | `STRIP_FLOORS` (`city.ts`) | 12 | variações de andar em cada tira de sprite |
 | `MASTER_VOLUME` (`sound.ts`) | 0,5 | volume geral dos efeitos |
 

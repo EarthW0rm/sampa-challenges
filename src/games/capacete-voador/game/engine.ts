@@ -3,13 +3,17 @@ import { riderKey, type Assets, type RiderPose } from './assets';
 import { applyCrater, generateCity, type City } from './city';
 import { blit, SCALE, upscaleAll } from './hires';
 import {
+  ANNOUNCE_MS,
   CRATER_RADIUS,
   DESTROY_CRATER_RADIUS,
+  EXPLOSION_FRAME_MS,
   H,
   MOTO_HP,
   RIDER_SIZE,
+  ROUND_OVER_MS,
   SUBSTEPS_PER_SECOND,
   SUN_POS,
+  THINK_MS,
   W,
 } from './constants';
 import { launch, launchPoint, riderBoxes, riderBounds, stepFlight, type Flight, type FlightEvent, type World } from './physics';
@@ -80,7 +84,7 @@ export interface EngineE2EState {
   flight: { owner: PlayerIndex; x: number; y: number; x0: number; y0: number; vx: number; vy: number; step: number; touchedSun: boolean } | null;
   explosion: { x: number; y: number; big: boolean; then: 'endTurn' | 'roundOver' } | null;
   riders: [Point, Point];
-  buildings: { key: string; x: number; width: number; height: number }[];
+  buildings: { key: string; x: number; width: number; height: number; flat: boolean; masp: boolean; roof: number }[];
 }
 
 export interface EngineE2ETargets {
@@ -121,10 +125,6 @@ interface Particle {
 }
 
 const SUBSTEP_MS = 1000 / SUBSTEPS_PER_SECOND;
-const EXPLOSION_FRAME_MS = 110;
-const ROUND_OVER_MS = 2800;
-const THINK_MS = 800;
-const ANNOUNCE_MS = 900;
 const THROW_POSE_MS = 280;
 
 const PART_NAMES = ['o baú', 'o farol e a roda'];
@@ -647,7 +647,15 @@ export class CapaceteEngine {
       flight: f ? { owner: f.owner, x: f.x, y: f.y, x0: f.x0, y0: f.y0, vx: f.vx, vy: f.vy, step: f.step, touchedSun: f.touchedSun } : null,
       explosion: e ? { x: e.x, y: e.y, big: e.big, then: e.then } : null,
       riders: [{ ...this.city.riders[0] }, { ...this.city.riders[1] }],
-      buildings: this.city.buildings.map((b) => ({ key: b.type.key, x: b.x, width: b.clipRight ?? b.type.width, height: b.height })),
+      buildings: this.city.buildings.map((b) => ({
+        key: b.type.key,
+        x: b.x,
+        width: b.clipRight ?? b.type.width,
+        height: b.height,
+        flat: b.type.flat,
+        masp: !!b.type.fixedH,
+        roof: b.type.roof,
+      })),
     };
   }
 
