@@ -225,6 +225,18 @@ test.describe('página base', () => {
     await expect(game.advanceUntil((t) => t.score > 99, 0.5)).rejects.toThrow(/advanceUntil: condição não ocorreu em 0.5 s/);
   });
 
+  test('expect sobre locator embrulhado mostra o erro real', async ({ game, page }) => {
+    await game.boot();
+    await page.evaluate(() => {
+      const i = document.createElement('input');
+      i.value = 'abc';
+      document.querySelector('.harness')!.append(i);
+    });
+    await expect(page.locator('.harness input')).toHaveValue('abc');
+    await expect(expect(page.locator('.harness input')).toHaveValue('xyz', { timeout: 300 })).rejects.toThrow(/toHaveValue/);
+    await expect(expect(page.locator('.harness h1')).toHaveText('Outro', { timeout: 300 })).rejects.toThrow(/toHaveText/);
+  });
+
   test('erro no console falha o teste', async ({ game, page }) => {
     test.fail();
     await game.boot();
