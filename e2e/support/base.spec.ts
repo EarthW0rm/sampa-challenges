@@ -143,6 +143,13 @@ test.describe('relógio', () => {
     expect((await read())[1], 'recarga preserva o que o jogo gravou').toBe('9');
   });
 
+  test('ir para about:blank não gera erro na página', async ({ game, page }) => {
+    await game.boot();
+    await page.goto('about:blank');
+    await page.goBack();
+    await page.waitForFunction(() => !!(window as unknown as { __toy?: unknown }).__toy);
+  });
+
   test('storage bloqueado lança ao acessar', async ({ game, page }) => {
     await game.boot({ blockStorage: true });
     const msg = await page.evaluate(() => {

@@ -110,13 +110,20 @@ export function installClock(o: ClockOptions): void {
         throw new Error('bloqueado');
       },
     });
-  } else if (!sessionStorage.getItem('__e2e_booted') && !sessionStorage.getItem('__pf_booted')) {
-    sessionStorage.setItem('__e2e_booted', '1');
-    sessionStorage.setItem('__pf_booted', '1');
-    localStorage.clear();
-    for (const [k, v] of Object.entries(o.soundOff)) localStorage.setItem(k, v);
-    for (const [k, v] of Object.entries(o.storage)) localStorage.setItem(k, v);
-    for (const [k, v] of Object.entries(o.rawStorage ?? {})) localStorage.setItem(k, v);
+  } else {
+    // `about:blank` e páginas opacas não têm storage: o acesso lança e o relógio não pode derrubar a página
+    try {
+      if (!sessionStorage.getItem('__e2e_booted') && !sessionStorage.getItem('__pf_booted')) {
+        sessionStorage.setItem('__e2e_booted', '1');
+        sessionStorage.setItem('__pf_booted', '1');
+        localStorage.clear();
+        for (const [k, v] of Object.entries(o.soundOff)) localStorage.setItem(k, v);
+        for (const [k, v] of Object.entries(o.storage)) localStorage.setItem(k, v);
+        for (const [k, v] of Object.entries(o.rawStorage ?? {})) localStorage.setItem(k, v);
+      }
+    } catch {
+      // sem storage nesta página
+    }
   }
 }
 
