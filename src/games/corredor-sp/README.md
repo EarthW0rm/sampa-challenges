@@ -178,7 +178,9 @@ liga a aceleração automática. Soltar, cancelar ou arrastar o dedo para fora d
 
 Há batida quando a moto e um veículo se sobrepõem: |Δz| < (comprimento do veículo + `PLAYER_LEN`)/2
 e |Δx| < meia largura do veículo + `PLAYER_HALF_W`. A meia largura de colisão é 72% da desenhada
-(é isso que deixa passar no corredor). **Motos que vêm por trás não batem** (desviam). Qualquer
+(é isso que deixa passar no corredor). **Motos que vêm por trás não batem** enquanto estão atrás:
+elas desviam da linha da moto quando chegam a 1 500 unidades (a 0,6 de lado por segundo); uma moto
+que termina a ultrapassagem ainda sobreposta conta como batida. Qualquer
 outro veículo bate, inclusive a ambulância que alcança a moto por trás e o motoboy na contramão.
 Veículo rodando depois de uma capacetada não bate.
 
@@ -241,8 +243,8 @@ das 4 faixas ou dos 3 corredores. Se a moto já tem `MAX_LIVES` vidas, a vida so
 
 ### CS-RN-16 Nível
 
-O nível é `1 + ⌊segundos de turno / LEVEL_TIME⌋` (sobe a cada 45 s), com faixa "NÍVEL n" (do 3 em
-diante com nome: TRÂNSITO PESADO, HORA DO RUSH, MARGINAL TRAVADA, CAOS TOTAL). A cada nível:
+O nível é `1 + ⌊segundos de turno / LEVEL_TIME⌋` (sobe a cada 45 s), com faixa "NÍVEL n · nome" (2 TRÂNSITO
+PESADO, 3 HORA DO RUSH, 4 MARGINAL TRAVADA, 5 em diante CAOS TOTAL). A cada nível:
 
 | Efeito | Fórmula |
 |---|---|
@@ -261,7 +263,8 @@ O jogo mantém à frente da moto `TRAFFIC_START` + (`TRAFFIC_MAX` − `TRAFFIC_S
 de 1 500 unidades atrás até `SPAWN_AHEAD_MAX` à frente, sem ambulância e contramão. Faltando, surgem
 até 2 por quadro entre `SPAWN_AHEAD_MIN` e `SPAWN_AHEAD_MAX` à frente; uma moto sorteada com a moto do
 jogador abaixo de 90 km/h tem 30% de chance de surgir 2 500 unidades **atrás** (e passa no corredor).
-Veículos que ficam 3 000 unidades para trás (ou além de 40 000 à frente) saem da pista.
+Motos que surgiram atrás entram na conta ao chegar a 1 500 atrás, então a contagem pode passar do
+alvo por 1 ou 2. Veículos que ficam 3 000 unidades para trás (ou além de 40 000 à frente) saem da pista.
 
 ### CS-RN-18 Dia e noite
 

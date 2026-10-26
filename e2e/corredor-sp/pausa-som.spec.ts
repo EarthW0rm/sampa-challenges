@@ -1,0 +1,74 @@
+import { FPS } from '../support/game-page';
+import { SOUND_KEY } from './support/page';
+import { expectStored } from '../support/storage';
+import { expect, test } from './support/test';
+
+test.describe('Corredor SP — pausa e som', () => {
+  test('CS-RN-28 P, Esc, botão e perda de foco pausam; nada anda; teclas soltas; Enter não aciona o botão em foco', async ({ game, page }) => {
+    await game.open();
+    await game.start();
+    await game.frames(60);
+    await game.pressKey('p', 0);
+    let s = await game.state();
+    expect(s.paused, 'pausa na contagem').toBe(true);
+    const c = s.countdown;
+    await game.frames(60);
+    expect((await game.state()).countdown, 'contagem parada').toBe(c);
+    await game.pressKey('p', 0);
+    await game.frames(130);
+    await page.keyboard.down('ArrowUp');
+    await game.frames(60);
+    s = await game.state();
+    expect(s.phase).toBe('racing');
+    await game.pressKey('Escape', 0);
+    const dialog = game.dialog('Pausa');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('heading', { name: 'PAUSA' })).toBeVisible();
+    const p = await game.state();
+    await game.frames(120);
+    const q = await game.state();
+    expect(q.time, 'cronômetro parado').toBe(p.time);
+    expect(q.meters, 'moto parada').toBe(p.meters);
+    expect(q.vehicles.map((v) => v.dz), 'trânsito parado').toEqual(p.vehicles.map((v) => v.dz));
+    await game.pressKey('Enter', 0);
+    await game.frames(2);
+    expect((await game.state()).paused, 'Enter é tecla do jogo: não aciona "Continuar"').toBe(true);
+    await dialog.getByRole('button', { name: 'Continuar' }).click();
+    await game.frames(2);
+    s = await game.state();
+    expect(s.paused).toBe(false);
+    expect(s.input.up, 'pausar soltou a tecla ainda apertada').toBe(false);
+    await page.keyboard.up('ArrowUp');
+    await page.getByRole('button', { name: 'Pausar' }).click();
+    expect((await game.state()).paused).toBe(true);
+    await page.getByRole('button', { name: 'Continuar' }).first().click();
+    expect((await game.state()).paused).toBe(false);
+    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    await expect(dialog).toBeVisible();
+    expect((await game.state()).paused, 'perda de foco pausa').toBe(true);
+    await game.pressKey('p', 0);
+    await game.frames(FPS);
+    expect((await game.state()).paused).toBe(false);
+    // da pausa, "Trocar moto ou pista" volta à escolha (CS-RN-30)
+    await game.pressKey('p', 0);
+    await dialog.getByRole('button', { name: 'Trocar moto ou pista' }).click();
+    await expect(game.setupTitle).toBeVisible();
+  });
+
+  test('CS-RN-29 botão Som liga e desliga e a escolha fica guardada', async ({ game, page }) => {
+    await game.open();
+    await game.start();
+    const btn = page.locator('.corredor-sp .race-bar button').nth(1);
+    await expect(btn, 'testes começam com som desligado').toHaveText('Som: não');
+    await btn.click();
+    await expect(btn).toHaveText('Som: sim');
+    await expect(btn).toHaveAttribute('aria-pressed', 'false');
+    await expectStored(page, SOUND_KEY, 'on');
+    await page.reload();
+    await game.start();
+    await expect(btn, 'lembrado após recarregar').toHaveText('Som: sim');
+    await btn.click();
+    await expect(btn).toHaveText('Som: não');
+    await expectStored(page, SOUND_KEY, 'off');
+  });
+});
