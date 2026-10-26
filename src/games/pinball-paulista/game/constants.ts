@@ -58,3 +58,86 @@ export const BALLS_PER_GAME = 3;
 export const SAVER_SECONDS = 12;
 export const MAX_MULT = 5;
 export const NUDGE_LIMIT = 3;
+/** Duração da Onda Verde (s): bumpers valem o dobro. */
+export const WAVE_SECONDS = 15;
+/** Batidas por estágio do semáforo: 0–2 vermelho, 3–5 amarelo, 6+ verde (`2 × SEMAFORO_HITS`). */
+export const SEMAFORO_HITS = 3;
+/** Segura-bola dado pelo prêmio do Minhocão (s). */
+export const SAVER_AWARD_SECONDS = 15;
+/** Tempo da tela de bônus de fim de bola (s). */
+export const BONUS_SECONDS = 3.4;
+
+// ------------------------------------------------------------------ pontos
+/** Pontos de cada evento (somados ao placar na hora). */
+export const PTS = {
+  /** Bumper; 2× com mais de uma bola na mesa e 2× na Onda Verde. */
+  bumper: 100,
+  /** 6ª batida no mesmo bumper (semáforo verde), fora da Onda Verde. */
+  semaforoVerde: 500,
+  /** Início da Onda Verde. */
+  ondaVerde: 5000,
+  /** Raia do topo apagada que acende. */
+  raia: 100,
+  /** As 3 raias acesas (multiplicador +1). */
+  raias: 1000,
+  /** Letra MOTOBOY nova / já acesa. */
+  letraNova: 500,
+  letraAcesa: 50,
+  /** 7 letras: Multiball. */
+  multiball: 2000,
+  /** Bola capturada pelo Minhocão. */
+  minhocao: 250,
+  /** Prêmio "10000 pontos" do Minhocão. */
+  premioPontos: 10000,
+  /** Prêmio "letra" com todas as letras já acesas (não acontece na prática: as 7 disparam o Multiball). */
+  premioLetraCheia: 3000,
+  /** Meia volta do spinner. */
+  spinner: 10,
+  /** Chute do estilingue. */
+  estilingue: 10,
+} as const;
+
+/** Quanto cada evento soma à base do bônus de fim de bola (multiplicada pelo multiplicador). */
+export const BONUS_PTS = {
+  bumper: 10,
+  estilingue: 5,
+  alvo: 100,
+  raia: 50,
+  minhocao: 100,
+  /** Prêmio "bônus" do Minhocão. */
+  premio: 2000,
+} as const;
+
+// ------------------------------------------------------------------ Minhocão
+/** Ciclo de prêmios do Minhocão (começa num ponto sorteado; `extra` só uma vez por jogo). */
+export const AWARDS = ['bonus', 'letra', 'saver', 'mult', 'pontos', 'letra', 'onda', 'extra'] as const;
+/** Tempo (s) em que o buraco fica "entupido" depois de capturar (conta a partir da captura). */
+export const KICKOUT_COOLDOWN = 4;
+/** Acima desta velocidade (px/s) a bola passa direto pelo buraco. */
+export const KICKOUT_MAX_SPEED = 700;
+/** Velocidade (px/s) e ângulo (graus a partir da vertical, sorteado) da ejeção. */
+export const KICK_EJECT_SPEED = 430;
+export const KICK_EJECT_MIN_DEG = 25;
+export const KICK_EJECT_RANGE_DEG = 30;
+
+// ------------------------------------------------------------------ sacudir e lançador
+/** Intervalo mínimo entre dois trancos (s). */
+export const NUDGE_COOLDOWN = 0.18;
+/** Quanto a conta de trancos cai por segundo (1 a cada 4 s). */
+export const NUDGE_DECAY = 0.25;
+/** Empurrão do tranco na bola (px/s): ±x (lado sorteado) e para cima. */
+export const NUDGE_PUSH_X = 55;
+export const NUDGE_PUSH_Y = 45;
+/** Carga mínima (fração de 0 a 1) para o lançador disparar; abaixo disso a bola volta ao lugar. */
+export const PLUNGER_MIN_CHARGE = 0.06;
+
+// ------------------------------------------------------------------ física (limites)
+/** Maior `dt` aceito por quadro (s): quadro maior é cortado. */
+export const MAX_DT = 0.05;
+/** Máximo de subpassos por quadro (o acumulador é zerado se sobrar mais que isso). */
+export const MAX_SUBSTEPS = 40;
+/** Velocidade mínima de impacto (px/s) para um alvo MOTOBOY contar. */
+export const TARGET_MIN_HIT = 25;
+/** Velocidade mínima de impacto (px/s) na face do estilingue para chutar, e intervalo entre chutes (s). */
+export const SLING_MIN_HIT = 40;
+export const SLING_COOLDOWN = 0.12;
