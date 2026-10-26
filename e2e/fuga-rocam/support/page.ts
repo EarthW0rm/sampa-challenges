@@ -137,6 +137,30 @@ export class FugaPage extends BaseGamePage<FugaE2E> {
     await this.ev.action(`Deslizar ${dist} px para ${DIR_NAMES[dir]} no mapa`);
   }
 
+  /** Segura um botão de toque (TURBO) com o dedo por `frames` quadros (eventos de toque via CDP). */
+  async holdTouch(name: string, frames: number): Promise<void> {
+    const box = (await this.page.getByRole('button', { name, exact: true }).boundingBox())!;
+    const pt = [{ x: box.x + box.width / 2, y: box.y + box.height / 2, id: 2 }];
+    await this.ev.quiet(async () => {
+      const cdp = await this.page.context().newCDPSession(this.page);
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt });
+      await this.frames(frames);
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await cdp.detach();
+      await this.frames(1);
+    });
+    await this.ev.action(`Segurar o botão ${name} por ${frames} quadros`);
+  }
+
+  /** Toque rápido num botão de toque (ÓLEO). */
+  async tapButton(name: string): Promise<void> {
+    await this.ev.quiet(async () => {
+      await this.page.getByRole('button', { name, exact: true }).tap();
+      await this.frames(1);
+    });
+    await this.ev.action(`Toque no botão ${name}`);
+  }
+
   /**
    * Dirige até o centro do tile (tx, ty) apertando a seta certa em cada esquina (rota do `route.ts`).
    * Para ao chegar, quando `until` valer, ou se a fase sair de PRONTO/jogando. Devolve o estado final.
