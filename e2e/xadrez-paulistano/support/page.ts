@@ -94,9 +94,12 @@ export class XadrezPage extends BaseGamePage<XadrezE2E> {
     await this.ev.action(`Lance por clique: ${from} → ${to}`);
   }
 
-  /** Sequência de lances por clique (`['e2e4', 'e7e5']`). */
+  /** Sequência de lances por clique (`['e2e4', 'e7e5']`), com uma evidência só no fim. */
   async moves(list: string[]): Promise<void> {
-    for (const m of list) await this.move(m.slice(0, 2), m.slice(2, 4));
+    await this.ev.quiet(async () => {
+      for (const m of list) await this.move(m.slice(0, 2), m.slice(2, 4));
+    });
+    await this.ev.action(`Lances por clique: ${list.join(' ')}`);
   }
 
   /** Arrasta a peça de uma casa até outra (ou até um ponto lógico qualquer). */
@@ -174,6 +177,16 @@ export class XadrezPage extends BaseGamePage<XadrezE2E> {
     });
     await this.ev.action('Computador jogou');
     return this.state();
+  }
+
+  /** Joga um lance UCI por clique (com a escolha da promoção, se houver), sem evidência própria. */
+  async playUci(uci: string): Promise<void> {
+    const labels: Record<string, 'Dama' | 'Torre' | 'Bispo' | 'Cavalo'> = { q: 'Dama', r: 'Torre', b: 'Bispo', n: 'Cavalo' };
+    await this.ev.quiet(async () => {
+      await this.clickSquare(uci.slice(0, 2));
+      await this.clickSquare(uci.slice(2, 4), ANIM_FRAMES);
+      if (uci.length > 4) await this.promote(labels[uci[4]]);
+    });
   }
 
   /** Lista de lances exibida (texto de cada item). */

@@ -76,7 +76,7 @@ const plain = (s: string) =>
     .toUpperCase()
     .replace(/[^A-Z0-9 .!+-]/g, ' ');
 
-/** Retrato lido pelo gancho dos testes (\`e2eHook.ts\`). Casas em notação \`e4\`; cores \`w\`/\`b\`. */
+/** Retrato lido pelo gancho dos testes (`e2eHook.ts`). Casas em notação `e4`; cores `w`/`b`. */
 export interface XadrezE2EState {
   mode: Settings['mode'];
   level: number;
@@ -98,7 +98,7 @@ export interface XadrezE2EState {
   names: string[];
   /** Computador buscando o lance. */
   thinking: boolean;
-  /** Lance do computador pronto, esperando \`AI_MIN_DELAY_MS\`. */
+  /** Lance do computador pronto, esperando `AI_MIN_DELAY_MS`. */
   aiPending: boolean;
   animating: boolean;
   flipPending: boolean;
@@ -112,6 +112,11 @@ export interface XadrezE2EState {
   worker: boolean;
   aiRequests: number;
   lastAiRequest: AiRequest | null;
+  /** Painel do canvas: texto do status e as caixas de cima e de baixo (nome, destaque, vantagem `+N`, capturadas). */
+  panel: {
+    status: string;
+    boxes: { color: 'w' | 'b'; name: string; highlighted: boolean; material: number; captured: string }[];
+  };
 }
 
 interface Anim {
@@ -577,10 +582,20 @@ export class XadrezEngine {
       worker: !!this.worker,
       aiRequests: this.aiRequests,
       lastAiRequest: req ? { ...req, moves: [...req.moves] } : null,
+      panel: {
+        status: this.statusText().text,
+        boxes: ([(this.bottom ^ 1) as Color, this.bottom] as const).map((c) => ({
+          color: side(c)!,
+          name: plain(this.names[c]).slice(0, 17),
+          highlighted: (!this.outcome && this.pos.turn === c) || (!!this.outcome && 'winner' in this.outcome && this.outcome.winner === c),
+          material: Math.max(0, this.material(c)),
+          captured: this.taken(c).map((pc) => ' pnbrqk'[typeOf(pc)]).join(''),
+        })),
+      },
     };
   }
 
-  /** Centro de cada casa (\`a1\`..\`h8\`) em coordenadas lógicas, respeitando o giro do tabuleiro. */
+  /** Centro de cada casa (`a1`..`h8`) em coordenadas lógicas, respeitando o giro do tabuleiro. */
   e2eTargets(): Record<string, { x: number; y: number }> {
     const out: Record<string, { x: number; y: number }> = {};
     for (let r = 0; r < 8; r++) {
@@ -592,7 +607,7 @@ export class XadrezEngine {
     return out;
   }
 
-  /** Pré-condição rara dos testes: troca a posição atual por \`fen\` (partida nova a partir dela). */
+  /** Pré-condição rara dos testes: troca a posição atual por `fen` (partida nova a partir dela). */
   e2eSetFen(fen: string) {
     this.cancelAi();
     this.startFen = fen;
@@ -757,31 +772,46 @@ export class XadrezEngine {
     this.drawSide(ctx, (this.bottom ^ 1) as Color, BOX_TOP_Y);
     this.drawSide(ctx, this.bottom, BOX_BOTTOM_Y);
 
-    let text: string;
-    let color = COLOR_TEXT;
-    const o = this.outcome;
-    if (o) {
-      color = COLOR_ACCENT;
-      text = {
-        checkmate: 'XEQUE-MATE!',
-        resign: 'DESISTENCIA',
-        stalemate: 'AFOGADO - EMPATE',
-        fifty: '50 LANCES - EMPATE',
-        repetition: 'REPETICAO - EMPATE',
-        material: 'SEM MATE - EMPATE',
-      }[o.kind];
-    } else if (this.promotion) {
-      text = 'ESCOLHA A PECA';
-      color = COLOR_ACCENT;
-    } else if (this.thinking || this.aiMove) {
-      text = 'PENSANDO' + '.'.repeat(Math.floor(this.time * 3) % 4);
-      color = COLOR_MUTED;
-    } else if (this.pos.inCheck()) {
-      text = 'XEQUE!';
-      color = Math.floor(this.time * 4) % 2 ? COLOR_RED : COLOR_TEXT;
-    } else text = this.pos.turn === WHITE ? 'VEZ DAS BRANCAS' : 'VEZ DAS PRETAS';
+    const { text, color } = this.statusText();
     const x = PANEL_X + Math.round((PANEL_W - textWidth(text)) / 2);
     drawPixelText(ctx, text, x, STATUS_Y + Math.round((STATUS_H - 5) / 2), color);
+  }
+
+  /** Texto e cor da caixa de status do painel. */
+  private statusText(): { text: string; color: string } {
+    const o = this.outcome;
+    if (o)
+      return {
+        color: COLOR_ACCENT,
+        text: {
+          checkmate: 'XEQUE-MATE!',
+          resign: 'DESISTENCIA',
+          stalemate: 'AFOGADO - EMPATE',
+          fifty: '50 LANCES - EMPATE',
+          repetition: 'REPETICAO - EMPATE',
+          material: 'SEM MATE - EMPATE',
+        }[o.kind],
+      };
+    if (this.promotion) return { text: 'ESCOLHA A PECA', color: COLOR_ACCENT };
+    if (this.thinking || this.aiMove) return { text: 'PENSANDO' + '.'.repeat(Math.floor(this.time * 3) % 4), color: COLOR_MUTED };
+    if (this.pos.inCheck()) return { text: 'XEQUE!', color: Math.floor(this.time * 4) % 2 ? COLOR_RED : COLOR_TEXT };
+    return { text: this.pos.turn === WHITE ? 'VEZ DAS BRANCAS' : 'VEZ DAS PRETAS', color: COLOR_TEXT };
+  }
+
+  /** Vantagem de material da cor `color` (pontos de `POINTS`; negativa se está atrás). */
+  private material(color: Color): number {
+    let material = 0;
+    const b = this.pos.board;
+    for (let sq = 0; sq < 128; sq++) {
+      if (sq & 0x88 || !b[sq]) continue;
+      material += (colorOf(b[sq]) === color ? 1 : -1) * POINTS[typeOf(b[sq])];
+    }
+    return material;
+  }
+
+  /** Peças adversárias que `color` capturou, na ordem do painel. */
+  private taken(color: Color): number[] {
+    return this.captures.filter((pc) => pc && colorOf(pc) !== color).sort((p, q) => CAPTURE_ORDER[typeOf(p)] - CAPTURE_ORDER[typeOf(q)]);
   }
 
   /** Caixa de um lado: nome, vez de jogar, peças que ele já capturou e vantagem de material. */
@@ -793,18 +823,13 @@ export class XadrezEngine {
     const name = plain(this.names[color]).slice(0, 17);
     drawPixelText(ctx, name, PANEL_X + 15, y + 6, active || won ? COLOR_ACCENT : COLOR_TEXT);
 
-    let material = 0;
-    const b = this.pos.board;
-    for (let sq = 0; sq < 128; sq++) {
-      if (sq & 0x88 || !b[sq]) continue;
-      material += (colorOf(b[sq]) === color ? 1 : -1) * POINTS[typeOf(b[sq])];
-    }
+    const material = this.material(color);
     if (material > 0) {
       const t = `+${material}`;
       drawPixelText(ctx, t, PANEL_X + PANEL_W - 4 - textWidth(t), y + 6, '#5fd17a');
     }
 
-    const taken = this.captures.filter((pc) => pc && colorOf(pc) !== color).sort((p, q) => CAPTURE_ORDER[typeOf(p)] - CAPTURE_ORDER[typeOf(q)]);
+    const taken = this.taken(color);
     taken.forEach((pc, i) => {
       const row = Math.floor(i / CAPTURED_PER_ROW);
       if (row > 1) return;

@@ -5,4 +5,6 @@ import { XadrezPage } from './page';
 
 export { expect };
 
+export { XadrezPage };
+
 export const test = makeTest((page, ev) => new XadrezPage(page, ev), [screenDescriber('.xadrez-paulistano'), xadrezDescriber]);
