@@ -56,6 +56,48 @@ export const ITEM_INTERVAL = 9;
 export const ITEM_LIFETIME = 28;
 export const SHIELD_STUN = 1.6;
 
+// ------------------------------------------------------------------ pedidos
+/** Alcance (px) da coleta e da entrega. */
+export const JOB_RADIUS = 9;
+/** Distância de caminho (tiles) do cachorro à coleta e da coleta à entrega: [mínimo, máximo]. */
+export const JOB_PICKUP_DIST = [12, 40] as const;
+export const JOB_DROP_DIST = [20, 60] as const;
+/** Próximo pedido depois de entregar / de perder o urgente (s). */
+export const NEXT_JOB_DELAY = 1.2;
+export const LATE_JOB_DELAY = 1.5;
+/** A partir de quantas entregas cada tipo entra no sorteio. */
+export const JOB_UNLOCK = { fragil: 2, urgente: 3, pesado: 4 } as const;
+/** Prazo do urgente: max(URGENT_MIN, tiles·TILE/PLAYER_SPEED·URGENT_FACTOR + URGENT_EXTRA) s. */
+export const URGENT_MIN = 10;
+export const URGENT_FACTOR = 1.4;
+export const URGENT_EXTRA = 8;
+/** Calor somado ao perder o urgente / extra da entrega pesada. */
+export const LATE_HEAT = 8;
+export const HEAVY_HEAT = 8;
+/** Pontos extras por estrela acima de 1 (fração dos pontos-base). */
+export const STAR_POINTS = 0.25;
+
+// ------------------------------------------------------------------ óleo, itens e captura (complemento)
+export const OIL_START = 1;
+export const OIL_MAX = 3;
+/** Onde a mancha cai (px atrás da moto) e o alcance da derrapada (px). */
+export const OIL_BACK = 6;
+export const OIL_RADIUS = 10;
+/** Primeiro item (s), distância mínima de caminho ao cachorro (tiles) e alcance para pegar (px). */
+export const ITEM_FIRST = ITEM_INTERVAL * 0.5;
+export const ITEM_MIN_DIST = 6;
+export const ITEM_RADIUS = 10;
+/** Invulnerável depois do capacete (s). */
+export const SHIELD_INVULN = 1;
+/** Duração do PEGO! (s) e fração do calor que fica depois de ser pego. */
+export const CAUGHT_PAUSE = 1.5;
+export const CATCH_HEAT_KEEP = 0.5;
+/** Espera até a primeira viatura no começo e depois de ser pego (s). */
+export const SPAWN_FIRST = 1;
+export const SPAWN_AFTER_CATCH = 2;
+/** Teto do passo do motor por quadro (s). */
+export const DT_MAX = 0.05;
+
 // ------------------------------------------------------------------ pontos
 export const POINTS = { normal: 100, fragil: 200, urgente: 250, pesado: 300 } as const;
 export const PIZZA_POINTS = 150;

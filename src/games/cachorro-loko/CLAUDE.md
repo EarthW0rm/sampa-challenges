@@ -1,7 +1,8 @@
 # CLAUDE.md — Cachorro Loko
 
 Leia antes o `CLAUDE.md` da raiz (regras do hub: CSS escopado, assets na pasta, manifest leve).
-Regras de jogo, pacotes e a tabela completa de parâmetros estão no `README.md` desta pasta.
+Regras de jogo (numeradas `CL-RN-NN`), pacotes e a tabela completa de parâmetros estão no `README.md`
+desta pasta, que é o manual do jogo: mudou regra ou número, atualize o README e o teste da regra juntos.
 
 ## Mapa dos arquivos
 
@@ -19,9 +20,10 @@ Regras de jogo, pacotes e a tabela completa de parâmetros estão no `README.md`
 | `game/record.ts` | recorde no `localStorage` (`cachorro-loko:recorde`) |
 | `game/assets.ts` | lista de PNGs, `assetUrl`, `loadAssets` |
 | `game/hires.ts` | `scale2x`, `upscaleAll` (sprites em alta, com cache), `blit`, `blitPart`, `SCALE` |
+| `game/e2eHook.ts` | gancho dos testes de ponta a ponta (`window.__e2e`), inerte sem a flag da página de teste |
 | `styles.css` | tudo prefixado com `.cachorro-loko` |
 
-## Como o motor funciona
+## Como o jogo funciona
 
 - `update(segundos)` / `render(ctx)` / callback `onHud` (só quando o HUD muda, comparando JSON).
   Fases: `playing`, `paused`, `over`. O React espera 1,2 s depois de `over` para mostrar a tela de
@@ -45,7 +47,7 @@ Regras de jogo, pacotes e a tabela completa de parâmetros estão no `README.md`
 - **Efeitos:** `fx` (brilho, poeira, explosão, caixa amassada) e `popups` (texto que sobe).
 - Camada estática (fundo, pés das esteiras, restaurante) é desenhada uma vez em `staticLayer`.
 
-## Visual em alta (640×400)
+## Resolução e visual em alta (640×400)
 
 A lógica continua toda em 320×200 (posições, colisões, constantes), mas o canvas tem 640×400:
 
@@ -97,12 +99,60 @@ A lógica continua toda em 320×200 (posições, colisões, constantes), mas o c
 - As zonas de toque cobrem o canvas inteiro; os botões de seta só aparecem com `pointer: coarse`.
 - O ímã também puxa bombas, de propósito.
 - `gameOverReady` no motor não é usado pela interface (o atraso de 1,2 s é feito no React).
+- Em `updateBoxes`, o laço para assim que a fase vira `over`: sem isso um pacote pego no mesmo quadro
+  em que outro tocava o asfalto pontuava depois do fim (bug corrigido na US-127, CL-RN-26).
+- O recorde só é gravado em `loseLife` (fim do turno). Sair no meio não salva (comportamento atual,
+  decisão pendente em `docs/specs/e2e-jogos/bugs.md`).
+- Os poderes terminam por subtração de `dt` em ponto flutuante: depois de exatamente `POWER_DURATION`
+  segundos sobra ~1e-13 (o HUD mostra `1s` por um quadro). Nos testes, avance 1 quadro a mais.
 
 ## Como verificar
 
-1. `npm run typecheck` na raiz.
-2. Jogue: confira que o desvio alterna a cada pacote (desce, rua, desce…), que cada poder aparece no HUD com o
+1. `npm run typecheck`, `npm run typecheck:e2e` e `npm run build` na raiz.
+2. `npm run test:e2e -- e2e/cachorro-loko/` e `npm run test:e2e:cobertura -- --jogo cachorro-loko`.
+3. Jogue: confira que o desvio alterna a cada pacote (desce, rua, desce…), que cada poder aparece no HUD com o
    tempo, que a bomba tira vida e deixa tonto, e que o recorde aparece no card do hub.
-3. Para mexer no equilíbrio sem jogar horas, dá para escrever um robô: crie o motor com um `Input`
-   controlado por código, chame `update(1/60)` em laço e mova o cachorro até o ponto de queda
-   previsto dos pacotes em `street`. Foi assim que a curva atual foi ajustada.
+4. Para mexer no equilíbrio sem jogar horas, use o piloto (`npm run test:e2e:longa -- e2e/cachorro-loko/`):
+   ele joga partidas inteiras pela tela e grava placar, nível e quadros em `partida-<n>.json`.
+
+## Testes de ponta a ponta
+
+Base comum em `e2e/support/` (guia em `e2e/README.md`); a camada deste jogo fica em `e2e/cachorro-loko/`.
+
+- **Gancho** (`game/e2eHook.ts`): `exposeCachorroLoko(engine, stage)` é chamado no efeito do motor em
+  `GameScreen` e o `dispose` no cleanup. Publica `window.__e2e = { id: 'cachorro-loko', api }` só com a
+  flag da página de teste (`src/shared/e2e/hook.ts`). O motor não tem campos públicos novos: o gancho
+  usa os métodos `e2eState()`, `e2eEvents()`, `e2eTargets()` e `e2eSpawn/e2eSetLives/e2eSetScore/e2eChef`.
+- **O que expõe:** `state()` (fase, placar, entregas, vidas, nível, recorde, tempo de jogo, velocidade
+  das esteiras, intervalo e cronômetro do próximo pedido, contador de especiais, poderes em segundos,
+  cachorro x/lado/tonto, área de pega, pacotes com tipo/x/y/vx/vy/estado/esteira, os 3 desvios com
+  destino e pisca, nº de eventos); `events(from)` (registro da partida: `spawn`, `desce`, `rua`,
+  `catch` com pontos e dobro, `land`, com placar e vidas depois de cada um; só existe sob a flag);
+  `targets()` (zonas de toque em coordenadas da página e a área de pega lógica).
+- **`prepare`** (pré-condição rara, sempre comentada no teste): `spawn(tipo, onde?)` põe um pacote (na
+  boca ou na rua/esteira), `lives(n)`, `score(n)` e `chef(on)` (liga/desliga os pedidos automáticos).
+- **Página** (`e2e/cachorro-loko/support/page.ts`): `play`, `openTitle`, `start(Enter|Space|click)`,
+  `walk(lado, quadros, setas|ad)`, `walkTo(x)`, `touch(lado, quadros)` (toque real por CDP em tela de
+  toque, mouse no desktop), `pause(P|Esc)`, `blurWindow`, `dropAt`/`dropOnDog`/`settle` (pacote posto
+  na rua e o evento final dele), `waitGameOver`. Lógico 320×200.
+- **Cabeçalho das evidências** (`support/describe.ts`): partida (fase, placar, entregas, vidas, nível),
+  poderes, cachorro, pacotes (tipo@esteira) e desvios.
+- **Piloto** (`support/pilot.ts` + `piloto.spec.ts`, projeto `longa`): prevê quando e onde cada pacote
+  que vai para a rua chega à altura do baú (esteiras na ordem de chegada, desvios alternando, gravidade,
+  vx médio de 23 px/s) e segura ←/→ por até 6 quadros para ficar embaixo do primeiro alcançável; desvia
+  de bomba que chega antes. Ao fim, `recalc(events)` refaz placar (×2 dentro de 10 s da caixa de dobro)
+  e vidas só pelos eventos e compara com o jogo, o diálogo, o `localStorage` e o card do hub.
+  Teto: 20 min de jogo por partida. Sementes 11, 23 e 37 (≈ 23–39 entregas, nível 3–4).
+- **Determinismo:** o relógio dos testes controla quadros, `performance.now`/`Date.now` e a semente do
+  `Math.random` (o motor usa `Math.random` como `rng`). Só o atraso de 1,2 s do diálogo de fim é
+  `setTimeout` real (os testes esperam com `expect`). Mesma semente + mesmos gestos = mesmo
+  `partida-<n>.json` (conferido no piloto).
+
+```bash
+npm run test:e2e -- e2e/cachorro-loko/                          # desktop + 390 px
+npm run test:e2e -- -g "CL-RN-13"                               # uma regra
+caffeinate -dimsu npm run test:e2e:longa -- e2e/cachorro-loko/  # piloto
+```
+
+Filtre sempre com `e2e/cachorro-loko/`: `cachorro-loko/` sozinho casa com o caminho do worktree
+`.worktrees/cachorro-loko/` e roda a suíte inteira.

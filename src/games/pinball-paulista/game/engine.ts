@@ -1,5 +1,8 @@
 import {
+  AWARDS,
   BALLS_PER_GAME,
+  BONUS_PTS,
+  BONUS_SECONDS,
   BALL_R,
   BALL_REST_Y,
   BUMPER_KICK,
@@ -19,19 +22,38 @@ import {
   GRAVITY,
   H,
   KICKOUT,
+  KICKOUT_COOLDOWN,
   KICKOUT_HOLD,
+  KICKOUT_MAX_SPEED,
+  KICK_EJECT_MIN_DEG,
+  KICK_EJECT_RANGE_DEG,
+  KICK_EJECT_SPEED,
   LANE_X,
+  MAX_DT,
   MAX_MULT,
   MAX_SPEED,
+  MAX_SUBSTEPS,
+  NUDGE_COOLDOWN,
+  NUDGE_DECAY,
   NUDGE_LIMIT,
+  NUDGE_PUSH_X,
+  NUDGE_PUSH_Y,
   PLUNGER_CHARGE_TIME,
   PLUNGER_MIN,
+  PLUNGER_MIN_CHARGE,
   PLUNGER_RANGE,
+  PTS,
   REST_SPEED,
+  SAVER_AWARD_SECONDS,
   SAVER_SECONDS,
+  SEMAFORO_HITS,
+  SLING_COOLDOWN,
   SLING_KICK,
+  SLING_MIN_HIT,
   STEP,
+  TARGET_MIN_HIT,
   W,
+  WAVE_SECONDS,
 } from './constants';
 import { BUMPERS, GATE, POSTS, ROLLOVERS, SLINGS, SPINNERS, TARGETS, WALLS, type Seg } from './geometry';
 import { blit, SCALE, upscaleAll } from './hires';
@@ -40,7 +62,8 @@ import type { Input } from './input';
 import { drawPixelText, textWidth } from './pixelFont';
 import { loadRecord, saveRecord } from './record';
 import { sfx } from './sound';
-import type { HudState, Phase } from './types';
+import type { HudState, Phase, ScoreKind } from './types';
+import type { PinballE2EState, PinballPrepare, PinballTargets } from './e2eHook';
 
 const INK = '#1b1220';
 
@@ -83,10 +106,8 @@ interface Fx {
   t: number;
 }
 
-type Award = 'bonus' | 'saver' | 'mult' | 'pontos' | 'onda' | 'extra' | 'letra';
-const AWARDS: Award[] = ['bonus', 'letra', 'saver', 'mult', 'pontos', 'letra', 'onda', 'extra'];
+type Award = (typeof AWARDS)[number];
 
-const WAVE_SECONDS = 15;
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
 export class PinballEngine {
@@ -141,6 +162,10 @@ export class PinballEngine {
   private sparks: Spark[] = [];
   private fxs: Fx[] = [];
   private lastHudKey = '';
+  /** Pontos do jogo atual por tipo de evento (lidos pelo gancho dos testes para recalcular o placar). */
+  private tally: Partial<Record<ScoreKind, { n: number; pts: number }>> = {};
+  /** Bônus de cada bola perdida neste jogo (base, multiplicador, total). */
+  private bonusLog: { base: number; mult: number; total: number }[] = [];
 
   constructor(
     assets: Assets,
@@ -167,6 +192,8 @@ export class PinballEngine {
 
   restart() {
     this.score = 0;
+    this.tally = {};
+    this.bonusLog = [];
     this.newRecord = false;
     this.record = loadRecord();
     this.ballNo = 1;
@@ -178,6 +205,8 @@ export class PinballEngine {
     this.extraPending = false;
     this.sparks = [];
     this.fxs = [];
+    // spinner parado: a roda que ainda girava no fim do jogo anterior não pontua no novo
+    this.spin = this.spin.map(() => ({ a: 0, w: 0, acc: 0 }));
     this.serveBall();
     this.msg('SEGURE ESPACO E SOLTE', 3);
     this.emit();
@@ -194,11 +223,16 @@ export class PinballEngine {
     this.msgT = secs;
   }
 
-  private addScore(n: number) {
+  private addScore(n: number, kind: ScoreKind, count = 1) {
     this.score += n;
+    const t = (this.tally[kind] ??= { n: 0, pts: 0 });
+    t.n += count;
+    t.pts += n;
     if (this.score > this.record) {
       this.record = this.score;
       this.newRecord = true;
+      // grava na hora: o título e o card do hub leem o recorde ao renderizar, antes do cleanup deste motor
+      saveRecord(this.score);
     }
   }
 
@@ -238,14 +272,14 @@ export class PinballEngine {
     this.wave = WAVE_SECONDS;
     this.bumperHits = [0, 0, 0];
     this.greens = 0;
-    this.addScore(5000);
+    this.addScore(PTS.ondaVerde, 'ondaVerde');
     this.msg('ONDA VERDE! BUMPERS x2', 2.4);
     sfx.award();
   }
 
   private bumperScore() {
     const multi = this.liveBalls() > 1;
-    return (multi ? 200 : 100) * (this.wave > 0 ? 2 : 1);
+    return PTS.bumper * (multi ? 2 : 1) * (this.wave > 0 ? 2 : 1);
   }
 
   private liveBalls() {
@@ -261,12 +295,12 @@ export class PinballEngine {
     sfx.award();
     switch (kind) {
       case 'bonus':
-        this.bonusBase += 2000;
-        this.msg('BONUS +2000', 2.2);
+        this.bonusBase += BONUS_PTS.premio;
+        this.msg(`BONUS +${BONUS_PTS.premio}`, 2.2);
         break;
       case 'saver':
-        this.saver = Math.max(this.saver, 15);
-        this.msg('SEGURA BOLA 15S', 2.2);
+        this.saver = Math.max(this.saver, SAVER_AWARD_SECONDS);
+        this.msg(`SEGURA BOLA ${SAVER_AWARD_SECONDS}S`, 2.2);
         sfx.saver();
         break;
       case 'mult':
@@ -274,8 +308,8 @@ export class PinballEngine {
         this.msg(`MULTIPLICADOR X${this.mult}`, 2.2);
         break;
       case 'pontos':
-        this.addScore(10000);
-        this.msg('10000 PONTOS', 2.2);
+        this.addScore(PTS.premioPontos, 'premioPontos');
+        this.msg(`${PTS.premioPontos} PONTOS`, 2.2);
         break;
       case 'onda':
         this.startWave();
@@ -286,7 +320,7 @@ export class PinballEngine {
           this.letters[i] = true;
           this.msg('LETRA ACESA!', 2);
           if (this.letters.every(Boolean)) this.startMultiball();
-        } else this.addScore(3000);
+        } else this.addScore(PTS.premioLetraCheia, 'premioLetraCheia');
         break;
       }
       case 'extra':
@@ -299,7 +333,7 @@ export class PinballEngine {
   }
 
   private startMultiball() {
-    this.addScore(2000);
+    this.addScore(PTS.multiball, 'multiball');
     this.letters = Array(7).fill(false);
     this.msg('MULTIBALL!', 2.6);
     sfx.multiball();
@@ -311,30 +345,32 @@ export class PinballEngine {
 
   nudge() {
     if (this.phase !== 'play' || this.tilt || this.nudgeCd > 0) return;
-    this.nudgeCd = 0.18;
+    this.nudgeCd = NUDGE_COOLDOWN;
     this.nudges += 1;
     const dir = Math.random() < 0.5 ? -1 : 1;
     for (const b of this.balls) {
       if (b.rest || b.held > 0) continue;
-      b.vx += dir * 55;
-      b.vy -= 45;
+      b.vx += dir * NUDGE_PUSH_X;
+      b.vy -= NUDGE_PUSH_Y;
     }
     sfx.nudge();
     if (this.nudges > NUDGE_LIMIT) {
       this.tilt = true;
       this.msg('TILT!', 3);
       sfx.tilt();
-    } else if (this.nudges >= NUDGE_LIMIT) {
+    } else if (this.nudges > NUDGE_LIMIT - 1) {
+      // a conta cai continuamente (NUDGE_DECAY), então `>= NUDGE_LIMIT` nunca acontecia e o aviso não aparecia
       this.msg('CUIDADO!', 1.2);
     }
   }
 
   private ballLost() {
     sfx.drain();
-    this.bonusT = 3.4;
+    this.bonusT = BONUS_SECONDS;
     const base = this.tilt ? 0 : this.bonusBase;
     this.bonusInfo = { base, mult: this.mult, total: base * this.mult };
-    this.addScore(this.bonusInfo.total);
+    this.bonusLog.push({ ...this.bonusInfo });
+    this.addScore(this.bonusInfo.total, 'bonus');
     this.phase = 'bonus';
   }
 
@@ -480,6 +516,14 @@ export class PinballEngine {
     b.x += b.vx * STEP;
     b.y += b.vy * STEP;
 
+    // alvos MOTOBOY antes das paredes: a placa fica sobre a guia, e a parede, tratada antes, já rebatia a
+    // bola e o alvo nunca via o impacto (as letras só acendiam pelo prêmio do Minhocão)
+    TARGETS.forEach((t, i) => {
+      if (t.nx === 1 ? b.x < t.seg.ax : b.x > t.seg.ax) return;
+      const v = this.segHit(b, t.seg, E_WALL, out);
+      if (v > TARGET_MIN_HIT) this.hitTarget(i, b);
+    });
+
     let hitSpeed = 0;
     for (const s of WALLS) hitSpeed = Math.max(hitSpeed, this.segHit(b, s, E_WALL, out));
     if (hitSpeed > 80 && this.wallCd <= 0) {
@@ -496,7 +540,7 @@ export class PinballEngine {
       this.segHit(b, side1, E_WALL, out);
       this.segHit(b, side2, E_WALL, out);
       const v = this.segHit(b, face, 0.3, out);
-      if (v > 40 && this.slingCd[i] <= 0) {
+      if (v > SLING_MIN_HIT && this.slingCd[i] <= 0) {
         // chute com um pouco de acaso (ângulo e força): evita a bola ficar "rebatendo" para sempre entre os dois estilingues
         const ang = (Math.random() - 0.5) * 0.7;
         const kx = out.nx * Math.cos(ang) - out.ny * Math.sin(ang);
@@ -507,18 +551,12 @@ export class PinballEngine {
           b.vx += kx * (kick - vn);
           b.vy += ky * (kick - vn);
         }
-        this.slingCd[i] = 0.12;
+        this.slingCd[i] = SLING_COOLDOWN;
         this.slingFlash[i] = 0.1;
-        this.addScore(10);
-        this.bonusBase += 5;
+        this.addScore(PTS.estilingue, 'estilingue');
+        this.bonusBase += BONUS_PTS.estilingue;
         sfx.sling(b.x);
       }
-    });
-
-    TARGETS.forEach((t, i) => {
-      if (t.nx === 1 ? b.x < t.seg.ax : b.x > t.seg.ax) return;
-      const v = this.segHit(b, t.seg, E_WALL, out);
-      if (v > 25) this.hitTarget(i, b);
     });
 
     BUMPERS.forEach((bp, i) => {
@@ -539,13 +577,13 @@ export class PinballEngine {
     ROLLOVERS.forEach((r, i) => {
       if (!this.rolls[i] && Math.abs(b.x - r.x) < 9 && Math.abs(b.y - r.y) < 6) {
         this.rolls[i] = true;
-        this.addScore(100);
-        this.bonusBase += 50;
+        this.addScore(PTS.raia, 'raia');
+        this.bonusBase += BONUS_PTS.raia;
         sfx.rollover(i);
         if (this.rolls.every(Boolean)) {
           this.rolls = [false, false, false];
           this.mult = Math.min(MAX_MULT, this.mult + 1);
-          this.addScore(1000);
+          this.addScore(PTS.raias, 'raias');
           this.msg(`MULTIPLICADOR X${this.mult}`, 2);
           sfx.award();
         }
@@ -558,14 +596,14 @@ export class PinballEngine {
         b.vy *= 0.9985;
       }
     });
-    if (this.kickCd <= 0 && Math.hypot(b.x - KICKOUT.x, b.y - KICKOUT.y) < KICKOUT.r - 1 && Math.hypot(b.vx, b.vy) < 700) {
-      this.kickCd = 4;
+    if (this.kickCd <= 0 && Math.hypot(b.x - KICKOUT.x, b.y - KICKOUT.y) < KICKOUT.r - 1 && Math.hypot(b.vx, b.vy) < KICKOUT_MAX_SPEED) {
+      this.kickCd = KICKOUT_COOLDOWN;
       b.held = KICKOUT_HOLD;
       b.x = KICKOUT.x;
       b.y = KICKOUT.y;
       b.vx = b.vy = 0;
-      this.addScore(250);
-      this.bonusBase += 100;
+      this.addScore(PTS.minhocao, 'minhocao');
+      this.bonusBase += BONUS_PTS.minhocao;
       sfx.kickCapture(b.x);
     }
 
@@ -583,17 +621,17 @@ export class PinballEngine {
     const bp = BUMPERS[i];
     this.bumperFlash[i] = 0.09;
     this.bumperHits[i] += 1;
-    const stage = Math.min(2, Math.floor(this.bumperHits[i] / 3));
-    this.addScore(this.bumperScore());
-    this.bonusBase += 10;
+    const stage = Math.min(2, Math.floor(this.bumperHits[i] / SEMAFORO_HITS));
+    this.addScore(this.bumperScore(), 'bumper');
+    this.bonusBase += BONUS_PTS.bumper;
     sfx.bumper(b.x, stage);
     this.bumpFx(bp.x, bp.y);
     this.spark(bp.x, bp.y, 4, ['#ffd36b', '#ffffff']);
-    if (this.bumperHits[i] === 6 && this.wave <= 0) {
-      this.addScore(500);
-      this.msg('SEMAFORO VERDE +500', 1.4);
+    if (this.bumperHits[i] === 2 * SEMAFORO_HITS && this.wave <= 0) {
+      this.addScore(PTS.semaforoVerde, 'semaforoVerde');
+      this.msg(`SEMAFORO VERDE +${PTS.semaforoVerde}`, 1.4);
     }
-    this.greens = this.bumperHits.filter((h) => h >= 6).length;
+    this.greens = this.bumperHits.filter((h) => h >= 2 * SEMAFORO_HITS).length;
     if (this.greens === 3 && this.wave <= 0) this.startWave();
   }
 
@@ -601,38 +639,38 @@ export class PinballEngine {
     const lit = this.letters[i];
     this.targetFlash[i] = 0.2;
     sfx.target(b.x, !lit);
-    this.bonusBase += 100;
+    this.bonusBase += BONUS_PTS.alvo;
     this.spark(b.x, b.y, 4, ['#ffd36b', '#ff4d5e']);
     if (lit) {
-      this.addScore(50);
+      this.addScore(PTS.letraAcesa, 'letraAcesa');
       return;
     }
     this.letters[i] = true;
-    this.addScore(500);
+    this.addScore(PTS.letraNova, 'letraNova');
     if (this.letters.every(Boolean)) this.startMultiball();
   }
 
   private stepWorld(dt: number) {
     this.acc += dt;
     let n = 0;
-    while (this.acc >= STEP && n < 40) {
+    while (this.acc >= STEP && n < MAX_SUBSTEPS) {
       this.acc -= STEP;
       n++;
       this.stepFlippers();
       for (const b of this.balls) this.stepBall(b);
     }
-    if (this.acc > STEP * 40) this.acc = 0;
+    if (this.acc > STEP * MAX_SUBSTEPS) this.acc = 0;
   }
 
   update(rawDt: number) {
-    const dt = Math.max(0, Math.min(rawDt, 0.05));
+    const dt = Math.max(0, Math.min(rawDt, MAX_DT));
     if (this.phase === 'paused') return;
     this.time += dt;
     if (this.msgT > 0) this.msgT -= dt;
     if (this.wallCd > 0) this.wallCd -= dt;
     if (this.kickCd > 0) this.kickCd -= dt;
     this.nudgeCd = Math.max(0, this.nudgeCd - dt);
-    this.nudges = Math.max(0, this.nudges - dt * 0.25);
+    this.nudges = Math.max(0, this.nudges - dt * NUDGE_DECAY);
     this.slingCd = this.slingCd.map((v) => Math.max(0, v - dt));
     this.slingFlash = this.slingFlash.map((v) => Math.max(0, v - dt));
     this.bumperFlash = this.bumperFlash.map((v) => Math.max(0, v - dt));
@@ -643,8 +681,9 @@ export class PinballEngine {
       s.acc += s.w * dt / (Math.PI * 2) * 2;
       s.w = Math.max(0, s.w - dt * 6);
       const ticks = Math.floor(s.acc) - before;
-      if (ticks > 0) {
-        this.addScore(10 * ticks);
+      // depois do fim de jogo a roda ainda gira, mas não pontua (o placar final e o recorde já foram fechados)
+      if (ticks > 0 && this.phase !== 'over') {
+        this.addScore(PTS.spinner * ticks, 'spinner', ticks);
         sfx.spinner(LANE_X / 2);
       }
     }
@@ -684,7 +723,7 @@ export class PinballEngine {
         this.charge = Math.min(1, this.charge + dt / PLUNGER_CHARGE_TIME);
         rest.y = BALL_REST_Y + this.charge * 9;
       } else if (this.charge > 0) {
-        if (rest && this.charge > 0.06) {
+        if (rest && this.charge > PLUNGER_MIN_CHARGE) {
           const p = this.charge;
           rest.rest = false;
           rest.y = BALL_REST_Y;
@@ -712,9 +751,9 @@ export class PinballEngine {
             b.held = 0;
             this.applyAward();
             this.kickDir = -this.kickDir;
-            const a = (this.kickDir * (25 + Math.random() * 30) * Math.PI) / 180;
-            b.vx = Math.sin(a) * 430;
-            b.vy = -Math.cos(a) * 430;
+            const a = (this.kickDir * (KICK_EJECT_MIN_DEG + Math.random() * KICK_EJECT_RANGE_DEG) * Math.PI) / 180;
+            b.vx = Math.sin(a) * KICK_EJECT_SPEED;
+            b.vy = -Math.cos(a) * KICK_EJECT_SPEED;
             sfx.kickEject(b.x);
           }
         }
@@ -769,10 +808,98 @@ export class PinballEngine {
     this.onHud(hud);
   }
 
-  /** Para os testes automáticos. */
-  debug() {
-    return { balls: this.balls.map((b) => ({ ...b })), flippers: this.flippers.map((f) => ({ ...f })) };
+  // ---------------------------------------------------------------- testes de ponta a ponta
+
+  /** Estado para o gancho dos testes (`game/e2eHook.ts`): cópia, só leitura. */
+  e2eState(): PinballE2EState {
+    const next = (() => {
+      let i = this.awardIdx;
+      for (let k = 0; k < AWARDS.length; k++) {
+        i = (i + 1) % AWARDS.length;
+        if (!(AWARDS[i] === 'extra' && this.extraGiven)) return AWARDS[i];
+      }
+      return AWARDS[i];
+    })();
+    return {
+      phase: this.phase,
+      prevPhase: this.prevPhase,
+      score: this.score,
+      record: this.record,
+      newRecord: this.newRecord,
+      ball: this.ballNo,
+      ballsTotal: BALLS_PER_GAME,
+      mult: this.mult,
+      letters: [...this.letters],
+      rolls: [...this.rolls],
+      bumperHits: [...this.bumperHits],
+      greens: this.greens,
+      wave: this.wave,
+      saver: this.saver,
+      tilt: this.tilt,
+      nudges: this.nudges,
+      extraPending: this.extraPending,
+      extraGiven: this.extraGiven,
+      kickCd: this.kickCd,
+      kickDir: this.kickDir,
+      nextAward: next,
+      bonusBase: this.bonusBase,
+      bonus: this.bonusInfo ? { ...this.bonusInfo } : null,
+      bonusLog: this.bonusLog.map((b) => ({ ...b })),
+      charge: this.charge,
+      launched: this.launched,
+      message: this.msgT > 0 ? this.message : '',
+      balls: this.balls.map((b) => ({ x: b.x, y: b.y, vx: b.vx, vy: b.vy, rest: b.rest, held: b.held })),
+      flippers: this.flippers.map((f) => ({ angle: f.angle, up: f.up })),
+      spin: this.spin.map((s) => ({ w: s.w, turns: s.acc })),
+      tally: Object.fromEntries(Object.entries(this.tally).map(([k, v]) => [k, { ...v }])),
+      time: this.time,
+    };
   }
+
+  /** Alvos em coordenadas lógicas do canvas (240×400) e seletores dos botões. */
+  e2eTargets(): PinballTargets {
+    return {
+      flipperLeft: { x: 0, y: 0, w: W / 2, h: H },
+      flipperRight: { x: W / 2, y: 0, w: W / 2, h: H },
+      launch: '.pinball-paulista .actions .launch',
+      nudge: '.pinball-paulista .actions button:not(.launch)',
+      flippers: this.flippers.map((f) => ({ x: f.px, y: f.py })),
+      bumpers: BUMPERS.map((b) => ({ x: b.x, y: b.y, r: BUMPER_R })),
+      rollovers: ROLLOVERS.map((r) => ({ x: r.x, y: r.y })),
+      targets: TARGETS.map((t) => ({ letter: t.letter, x: t.seg.ax, y1: t.seg.ay, y2: t.seg.by, nx: t.nx })),
+      spinners: SPINNERS.map((s) => ({ x: s.x, y: s.y, w: s.w })),
+      slings: SLINGS.map((s) => ({ a: { x: s.a[0], y: s.a[1] }, c: { x: s.c[0], y: s.c[1] } })),
+      kickout: { ...KICKOUT },
+      gate: { x: GATE.ax, y1: GATE.ay, y2: GATE.by },
+    };
+  }
+
+  /** Pré-condições raras dos testes (cada uso é comentado no teste). */
+  readonly e2ePrepare: PinballPrepare = {
+    ball: (x, y, vx, vy, i = 0) => {
+      const b = this.balls[i] ?? this.newRestBall();
+      Object.assign(b, { x, y, px: x, py: y, vx, vy, rest: false, held: 0, dead: false });
+      if (!this.balls.includes(b)) this.balls.push(b);
+      this.emit();
+    },
+    lights: (o) => {
+      if (o.letters) this.letters = [...o.letters];
+      if (o.rolls) this.rolls = [...o.rolls];
+      if (o.bumperHits) {
+        this.bumperHits = [...o.bumperHits];
+        this.greens = this.bumperHits.filter((h) => h >= 2 * SEMAFORO_HITS).length;
+      }
+      if (o.mult !== undefined) this.mult = o.mult;
+      if (o.nextAward !== undefined) {
+        // posiciona o ciclo para o próximo prêmio ser `nextAward`
+        const idx = AWARDS.indexOf(o.nextAward);
+        this.awardIdx = (idx - 1 + AWARDS.length) % AWARDS.length;
+      }
+      if (o.kickCd !== undefined) this.kickCd = o.kickCd;
+      if (o.saver !== undefined) this.saver = o.saver;
+      this.emit();
+    },
+  };
 
   // ---------------------------------------------------------------- desenho
 

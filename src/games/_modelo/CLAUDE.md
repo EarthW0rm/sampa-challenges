@@ -13,6 +13,7 @@ pasta, manifest leve). Regras e parâmetros ficam no `README.md` desta pasta.
 | `assets/` | imagens do jogo em 1× (`capa.png` é a capa do card, 320×200) |
 | `game/constants.ts` | `W`, `H` (grade lógica 320×200) e os números do jogo |
 | `game/hires.ts` | padrão de resolução: `SCALE` = 2, `scale2x`, `upscaleAll`, `blit`, `blitPart` |
+| `game/e2eHook.ts` | gancho dos testes de ponta a ponta (`window.__e2e`), inerte sem a flag da página de teste |
 
 Estrutura recomendada quando o jogo crescer (igual aos outros jogos do hub):
 
@@ -67,5 +68,30 @@ Descreva o laço principal, os estados (menu, jogando, pausa, fim) e qualquer re
 
 ## Como verificar
 
-1. `npm run typecheck` na raiz.
-2. Abra `#/jogos/__ID__`, jogue, volte ao hub pela barra e confira que nada mudou nos outros jogos.
+1. `npm run typecheck` e `npm run typecheck:e2e` na raiz.
+2. `npm run test:e2e -- e2e/__ID__/` (desktop + celular).
+3. Abra `#/jogos/__ID__`, jogue, volte ao hub pela barra e confira que nada mudou nos outros jogos.
+
+## Testes de ponta a ponta
+
+Base comum em `e2e/support/` (guia em `e2e/README.md`); a camada deste jogo fica em `e2e/__ID__/`.
+
+- **Gancho** (`game/e2eHook.ts`): `exposeGame(...)` é chamado no efeito que cria o jogo e o `dispose`
+  no cleanup. Publica `window.__e2e = { id: '__ID__', api }` só quando a página de teste liga a flag
+  (`src/shared/e2e/hook.ts`). A `api` é só leitura: `state()` (estado que as regras precisam) e
+  `targets()` (onde clicar, em coordenadas lógicas). Pré-condições raras vão num `prepare` e cada uso
+  é comentado no teste.
+- **Página** (`e2e/__ID__/support/page.ts`): estende `BaseGamePage` com os gestos do jogo
+  (`cfg.logical` = tamanho lógico do canvas).
+- **Cabeçalho das evidências** (`e2e/__ID__/support/describe.ts`): campos do estado do jogo.
+- **Testes**: um ou mais por regra do README, com o número no nome
+  (`test('__SIGLA__-RN-01 …')`); números esperados importados de `game/constants.ts`.
+- **Determinismo**: o relógio dos testes controla os quadros, `performance.now`/`Date.now` e a
+  semente do `Math.random`; nada no jogo pode depender de tempo real.
+- **Piloto** (`e2e/__ID__/support/pilot.ts` + `piloto.spec.ts`, projeto `longa`): decide pelo estado
+  do gancho e joga só por gestos de tela.
+
+```bash
+npm run test:e2e -- e2e/__ID__/
+npm run test:e2e:longa -- e2e/__ID__/
+```

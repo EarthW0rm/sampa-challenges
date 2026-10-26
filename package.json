@@ -12,7 +12,9 @@
     "test:e2e": "playwright test -c e2e/playwright.config.ts --project=desktop --project=celular",
     "typecheck:e2e": "tsc --noEmit -p e2e",
     "test:e2e:campanha": "playwright test -c e2e/playwright.config.ts --project=campanha",
-    "test:e2e:tudo": "playwright test -c e2e/playwright.config.ts"
+    "test:e2e:longa": "playwright test -c e2e/playwright.config.ts --project=longa",
+    "test:e2e:cobertura": "node scripts/e2e-cobertura.mjs",
+    "test:e2e:tudo": "playwright test -c e2e/playwright.config.ts --project=desktop --project=celular --project=longa --project=campanha"
   },
   "dependencies": {
     "react": "18.3.1",

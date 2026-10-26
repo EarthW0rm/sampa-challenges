@@ -3,5 +3,6 @@
   "compilerOptions": {
     "types": ["node", "vite/client"]
   },
-  "include": [".", "../src/games/pastel-de-feira/game"]
+  "include": [".", "../src/games/*/game", "../src/shared"],
+  "exclude": ["_modelo", "../src/games/_modelo"]
 }

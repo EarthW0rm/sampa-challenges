@@ -13,7 +13,7 @@ As regras do jogo e a tabela de parâmetros estão no `README.md` desta pasta.
 | `components/GameScreen.tsx` | canvas + laço `requestAnimationFrame`, painéis dos jogadores (vida da moto, mira), placar, fim de jogo |
 | `components/AimForm.tsx` | campos de ângulo e velocidade com validação |
 | `game/types.ts` | `Settings`, `Shot`, `GameMode`, `Difficulty`, `Rect`, `Point` |
-| `game/constants.ts` | todos os números de física, áreas de acerto e limites |
+| `game/constants.ts` | todos os números de física, áreas de acerto, limites, tempos do motor (`THINK_MS`, `ANNOUNCE_MS`, `ROUND_OVER_MS`, `EXPLOSION_FRAME_MS`) e zonas da cidade (`ZONE_P1/P2`, `MIN_RIDER_GAP`, `MAX_NEIGHBOR_RISE`) |
 | `game/assets.ts` | lista de PNGs, `assetUrl`, `riderKey(jogador, dano, pose)`, `loadAssets` |
 | `game/city.ts` | tipos de prédio, montagem da cidade, máscara de colisão, `applyCrater` |
 | `game/physics.ts` | `launch`, `stepFlight` (passo determinístico), `simulate`, `riderBoxes` |
@@ -21,6 +21,7 @@ As regras do jogo e a tabela de parâmetros estão no `README.md` desta pasta.
 | `game/engine.ts` | `CapaceteEngine`: turnos, dano, rodadas, partículas, desenho, estado do HUD |
 | `game/sound.ts` | `sfx`: efeitos sonoros em WebAudio (arremesso, assobio do voo, explosões, jingles), mute persistido |
 | `game/hires.ts` | `scale2x`, `upscaleAll` (sprites em alta, com cache), `blit`, `blitPart`, `SCALE` |
+| `game/e2eHook.ts` | gancho dos testes de ponta a ponta (`window.__e2e`), inerte sem a flag da página de teste |
 | `styles.css` | tudo prefixado com `.capacete-voador` |
 
 ## Como o motor funciona
@@ -47,7 +48,7 @@ As regras do jogo e a tabela de parâmetros estão no `README.md` desta pasta.
 - O nome `city.riders` são as posições (canto superior esquerdo do quadro 40×40) dos dois
   motoboys; o jogador 2 é desenhado espelhado (`facingOf(1) = -1`).
 
-## Visual em alta (campo 640×400, canvas 1280×800)
+## Resolução e visual em alta (campo 640×400, canvas 1280×800)
 
 A lógica roda em 640×400 (posições, colisões, constantes; 1 unidade de física = 1 px) e o canvas tem
 1280×800: cada pixel lógico vira 2×2 na tela e os PNGs (1×) passam pelo Scale2x:
@@ -104,12 +105,67 @@ A lógica roda em 640×400 (posições, colisões, constantes; 1 unidade de fís
   em segundo plano pode voltar com um salto enorme.
 - `GameScreen` cria o motor dentro do `useEffect` (StrictMode roda duas vezes em desenvolvimento).
 - A cratera de destruição pode deixar a moto "flutuando" sobre o buraco: é visual, como no original.
-- Não há persistência: placar e nomes somem ao sair do jogo.
+- Não há persistência: placar e nomes somem ao sair do jogo (só `capacete-voador:som` é gravado).
+- `game/constants.ts` não pode importar nada com DOM ou `import.meta.glob`: os testes (Node) importam
+  dele os números esperados. Por isso os tempos do motor e as zonas da cidade moram lá, não em
+  `engine.ts`/`city.ts` (que puxam `assets.ts`).
+- Os campos numéricos do `AimForm` e da gravidade usam a validação nativa do navegador (`min`, `max`,
+  `step`): fora do limite o envio é barrado antes do `onSubmit`. Ângulo vazio vira 0 (manual, CV-RN-10).
 
 ## Como verificar
 
-1. `npm run typecheck` na raiz.
+1. `npm run typecheck`, `npm run typecheck:e2e` e `npm run test:e2e -- capacete-voador/` na raiz.
 2. Jogue no modo treino: 3 acertos na moto do alvo devem destruí-la; um acerto na cabeça encerra a
    rodada.
 3. Contra o computador no difícil: ele deve acertar você (moto ou cabeça) em até 3 tiros por rodada.
    No fácil, nunca.
+
+## Testes de ponta a ponta
+
+Base comum em `e2e/support/` (guia em `e2e/README.md`); a camada deste jogo fica em
+`e2e/capacete-voador/`. Manual com as regras `CV-RN-NN` e a tabela regra → teste: `README.md`, seção 12.
+
+- **Gancho** (`game/e2eHook.ts`): `exposeCapacete(engine)` é chamado no efeito do `GameScreen` que cria
+  o motor e o `dispose` no cleanup. Publica `window.__e2e = { id: 'capacete-voador', api }` só com a flag
+  da página de teste (`src/shared/e2e/hook.ts`). Só existe durante a partida (no menu não há gancho).
+  - `state()`: retrato de `CapaceteEngine.e2eState()` — opções (modo, dificuldade, nomes, pontos,
+    gravidade, garoa), fase, vez, quem começa, rodada, placar, vento, dano, nocaute, vencedor da rodada,
+    mensagem, tiro do computador e quantos ele deu na rodada, últimos tiros, treino (tiros/acertos),
+    susto do sol, `shotsFired`, `outcomes` (registro do fim de cada voo: tiro, rodada, quem, tipo,
+    motoboy atingido, ponto, sol), capacete em voo (`x0`, `vx`, `vy`, `step`…), explosão, motoboys e
+    prédios (chave, x, largura, altura, telhado reto, MASP, `roof`).
+  - `targets()`: cabeça, moto e ponto de lançamento de cada motoboy (pixels lógicos) e os seletores do
+    formulário de cada lado.
+  - `simulateShot(ângulo, velocidade, jogador?)`: roda `launch` + `stepFlight` (a mesma física do jogo e
+    da IA) sobre a máscara atual, sem disparar nem mudar nada; devolve tipo, motoboy, ponto, passos, sol e
+    a menor distância ao adversário. Os testes e o piloto acham tiros de acerto conhecidos com ele.
+  - `solid(x, y)`: o pixel lógico é prédio na máscara (crateras).
+  - `prepare.wind(v)` e `prepare.city(semente)`: só para pré-condições raras (vento conhecido, cidade
+    com MASP para cavar até o chão), sempre comentadas no teste.
+- **Página** (`e2e/capacete-voador/support/page.ts`, `CapacetePage`): `cfg.logical` 640×400; gestos
+  `menu(opções)`, `start()`, `play()`, `aim(a, v, jogador)`, `fire('enter' | 'botao')`, `waitShot()`,
+  `shoot()`, `waitAim()`, `waitRound()`, `restart()`, `backToMenu()`, `passTurn()`; busca
+  `findShot(...)`/`findShotOrRestart(...)` (grade inteira numa chamada do navegador; sem tiro na cidade,
+  clica em **Reiniciar** para sortear outra).
+- **Cabeçalho das evidências** (`support/describe.ts`): modo, rodada/fase, placar (ou tiros/acertos),
+  vez, vento, mira digitada (e o tiro do computador), vida das motos, capacete em voo.
+- **Determinismo**: o relógio dos testes controla quadros, `performance.now`/`Date.now` e a semente do
+  `Math.random`; a cidade, o vento e a IA (que roda na página) seguem a semente. O voo anda em passos
+  inteiros (2 por quadro), então mesma semente + mesmos gestos = mesma partida.
+- **Piloto** (`support/pilot.ts` + `piloto.spec.ts`, projeto `longa`): na vez de um humano varre ângulos
+  15–88 × velocidades 10–160 com `simulateShot`, escolhe um tiro que acerte o adversário (o mais perto
+  de 45°) ou, sem caminho, o que passa mais perto (abre cratera), e executa pela tela: preenche os dois
+  campos e aperta Enter. Joga 2 jogadores (piloto dos dois lados), contra o computador fácil, médio e
+  difícil, e treino (3 rodadas). Ao fim confere placar exibido = recalculado pelos `outcomes`, vencedor
+  no diálogo, card do hub sem recorde e console limpo; a mesma semente 2 vezes dá o mesmo
+  `partida-<n>.json`. Teto de 15 min de jogo por partida.
+
+```bash
+npm run test:e2e -- capacete-voador/
+npm run test:e2e -- --project=celular capacete-voador/
+caffeinate -dimsu npm run test:e2e:longa -- capacete-voador/
+npm run test:e2e:cobertura -- --jogo capacete-voador
+```
+
+Com outra cópia do repositório rodando ao mesmo tempo, use `E2E_PORT=<porta>` (veja
+`e2e/playwright.config.ts`).

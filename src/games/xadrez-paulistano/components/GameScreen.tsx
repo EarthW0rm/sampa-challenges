@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { assetUrl, pieceKey, type Assets } from '../game/assets';
 import { BISHOP, type Color, KNIGHT, type Outcome, QUEEN, ROOK } from '../game/chess';
 import { H, W } from '../game/constants';
+import { exposeGame } from '../game/e2eHook';
 import { XadrezEngine } from '../game/engine';
 import { SCALE } from '../game/hires';
 import { levelLabel } from '../game/levels';
@@ -54,6 +55,7 @@ export function GameScreen({ assets, settings, onExit }: Props) {
     const ctx = canvasRef.current!.getContext('2d')!;
     const engine = new XadrezEngine(assets, settings, setHud);
     engineRef.current = engine;
+    const disposeHook = exposeGame(engine);
     let raf = 0;
     let last = performance.now();
     const loop = (now: number) => {
@@ -65,6 +67,7 @@ export function GameScreen({ assets, settings, onExit }: Props) {
     raf = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(raf);
+      disposeHook();
       engine.dispose();
       engineRef.current = null;
     };

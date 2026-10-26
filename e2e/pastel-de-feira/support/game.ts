@@ -1,14 +1,16 @@
-import { test as base, expect, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { E2EHook } from '../../../src/games/pastel-de-feira/game/e2eHook';
 import type { StationId } from '../../../src/games/pastel-de-feira/game/types';
+import type { Evidence } from '../../support/evidence';
+import { expect, makeTest } from '../../support/fixtures';
+import { BaseGamePage, FPS, expectSteps, type HookFn } from '../../support/game-page';
 import { buildCampaign, SAVE_KEY, saveText, type CampaignSpec } from './campaign';
-import { Evidence, evidenceLevel, wrapPage, type Composer, type EvidenceLevel } from './evidence';
+import { pastelDescriber } from './describe';
 
-export { expect };
+export { expect, expectSteps, FPS };
+export type { EvidenceOptions } from '../../support/fixtures';
 
 export const ROUTE = '#/jogos/pastel-de-feira';
-/** Quadros por segundo do relógio controlado: 1 quadro = 1 passo da simulação (1/60 s). */
-export const FPS = 60;
 
 export interface BootOptions {
   /** Campanha salva antes de abrir o jogo (fase `preparo` por padrão). `null` = sem save. */
@@ -24,106 +26,36 @@ export interface BootOptions {
   blockStorage?: boolean;
 }
 
-type HookFn<A, R> = (pf: E2EHook, arg: A) => R;
-
 /**
- * Página do jogo com o relógio sob controle do teste. O `requestAnimationFrame` é trocado por uma
- * fila manual: nada anda sozinho, e `frames(n)` roda `n` quadros de exatamente 1/60 s (1 passo da
- * simulação por quadro). O resto da página (React, imagens) segue normal.
+ * Página do jogo com o relógio sob controle do teste (base comum: `e2e/support/game-page.ts`). O
+ * `requestAnimationFrame` é trocado por uma fila manual: nada anda sozinho, e `frames(n)` roda `n`
+ * quadros de exatamente 1/60 s (1 passo da simulação por quadro). O Pastel usa o relógio real de
+ * `performance.now` (`virtualTime: false`) e o gancho `window.__pf`.
  */
-export class GamePage {
-  /** `page` registra evidência a cada ação (ver `evidence.ts`); os gestos daqui registram uma só, já descrita. */
-  constructor(
-    readonly page: Page,
-    readonly ev: Evidence,
-  ) {}
-
-  /** Registra uma evidência (captura com cabeçalho) do momento atual. */
-  evidence(description: string): Promise<void> {
-    return this.ev.milestone(description);
-  }
-
-  /** Passo nomeado: aparece no relatório e no cabeçalho das evidências tiradas dentro dele. */
-  step<T>(label: string, fn: () => Promise<T>): Promise<T> {
-    return this.ev.step(label, fn);
-  }
-
-  get canvas(): Locator {
-    return this.page.locator('.pastel-de-feira canvas');
+export class GamePage extends BaseGamePage<E2EHook> {
+  constructor(page: Page, ev: Evidence) {
+    super(page, ev, {
+      id: 'pastel-de-feira',
+      ready: '.pastel-de-feira h1, .pastel-de-feira .prep',
+      logical: { w: 640, h: 480 },
+      hookName: '__pf',
+      virtualTime: false,
+      soundOff: { 'pastel-de-feira:som': 'off', 'pastel-de-feira:musica': 'off' },
+    });
   }
 
   get clock(): Locator {
     return this.page.locator('.pastel-de-feira .hud-clock');
   }
 
-  async boot(opts: BootOptions = {}): Promise<void> {
+  override async boot(opts: BootOptions = {}): Promise<void> {
     const save = opts.rawSave ?? (opts.campaign === null ? null : saveText(buildCampaign(opts.campaign ?? {}), opts.phase ?? 'preparo'));
-    await this.page.addInitScript(
-      ({ key, save, storage, seed, block }) => {
-        const w = window as unknown as Record<string, unknown>;
-        w.__PF_E2E__ = true;
-        // Math.random determinístico (mulberry32): a semente da campanha nova fica previsível.
-        let a = seed >>> 0;
-        Math.random = () => {
-          a = (a + 0x6d2b79f5) >>> 0;
-          let t = a;
-          t = Math.imul(t ^ (t >>> 15), t | 1);
-          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-        };
-        // Relógio manual dos quadros.
-        const queue = new Map<number, FrameRequestCallback>();
-        let nextId = 1;
-        let ts = -1;
-        let inFrame = false;
-        window.requestAnimationFrame = (cb) => {
-          // Pedido fora de um quadro = laço novo (o dia abriu; o jogo marca `last` com o tempo real). O relógio
-          // parte de agora + meio quadro: o 1º quadro roda 1 passo e o acumulador do jogo fica no meio do passo.
-          // Sem isso, a demora do teste até o 1º `frames()` (sob carga, > MAX_FRAME_DT) deixava o acumulador
-          // na fronteira de um passo, e o arredondamento fazia quadros rodarem 0 passos (toque não processado).
-          if (!inFrame) ts = performance.now() + 1000 / 120;
-          queue.set(nextId, cb);
-          return nextId++;
-        };
-        window.cancelAnimationFrame = (id) => {
-          queue.delete(id);
-        };
-        w.__pfFrames = (n: number) => {
-          if (ts < 0) ts = performance.now();
-          for (let i = 0; i < n; i++) {
-            ts += 1000 / 60;
-            const cbs = [...queue.values()];
-            queue.clear();
-            inFrame = true;
-            try {
-              for (const cb of cbs) cb(ts);
-            } finally {
-              inFrame = false;
-            }
-          }
-        };
-        // Salto do relógio sem quadros (aba em segundo plano): o próximo quadro chega com dt enorme.
-        w.__pfJump = (ms: number) => {
-          if (ts < 0) ts = performance.now();
-          ts += ms;
-        };
-        // O storage só é preparado uma vez por teste (recarregar a página preserva o que o jogo gravou).
-        if (block) {
-          Object.defineProperty(window, 'localStorage', { get: () => { throw new Error('bloqueado'); } });
-        } else if (!sessionStorage.getItem('__pf_booted')) {
-          sessionStorage.setItem('__pf_booted', '1');
-          localStorage.clear();
-          localStorage.setItem('pastel-de-feira:som', 'off');
-          localStorage.setItem('pastel-de-feira:musica', 'off');
-          if (save !== null) localStorage.setItem(key, save);
-          for (const [k, v] of Object.entries(storage)) localStorage.setItem(k, v);
-        }
-      },
-      { key: SAVE_KEY, save, storage: opts.storage ?? {}, seed: opts.randomSeed ?? 1, block: !!opts.blockStorage },
-    );
-    await this.page.goto(`./${ROUTE}`);
-    await expect(this.page.locator('.pastel-de-feira h1, .pastel-de-feira .prep')).toBeVisible();
-    await this.ev.milestone(`Jogo aberto em ${ROUTE}${opts.phase ? ` (save na fase ${opts.phase})` : ''}`);
+    await super.boot({
+      seed: opts.randomSeed ?? 1,
+      storage: { ...(save !== null ? { [SAVE_KEY]: save } : {}), ...(opts.storage ?? {}) },
+      blockStorage: opts.blockStorage,
+      note: opts.phase ? `(save na fase ${opts.phase})` : undefined,
+    });
   }
 
   /** Do título, com save em preparo: Continuar → Preparo. */
@@ -155,30 +87,6 @@ export class GamePage {
     await this.openFair();
   }
 
-  /** Roda uma função no navegador com o gancho do dia (precisa ser autocontida). */
-  async hook<R, A = undefined>(fn: HookFn<A, R>, arg?: A): Promise<R> {
-    return this.page.evaluate(
-      ({ src, arg }) => {
-        const pf = (window as unknown as { __pf?: unknown }).__pf;
-        if (!pf) throw new Error('gancho __pf ausente (o dia não está aberto)');
-        return (0, eval)(`(${src})`)(pf, arg);
-      },
-      { src: fn.toString(), arg: arg as unknown },
-    ) as Promise<R>;
-  }
-
-  /** Como `hook`, mas com o gancho do último dia (vale depois do fechamento, quando a tela do dia já desmontou). */
-  async lastHook<R, A = undefined>(fn: HookFn<A, R>, arg?: A): Promise<R> {
-    return this.page.evaluate(
-      ({ src, arg }) => {
-        const pf = (window as unknown as { __pfLast?: unknown }).__pfLast;
-        if (!pf) throw new Error('gancho __pfLast ausente (nenhum dia foi aberto)');
-        return (0, eval)(`(${src})`)(pf, arg);
-      },
-      { src: fn.toString(), arg: arg as unknown },
-    ) as Promise<R>;
-  }
-
   /** Roda até o corte das 14h (o dia termina e a tela de fechamento aparece). */
   async runToEnd(): Promise<void> {
     for (let guard = 0; guard < 100; guard++) {
@@ -191,13 +99,6 @@ export class GamePage {
     }
     await expect(this.page.getByRole('heading', { name: 'Fim da feira' })).toBeVisible();
     await this.ev.milestone('Corte das 14h: tela de fechamento');
-  }
-
-  /** Roda `n` quadros de 1/60 s. */
-  async frames(n: number): Promise<void> {
-    for (let left = n; left > 0; left -= 600) {
-      await this.page.evaluate((k) => (window as unknown as { __pfFrames: (k: number) => void }).__pfFrames(k), Math.min(600, left));
-    }
   }
 
   /** Passo atual da simulação. */
@@ -217,7 +118,7 @@ export class GamePage {
   }
 
   /** Avança até a condição valer ou estourar `maxSeconds` de jogo. */
-  async advanceUntil<A>(cond: HookFn<A, boolean>, maxSeconds: number, arg?: A, chunk = 6): Promise<void> {
+  override async advanceUntil<A>(cond: HookFn<E2EHook, A, boolean>, maxSeconds: number, arg?: A, chunk = 6): Promise<void> {
     const limit = (await this.tick()) + maxSeconds * FPS;
     while (!(await this.hook(cond, arg))) {
       if ((await this.tick()) >= limit || (await this.hook((pf) => pf.sim.isOver()))) {
@@ -225,41 +126,6 @@ export class GamePage {
       }
       await this.frames(chunk);
     }
-  }
-
-  /** Pula `ms` de relógio sem rodar quadros (o próximo quadro chega atrasado). */
-  async jump(ms: number): Promise<void> {
-    await this.page.evaluate((k) => (window as unknown as { __pfJump: (k: number) => void }).__pfJump(k), ms);
-  }
-
-  /** Converte coordenadas lógicas (640×480) em coordenadas da página. */
-  async toClient(x: number, y: number): Promise<{ x: number; y: number }> {
-    const box = await this.canvas.boundingBox();
-    if (!box) throw new Error('canvas sem caixa');
-    return { x: box.x + (x * box.width) / 640, y: box.y + (y * box.height) / 480 };
-  }
-
-  /** Toque (botão abaixa e solta) num ponto lógico do canvas. */
-  async tapAt(x: number, y: number): Promise<void> {
-    const p = await this.toClient(x, y);
-    await this.ev.quiet(async () => {
-      await this.page.mouse.move(p.x, p.y);
-      await this.page.mouse.down();
-      await this.page.mouse.up();
-    });
-    await this.ev.action(`Toque no canvas em (${Math.round(x)}, ${Math.round(y)}) lógico`);
-  }
-
-  /** Segura o botão num ponto lógico por `seconds` de jogo e solta. */
-  async holdAt(x: number, y: number, seconds: number): Promise<void> {
-    const p = await this.toClient(x, y);
-    await this.ev.quiet(async () => {
-      await this.page.mouse.move(p.x, p.y);
-      await this.page.mouse.down();
-      await this.frames(Math.round(seconds * FPS));
-      await this.page.mouse.up();
-    });
-    await this.ev.action(`Segurar o canvas em (${Math.round(x)}, ${Math.round(y)}) lógico por ${seconds} s e soltar`);
   }
 
   async zone(id: string): Promise<{ x: number; y: number; w: number; h: number }> {
@@ -347,64 +213,10 @@ export class GamePage {
     await this.ev.action(`Toque no cliente #${c.id} (posição ${i} da fila)`);
   }
 
-  /** Erros de página coletados (exceções não tratadas e console.error). */
-  readonly errors: string[] = [];
 }
 
-export interface EvidenceOptions {
-  /** Nível das evidências do projeto (`PF_EVIDENCIAS` tem prioridade). */
-  evidencias: EvidenceLevel;
-}
-
-const evidenceOf = new WeakMap<Page, Evidence>();
-
-/**
- * Fixtures: `page` registra evidência a cada ação e tira a captura final (resultado e erro);
- * `game` é a página com o gancho E2E e coleta de erros do console.
- */
-export const test = base.extend<EvidenceOptions & { game: GamePage }, { composer: Composer }>({
-  evidencias: ['acoes', { option: true }],
-  // página que monta as evidências: contexto próprio, por worker (não mexe no foco da página do jogo), criada na primeira evidência
-  composer: [
-    async ({ browser }, use) => {
-      let ctx: BrowserContext | null = null;
-      let p: Promise<Page> | null = null;
-      await use(() => {
-        p ??= browser.newContext({ deviceScaleFactor: 1 }).then((c) => {
-          ctx = c;
-          return c.newPage();
-        });
-        return p;
-      });
-      await (ctx as BrowserContext | null)?.close();
-    },
-    { scope: 'worker' },
-  ],
-  page: async ({ page: raw, evidencias, composer }, use, testInfo) => {
-    const ev = new Evidence(raw, testInfo, evidenceLevel(evidencias), composer);
-    const page = wrapPage(raw, ev);
-    evidenceOf.set(page, ev);
-    await use(page);
-    await ev.final();
-  },
-  game: async ({ page }, use) => {
-    const g = new GamePage(page, evidenceOf.get(page)!);
-    page.on('pageerror', (e) => g.errors.push(`pageerror: ${e.message}`));
-    page.on('console', (m) => {
-      if (m.type() === 'error') g.errors.push(`console: ${m.text()}`);
-    });
-    await use(g);
-    expect(g.errors, 'erros no console da página').toEqual([]);
-  },
-});
-
-/**
- * Passos esperados depois de N quadros. O carimbo de tempo dos quadros é ponto flutuante, então o
- * acumulador do laço pode ganhar ou perder 1 passo numa janela; a tolerância é de 1 passo.
- */
-export function expectSteps(actual: number, expected: number, msg = 'passos da simulação'): void {
-  expect(Math.abs(actual - expected), `${msg}: esperado ${expected}, obtido ${actual}`).toBeLessThanOrEqual(1);
-}
+/** Fixtures do Pastel: evidência a cada ação com o cabeçalho do dia e coleta de erros do console. */
+export const test = makeTest((page, ev) => new GamePage(page, ev), [pastelDescriber]);
 
 /** Pedido do primeiro cliente: itens pedidos, para os testes montarem o pastel certo. */
 export function frontOrder(game: GamePage): Promise<{ id: number; profile: string; items: string[]; patience: number; patienceMax: number } | null> {

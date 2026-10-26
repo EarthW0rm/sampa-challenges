@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { assetUrl, type Assets, type AssetKey } from '../game/assets';
 import { H, MAX_LIVES, W } from '../game/constants';
+import { exposeCachorroLoko } from '../game/e2eHook';
 import { CachorroLokoEngine } from '../game/engine';
 import { SCALE } from '../game/hires';
 import { Input } from '../game/input';
@@ -32,6 +33,8 @@ export function GameScreen({ assets, onExit }: Props) {
     const ctx = canvasRef.current!.getContext('2d')!;
     const engine = new CachorroLokoEngine(assets, inputRef.current, setHud);
     engineRef.current = engine;
+    // gancho dos testes de ponta a ponta (inerte para o jogador)
+    const disposeE2E = exposeCachorroLoko(engine, () => canvasRef.current?.parentElement ?? null);
     let raf = 0;
     let last = performance.now();
     const loop = (now: number) => {
@@ -42,6 +45,7 @@ export function GameScreen({ assets, onExit }: Props) {
     };
     raf = requestAnimationFrame(loop);
     return () => {
+      disposeE2E();
       cancelAnimationFrame(raf);
       engineRef.current = null;
     };

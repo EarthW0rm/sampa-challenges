@@ -53,3 +53,12 @@ export const AI_BLUNDER_MAX = 0.35;
 export const AI_QUIESCENCE_FROM = 15;
 /** Entradas da tabela de transposição (potência de 2). */
 export const AI_TT_SIZE = 1 << 19;
+
+// ---------------------------------------------------------------- testes de ponta a ponta
+
+/**
+ * Só nos testes (`isE2E()`): a busca do computador para em `tempo do nível × E2E_NODES_PER_MS` nós em vez
+ * de pelo relógio, para os lances não dependerem da máquina. Calibrado em nós/ms medidos no nível 60
+ * (registro da medição no CLAUDE.md do jogo).
+ */
+export const E2E_NODES_PER_MS = 400;

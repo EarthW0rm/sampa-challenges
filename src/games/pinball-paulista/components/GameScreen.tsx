@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { assetUrl, type Assets } from '../game/assets';
 import { H, W } from '../game/constants';
+import { exposePinball } from '../game/e2eHook';
 import { PinballEngine } from '../game/engine';
 import { SCALE } from '../game/hires';
 import { Input } from '../game/input';
@@ -30,6 +31,7 @@ export function GameScreen({ assets, onExit }: Props) {
     const ctx = canvasRef.current!.getContext('2d')!;
     const engine = new PinballEngine(assets, inputRef.current, setHud);
     engineRef.current = engine;
+    const disposeHook = exposePinball(engine);
     let raf = 0;
     let last = performance.now();
     const loop = (now: number) => {
@@ -41,6 +43,7 @@ export function GameScreen({ assets, onExit }: Props) {
     raf = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(raf);
+      disposeHook();
       engine.dispose();
       engineRef.current = null;
     };
