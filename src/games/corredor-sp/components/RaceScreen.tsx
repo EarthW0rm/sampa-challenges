@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { Assets } from '../game/assets';
 import { H, W } from '../game/constants';
+import { exposeCorredor } from '../game/e2eHook';
 import { CorredorEngine, type HudState, type RaceConfig } from '../game/engine';
 import { Input } from '../game/input';
 import { sfx } from '../game/sound';
@@ -23,12 +24,14 @@ export function RaceScreen({ assets, config, onBack }: Props) {
   const [muted, setMuted] = useState(sfx.isMuted());
 
   useEffect(() => {
-    const ctx = canvasRef.current!.getContext('2d')!;
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext('2d')!;
     inputRef.current.clear();
     // no celular a moto acelera sozinha
     inputRef.current.autoAccel = window.matchMedia?.('(pointer: coarse)').matches ?? false;
     const engine = new CorredorEngine(assets, config, inputRef.current, setHud);
     engineRef.current = engine;
+    const disposeE2E = exposeCorredor(engine, canvas);
     let raf = 0;
     let last = performance.now();
     const loop = (now: number) => {
@@ -40,6 +43,7 @@ export function RaceScreen({ assets, config, onBack }: Props) {
     raf = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(raf);
+      disposeE2E();
       engine.dispose();
       engineRef.current = null;
     };

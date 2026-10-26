@@ -83,14 +83,45 @@ export interface HudState {
   overtakes: number;
 }
 
-type ItemKind = 'pacote' | 'vida' | 'velocidade' | 'grau' | 'capacete';
+export type ItemKind = 'pacote' | 'vida' | 'velocidade' | 'grau' | 'capacete';
+export type HazardKind = 'buraco' | 'cone';
+
+/** Foto do estado para o gancho dos testes de ponta a ponta (`game/e2eHook.ts`). Distâncias `dz` relativas à moto. */
+export interface CorredorSnapshot {
+  phase: HudState['phase'];
+  paused: boolean;
+  countdown: number;
+  track: TrackId;
+  model: { id: string; vmax: number; accel: number; brake: number; steer: number };
+  time: number;
+  points: number;
+  meters: number;
+  packages: number;
+  level: number;
+  record: number;
+  overtakes: number;
+  player: { x: number; vx: number; speed: number; kmh: number; lives: number; helmets: number; grau: number; grauOn: boolean; crashT: number; invul: number; boostT: number; wobble: number };
+  /** Teclas/botões vistos pelo motor (o que a tela entregou). */
+  input: { up: boolean; down: boolean; left: boolean; right: boolean; grau: boolean; autoAccel: boolean };
+  rain: { on: boolean; timer: number };
+  night: number;
+  dayT: number;
+  vehicles: { id: number; kind: VehicleKind; x: number; lane: number; dz: number; kmh: number; state: string; blink: number; hazard: boolean; len: number; halfW: number; removable: boolean }[];
+  items: { kind: ItemKind; x: number; dz: number }[];
+  hazards: { kind: HazardKind; x: number; dz: number; hit: boolean }[];
+  helmetsFlying: { x: number; dz: number; bouncing: boolean }[];
+  /** Veículos que surgiram no turno, por tipo (sorteio do trânsito comum, inicial incluído). */
+  spawned: Partial<Record<VehicleKind, number>>;
+  banner: string | null;
+  popups: string[];
+}
 interface Item {
   kind: ItemKind;
   z: number;
   x: number;
 }
 interface Hazard {
-  kind: 'buraco' | 'cone';
+  kind: HazardKind;
   z: number;
   x: number;
   flyT: number;
@@ -203,6 +234,10 @@ export class CorredorEngine {
   private fogRgb: number[] = [245, 184, 96];
   private prevGrau = false;
   private prevCount = 4;
+  /** Contagem de veículos surgidos por tipo (leitura dos testes). */
+  private spawned: Partial<Record<VehicleKind, number>> = {};
+  /** Testes: sem trânsito, itens e perigos novos (pré-condição isolada, só via gancho). */
+  private calm = false;
 
   constructor(
     private readonly assets: Assets,
@@ -503,10 +538,12 @@ export class CorredorEngine {
     }
     const s = this.spriteFor(kind);
     this.vehicles.push(makeVehicle(kind, z, x, lane, this.trafficFactor, this.rand, s.w, s.key));
+    this.spawned[kind] = (this.spawned[kind] ?? 0) + 1;
     return true;
   }
 
   private updateSpawns(dt: number) {
+    if (this.calm) return;
     const pz = this.playerZ;
     // densidade sobe aos poucos desde o início do turno até o teto
     const target = Math.round(TRAFFIC_START + (TRAFFIC_MAX - TRAFFIC_START) * Math.min(1, this.time / TRAFFIC_RAMP));
@@ -722,6 +759,85 @@ export class CorredorEngine {
         }
         break;
     }
+  }
+
+  // ================================================================ testes de ponta a ponta
+
+  /** Estado para o gancho dos testes (só leitura). */
+  e2eState(): CorredorSnapshot {
+    const p = this.player;
+    const pz = this.playerZ;
+    const m = this.cfg.model;
+    const i = this.input;
+    return {
+      phase: this.phase,
+      paused: this.paused,
+      countdown: this.countdown,
+      track: this.cfg.track,
+      model: { id: m.id, vmax: m.vmax, accel: m.accel, brake: m.brake, steer: m.steer },
+      time: this.time,
+      points: this.points,
+      meters: this.meters,
+      packages: this.packages,
+      level: this.level,
+      record: this.record,
+      overtakes: this.overtakes,
+      player: { x: p.x, vx: p.vx, speed: p.speed, kmh: p.speed / KMH, lives: p.lives, helmets: p.helmets, grau: p.grau, grauOn: p.grauOn, crashT: p.crashT, invul: p.invul, boostT: p.boostT, wobble: p.wobble },
+      input: { up: i.up, down: i.down, left: i.left, right: i.right, grau: i.grau, autoAccel: i.autoAccel },
+      rain: { on: this.rain.on, timer: this.rain.timer },
+      night: this.night,
+      dayT: this.dayT,
+      vehicles: this.vehicles.map((v) => ({ id: v.id, kind: v.kind, x: v.x, lane: v.lane, dz: v.z - pz, kmh: v.speed / KMH, state: v.state, blink: v.blink, hazard: v.hazard, len: v.len, halfW: v.halfW, removable: v.removable })),
+      items: this.items.map((it) => ({ kind: it.kind, x: it.x, dz: it.z - pz })),
+      hazards: this.hazards.map((h) => ({ kind: h.kind, x: h.x, dz: h.z - pz, hit: h.flyT > 0 })),
+      helmetsFlying: this.helmetsFlying.map((h) => ({ x: h.x, dz: h.z - pz, bouncing: h.bounce > 0 })),
+      spawned: { ...this.spawned },
+      banner: this.banner?.text ?? null,
+      popups: this.popups.map((pp) => pp.text),
+    };
+  }
+
+  /** Testes: põe um veículo a `dz` da moto (faixa 0–3 para quatro rodas; `x` livre para motos). */
+  e2eSpawnVehicle(kind: VehicleKind, where: { lane?: number; x?: number }, dz: number, kmh?: number) {
+    const lane = kind === 'moto' || kind === 'contramao' ? -1 : (where.lane ?? 0);
+    const x = where.x ?? (lane >= 0 ? LANES[lane] : 0);
+    const s = this.spriteFor(kind);
+    const v = makeVehicle(kind, this.playerZ + dz, x, lane, this.trafficFactor, this.rand, s.w, s.key);
+    if (kmh !== undefined) v.speed = v.desired = kmh * KMH * (kind === 'contramao' ? -1 : 1);
+    this.vehicles.push(v);
+    return v.id;
+  }
+
+  /** Testes: põe um item ou perigo a `dz` da moto, na posição lateral `x`. */
+  e2eSpawnThing(kind: ItemKind | HazardKind, x: number, dz: number) {
+    const z = this.playerZ + dz;
+    if (kind === 'buraco' || kind === 'cone') this.hazards.push({ kind, z, x, flyT: 0 });
+    else this.items.push({ kind, z, x });
+  }
+
+  /** Testes: tira trânsito, itens e perigos e para de criar novos (`on = false` volta ao normal). */
+  e2eCalm(on: boolean) {
+    this.calm = on;
+    if (on) {
+      this.vehicles = [];
+      this.items = [];
+      this.hazards = [];
+    }
+  }
+
+  /** Testes: leva o cronômetro do turno a `s` segundos (o nível e o dia seguem no próximo quadro). */
+  e2eSetTime(s: number) {
+    this.time = s;
+  }
+
+  /** Testes: troca o estado da garoa no próximo quadro (como o relógio dela faria). */
+  e2eToggleRain() {
+    this.rain.timer = 0;
+  }
+
+  /** Testes: fixa o número de vidas. */
+  e2eSetLives(n: number) {
+    this.player.lives = n;
   }
 
   // ================================================================ render
