@@ -498,4 +498,83 @@ Resumo: `Game.tsx` (escolha salva, alterna as telas) → `components/SetupScreen
 
 ## 15. Testes
 
-(Preenchido na TF-130-07.)
+Testes de ponta a ponta no navegador (Playwright), na raiz do repositório; base comum em `e2e/support/`
+(guia em [`e2e/README.md`](../../../e2e/README.md)) e a camada deste jogo em `e2e/corredor-sp/`.
+
+```bash
+npm run test:e2e -- e2e/corredor-sp/                      # suíte rápida do jogo (desktop, ~1 min com 2 workers)
+npm run test:e2e -- --project=celular e2e/corredor-sp/    # 390 px com toque
+npm run test:e2e -- -g "CS-RN-13"                         # uma regra
+caffeinate -dimsu npm run test:e2e:longa -- e2e/corredor-sp/   # piloto: um turno inteiro por pista (~1,5 min)
+npm run test:e2e:cobertura -- --jogo corredor-sp          # cada CS-RN tem teste?
+```
+
+(Num worktree em `.worktrees/corredor-sp/`, filtre por `e2e/corredor-sp/`: o filtro `corredor-sp/` casa
+com o caminho do próprio worktree e roda a suíte inteira.)
+
+- Os testes jogam pela tela: teclado (setas, WASD, Espaço, X/Enter, P/Esc), cliques nos botões e toques
+  reais (eventos de toque) nos botões de toque no projeto `celular`. O relógio é controlado (1 quadro =
+  1/60 s, `performance.now` virtual) e o `Math.random` é semeado.
+- O gancho `window.__e2e` (`game/e2eHook.ts`) só lê o estado e os alvos; pré-condições raras (pista
+  vazia, item/veículo/perigo posto à frente, cronômetro, garoa, vidas) usam `prepare.*` e cada uso é
+  comentado no teste.
+- Cada ação grava uma evidência em `evidencias/` com o estado do turno no cabeçalho (pista, pontos,
+  metros, multiplicador, vidas, nível, km/h, faixa/corredor, grau, capacetes, caído/invulnerável).
+
+### Cobertura por arquivo
+
+| Arquivo | Cobertura |
+|---|---|
+| `navegacao.spec.ts` | abre a escolha, larga, volta ao hub; gancho só com a flag; no desktop sem aceleração automática nem botões de toque |
+| `escolha.spec.ts` | opções exclusivas, categoria → 1º modelo, prévia; escolha gravada e lembrada; "Trocar moto ou pista" |
+| `largada-controles.spec.ts` | contagem parada; curva de aceleração, teto de dois modelos, freio, solto, WASD; direção com inércia, limite e terra |
+| `pontuacao.spec.ts` | fórmula com pacotes; parado só o tempo conta |
+| `vidas-queda.spec.ts` | batida, 2 s no chão, sem item caído, volta parada, 3 s invulnerável; moto por trás, ambulância e contramão |
+| `corredor-grau.spec.ts` | carga 8% no corredor, 14% na faixa azul, nada na faixa; grau (30%, teto, direção, gasto, barra vazia) |
+| `capacete.spec.ts` | até 3; derruba carro, quica no ônibus, cone voa; sem capacete nada sai |
+| `itens.spec.ts` | pacote, grau, vida (teto), velocidade (+15%, renova); sorteio, intervalo, posição, vida → pacote no teto |
+| `nivel-densidade.spec.ts` | nível a cada 45 s com nome, velocidade do trânsito por nível; densidade 6 → 42 |
+| `perigos.spec.ts` | buraco acima/abaixo de 55%; cone −30% e grupos de 3; contramão/ambulância só do nível 2; ônibus/caminhão nas faixas, seta, ambulância abre passagem; pesos por pista |
+| `garoa-dia-noite.spec.ts` | 1ª garoa aos 70 s, duração, freio −25%, aderência; ciclo dia/noite |
+| `pausa-som.spec.ts` | P/Esc/botão/foco pausam, nada anda, teclas soltas, Enter não aciona botão; som e persistência |
+| `recorde.spec.ts` | fim de turno (conta, sem pausa, Correr de novo), recorde por pista, card da pista e do hub |
+| `bordas.spec.ts` | quadro gigante, foco, storage bloqueado, recorde/escolha corrompidos, laço único, sair pelo hub e voltar |
+| `responsivo.spec.ts` (celular) | 390 px sem rolagem, aceleração automática, botões de toque abaixo da pista, cada botão por toque |
+| `piloto.spec.ts` (longa) | um turno inteiro por pista até o fim das vidas (nível ≥ 2), pontos = fórmula, recorde no card e no hub, mesma semente → mesma partida |
+
+### Regra → teste
+
+Gerada por `npm run test:e2e:cobertura -- --md corredor-sp`:
+
+| Regra | Testes |
+|---|---|
+| CS-RN-01 | `escolha.spec.ts` |
+| CS-RN-02 | `bordas.spec.ts`, `escolha.spec.ts` |
+| CS-RN-03 | `largada-controles.spec.ts` |
+| CS-RN-04 | `largada-controles.spec.ts`, `navegacao.spec.ts` |
+| CS-RN-05 | `largada-controles.spec.ts` |
+| CS-RN-06 | `largada-controles.spec.ts` |
+| CS-RN-07 | `navegacao.spec.ts`, `responsivo.spec.ts` |
+| CS-RN-08 | `vidas-queda.spec.ts` |
+| CS-RN-09 | `vidas-queda.spec.ts` |
+| CS-RN-10 | `corredor-grau.spec.ts` |
+| CS-RN-11 | `corredor-grau.spec.ts` |
+| CS-RN-12 | `corredor-grau.spec.ts` |
+| CS-RN-13 | `capacete.spec.ts` |
+| CS-RN-14 | `itens.spec.ts` |
+| CS-RN-15 | `itens.spec.ts` |
+| CS-RN-16 | `nivel-densidade.spec.ts` |
+| CS-RN-17 | `nivel-densidade.spec.ts` |
+| CS-RN-18 | `garoa-dia-noite.spec.ts` |
+| CS-RN-19 | `garoa-dia-noite.spec.ts` |
+| CS-RN-20 | `perigos.spec.ts` |
+| CS-RN-21 | `perigos.spec.ts` |
+| CS-RN-22 | `perigos.spec.ts` |
+| CS-RN-23 | `perigos.spec.ts` |
+| CS-RN-24 | `perigos.spec.ts` |
+| CS-RN-25 | `piloto.spec.ts`, `pontuacao.spec.ts` |
+| CS-RN-26 | `piloto.spec.ts`, `recorde.spec.ts` |
+| CS-RN-27 | `bordas.spec.ts`, `piloto.spec.ts`, `recorde.spec.ts` |
+| CS-RN-28 | `bordas.spec.ts`, `pausa-som.spec.ts` |
+| CS-RN-29 | `pausa-som.spec.ts` |
+| CS-RN-30 | `bordas.spec.ts`, `escolha.spec.ts` |

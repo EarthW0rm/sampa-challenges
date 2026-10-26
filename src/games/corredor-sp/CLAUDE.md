@@ -1,7 +1,9 @@
 # CLAUDE.md — Corredor SP
 
 Leia antes o `CLAUDE.md` da raiz (regras do hub: CSS escopado, assets na pasta, manifest leve).
-Regras, tabelas de modelos, itens, trânsito e parâmetros estão no `README.md` desta pasta.
+O `README.md` desta pasta é o **manual**: regras numeradas `CS-RN-NN`, tabelas de modelos, itens,
+trânsito e todos os parâmetros. Mudou regra ou número? Atualize a seção do manual e o teste que cita a
+regra no mesmo commit.
 
 ## Mapa dos arquivos
 
@@ -22,8 +24,24 @@ Regras, tabelas de modelos, itens, trânsito e parâmetros estão no `README.md`
 | `game/input.ts` | teclado (setas/WASD/Espaço/X/Enter) e toque; `takeThrow()` consome o arremesso |
 | `game/sound.ts` | `sfx`: sons em WebAudio (sem arquivos). Contínuos (`drive()` motor/terra/garoa/turbo, `siren()`) + eventos (itens, capacete, buraco, batida, ultrapassagem, contagem, fim de turno); `unlock()` no 1º gesto, `silence()`, mute persistido em `corredor-sp:som` |
 | `game/record.ts` | recorde por pista (`corredor-sp:recorde:<pista>`) |
+| `game/e2eHook.ts` | gancho dos testes de ponta a ponta (`exposeCorredor`): só existe com a flag de teste |
 
-## Como o pseudo-3D funciona
+## Resolução
+
+`W × H` = 640×400 (lógica e canvas iguais; é o tamanho lógico usado pelos testes). `K = W / 320`
+converte medidas "de projeto" (as do jogo antigo em 320×200) para a tela. O HUD é desenhado em 320×200
+dentro de `ctx.scale(K, K)` (`drawHudLayer`); qualquer novo desenho fora do HUD em pixels fixos deve
+multiplicar por `K`. O CSS amplia o canvas com `image-rendering: pixelated`.
+
+## Como o jogo funciona
+
+`Game.tsx` carrega os assets e lê a escolha salva (`loadChoice` valida **todos** os campos; inválida →
+padrão). `RaceScreen` cria o `CorredorEngine` dentro do `useEffect` (StrictMode: o 1º é descartado no
+cleanup), roda o laço `update(dt)` + `render(ctx)` e liga teclado, toque, pausa por foco e os diálogos.
+O motor emite `HudState` só quando muda a fase, a pausa ou (no fim) os pontos. Fases: `countdown` (3 s,
+nada anda) → `racing` → `over` (o diálogo de fim aparece 1,5 s depois, por `setTimeout`).
+
+### Pseudo-3D
 
 Baseado no "Javascript Racer" (Jake Gordon), adaptado para pixel art:
 
@@ -40,9 +58,6 @@ Baseado no "Javascript Racer" (Jake Gordon), adaptado para pixel art:
   Cada um vai para o "balde" do segmento em que está; a escala vem da projeção do segmento e o
   recorte (`clip`) esconde a parte que fica atrás do relevo. Um sprite sai no tamanho nativo na
   distância do jogador (`SPRITE_UNITS`).
-- **Resolução:** `W × H` = 640×400; `K = W / 320` converte medidas "de projeto" (as do jogo antigo
-  em 320×200) para a tela. O HUD é desenhado em 320×200 dentro de `ctx.scale(K, K)`
-  (`drawHudLayer`); qualquer novo desenho fora do HUD em pixels fixos deve multiplicar por `K`.
 - **Sprites:** os PNGs do jogo são 1× e os cachorros/motos da biblioteca são 2× nativos. O motor desenha `hires(key)` (Scale2x, `SPRITE_SCALE` = 2) e escolhe
   o nível de `mip(key, larguraNaTela)`. `sprite()` devolve `f` = pixels de tela **por pixel do PNG
   original**, então as coordenadas de `LIGHTS` e do poste continuam no original. Não use
@@ -55,7 +70,7 @@ Baseado no "Javascript Racer" (Jake Gordon), adaptado para pixel art:
 - Ordem do quadro: céu e horizonte → pista → objetos → escurecimento da noite e luzes → setas e
   luzes de freio → jogador → garoa → HUD.
 
-## Trânsito
+### Trânsito
 
 - Veículos de quatro rodas têm `lane` (0–3) e ficam no centro dela; motos têm `lane = −1` e `x`
   livre (corredores e faixas). A contramão tem velocidade negativa.
@@ -112,6 +127,11 @@ Baseado no "Javascript Racer" (Jake Gordon), adaptado para pixel art:
 - `recolored()` usa `getImageData`: os PNGs precisam vir da mesma origem (é o caso com o Vite).
 - Texto do HUD só usa os caracteres de `pixelFont.ts`; acentos viram a letra sem acento e
   caracteres desconhecidos viram espaço.
+- Enter e Espaço são teclas do jogo com o padrão cancelado: não acionam os botões em foco dos diálogos.
+- Escolha salva com um cachorro/pista/cor desconhecido derrubava a prévia da moto (`recolored` de chave
+  inexistente): por isso `loadChoice` valida todos os campos.
+- Botões de toque a 390 px: os de ação quebram em duas linhas (`flex-wrap`); sem isso o CAPACETE ficava
+  fora da tela.
 
 ## Como verificar
 
@@ -121,3 +141,50 @@ Baseado no "Javascript Racer" (Jake Gordon), adaptado para pixel art:
 3. No celular (ou com emulação de toque): a moto acelera sozinha e os botões ficam abaixo da pista.
 4. Para mexer no equilíbrio, use um piloto automático: crie o motor com um `Input` controlado por
    código, chame `update(1/60)` em laço e escolha a posição lateral com mais espaço livre à frente.
+
+## Testes de ponta a ponta
+
+Base comum em `e2e/support/` (guia em `e2e/README.md`); a camada deste jogo fica em `e2e/corredor-sp/`.
+Cobertura por arquivo e a tabela regra → teste na seção "Testes" do `README.md`.
+
+- **Gancho** (`game/e2eHook.ts`): `exposeCorredor(engine, canvas)` é chamado no efeito do
+  `RaceScreen` que cria o motor e o `dispose` no cleanup. Publica `window.__e2e = { id: 'corredor-sp', api }`
+  só com a flag de teste (`src/shared/e2e/hook.ts`); na tela de escolha não há gancho (não há motor).
+  - `state()` = `engine.e2eState()`: fase, pausa, contagem, pista, modelo, tempo, pontos, metros, pacotes,
+    nível, recorde, ultrapassagens, moto (x, vx, velocidade/km/h, vidas, capacetes, grau, grau ligado,
+    caído, invulnerável, turbo, balanço), entradas vistas pelo motor (inclusive `autoAccel`), garoa,
+    escuridão, veículos/itens/perigos/capacetes em voo com `dz` relativo à moto, veículos surgidos por tipo,
+    faixa e textos curtos.
+  - `targets()`: retângulos (página) do canvas e dos botões de toque (`null` quando escondidos).
+  - `prepare` (só pré-condição rara, comentada no teste): `spawn(tipo, {lane|x}, dz, kmh?)`,
+    `thing(item|buraco|cone, x, dz)`, `calm(on)` (pista vazia e sem surgimentos: `e2eCalm` faz o
+    `updateSpawns` sair cedo), `time(s)`, `level(n)`, `toggleRain()`, `lives(n)`. São métodos `e2e*` do
+    motor; nenhum campo virou público.
+- **Página** (`e2e/corredor-sp/support/page.ts`): `CorredorPage` (lógico 640×400, som `off`) com
+  `open`, `choose`, `start`, `race(escolha, { calm })`, `accelerate`, `brake`, `steer`, `grau`, `helmet`,
+  `holdKeys`, `steerTo`, `drive` (↑ segurado corrigindo a posição lateral, com condição de parada) e
+  `touchBtn` (eventos de toque reais via CDP). `support/physics.ts` refaz as contas de aceleração e
+  direção do motor para comparar.
+- **Cabeçalho das evidências** (`support/describe.ts`): pista, modelo, fase, pontos, metros, segundos,
+  multiplicador, vidas, nível, km/h, x e faixa/corredor/faixa azul/terra, grau, capacetes, turbo,
+  caído/invulnerável, garoa (spec RN-32).
+- **Determinismo**: relógio dos testes (quadros de 1/60 s, `performance.now`/`Date.now` virtuais) e
+  `Math.random` semeado; o jogo não usa outra fonte de sorteio. Diálogo de fim por `setTimeout` real
+  (os testes esperam com `expect`).
+- **Piloto** (`support/pilot.ts` + `piloto.spec.ts`, projeto `longa`): ↑ segurado o turno inteiro; a
+  cada 6 quadros escolhe entre as 4 faixas e os 3 corredores a posição com mais pista livre à frente
+  (9 000 unidades), penalizando atravessar quem está ao lado e premiando item na linha; freia quando
+  tudo fecha perto, arremessa capacete em bloqueio removível a menos de 5 000 e dá grau na faixa azul
+  livre. Um turno por pista (sementes 23, 31, 47), teto de 15 min de jogo; confere pontos = fórmula,
+  diálogo, recorde gravado, card da pista e do hub; na 23 de Maio joga duas vezes com a mesma semente e
+  compara os `partida-<n>.json`.
+
+```bash
+npm run test:e2e -- e2e/corredor-sp/
+npm run test:e2e -- --project=celular e2e/corredor-sp/
+caffeinate -dimsu npm run test:e2e:longa -- e2e/corredor-sp/
+npm run test:e2e:cobertura -- --jogo corredor-sp
+```
+
+Num worktree (`.worktrees/<nome>/`) use `E2E_PORT` próprio e filtre por `e2e/corredor-sp/` (o filtro
+`corredor-sp/` casa com o caminho do worktree e roda a suíte inteira).
