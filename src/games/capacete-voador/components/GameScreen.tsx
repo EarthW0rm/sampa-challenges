@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Assets } from '../game/assets';
 import { ANGLE_MAX, ANGLE_MIN, H, VELOCITY_MAX, VELOCITY_MIN, W } from '../game/constants';
+import { exposeCapacete } from '../game/e2eHook';
 import { CapaceteEngine, type HudState } from '../game/engine';
 import { SCALE } from '../game/hires';
 import { sfx } from '../game/sound';
@@ -24,6 +25,7 @@ export function GameScreen({ assets, settings, onExit }: Props) {
     const ctx = canvas.getContext('2d')!;
     const engine = new CapaceteEngine(assets, settings, setHud);
     engineRef.current = engine;
+    const disposeHook = exposeCapacete(engine);
     let raf = 0;
     let last = performance.now();
     const loop = (now: number) => {
@@ -35,6 +37,7 @@ export function GameScreen({ assets, settings, onExit }: Props) {
     raf = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(raf);
+      disposeHook();
       engine.dispose();
       engineRef.current = null;
     };
