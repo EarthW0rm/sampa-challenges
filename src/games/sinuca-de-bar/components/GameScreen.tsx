@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as R
 import { LEVELS } from '../game/ai';
 import type { Assets } from '../game/assets';
 import { H, W } from '../game/constants';
+import { exposeSinuca } from '../game/e2eHook';
 import { SinucaEngine } from '../game/engine';
 import { SCALE } from '../game/hires';
 import { RULES } from '../game/rules';
@@ -27,6 +28,7 @@ export function GameScreen({ assets, settings, onExit }: Props) {
     const ctx = canvasRef.current!.getContext('2d')!;
     const engine = new SinucaEngine(assets, settings, setHud);
     engineRef.current = engine;
+    const disposeE2E = exposeSinuca(engine);
     let raf = 0;
     let last = performance.now();
     const loop = (now: number) => {
@@ -38,6 +40,7 @@ export function GameScreen({ assets, settings, onExit }: Props) {
     raf = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(raf);
+      disposeE2E();
       engine.dispose();
       engineRef.current = null;
     };
