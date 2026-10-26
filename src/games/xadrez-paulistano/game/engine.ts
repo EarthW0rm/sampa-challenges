@@ -22,6 +22,7 @@ import {
   QUEEN,
   rankOf,
   square,
+  squareName,
   START_FEN,
   typeOf,
   uciToMove,
@@ -66,6 +67,44 @@ const plain = (s: string) =>
     .toUpperCase()
     .replace(/[^A-Z0-9 .!+-]/g, ' ');
 
+/** Retrato lido pelo gancho dos testes (\`e2eHook.ts\`). Casas em notação \`e4\`; cores \`w\`/\`b\`. */
+export interface XadrezE2EState {
+  mode: Settings['mode'];
+  level: number;
+  autoFlip: boolean;
+  fen: string;
+  startFen: string;
+  /** Lances em notação portuguesa (como na lista) e em UCI. */
+  moves: string[];
+  ucis: string[];
+  plies: number;
+  turn: 'w' | 'b';
+  check: boolean;
+  outcome: Outcome | null;
+  selected: string | null;
+  cursor: string | null;
+  dragging: boolean;
+  bottom: 'w' | 'b';
+  humanColor: 'w' | 'b' | null;
+  names: string[];
+  /** Computador buscando o lance. */
+  thinking: boolean;
+  /** Lance do computador pronto, esperando \`AI_MIN_DELAY_MS\`. */
+  aiPending: boolean;
+  animating: boolean;
+  flipPending: boolean;
+  promotion: { color: 'w' | 'b'; from: string; to: string } | null;
+  canUndo: boolean;
+  /** O tabuleiro aceita entrada agora. */
+  humanTurn: boolean;
+  /** Destinos legais da peça selecionada. */
+  legalTargets: string[];
+  /** Há worker de IA vivo (false = reserva na thread principal). */
+  worker: boolean;
+  aiRequests: number;
+  lastAiRequest: AiRequest | null;
+}
+
 interface Anim {
   piece: number;
   from: number;
@@ -91,6 +130,8 @@ interface Drag {
  */
 export class XadrezEngine {
   private readonly sprites: Record<string, HTMLCanvasElement>;
+  /** Posição em que a partida começou (FEN): vai no pedido ao computador junto com os lances. */
+  private startFen = START_FEN;
   private pos = Position.fromFen(START_FEN);
   private legal: number[] = [];
   private sans: string[] = [];
@@ -116,6 +157,9 @@ export class XadrezEngine {
   private aiId = 0;
   private aiStarted = 0;
   private aiMove: { move: number; at: number } | null = null;
+  /** Último pedido feito ao computador (só para leitura dos testes). */
+  private lastAiRequest: AiRequest | null = null;
+  private aiRequests = 0;
 
   private lastHud = '';
 
@@ -140,6 +184,7 @@ export class XadrezEngine {
   restart() {
     this.cancelAi();
     const s = this.settings;
+    this.startFen = START_FEN;
     this.pos = Position.fromFen(START_FEN);
     this.legal = this.pos.legalMoves();
     this.sans = [];
@@ -407,7 +452,9 @@ export class XadrezEngine {
   private requestAi() {
     this.thinking = true;
     this.aiStarted = performance.now();
-    const req: AiRequest = { id: ++this.aiId, fen: START_FEN, moves: [...this.ucis], level: this.settings.level };
+    const req: AiRequest = { id: ++this.aiId, fen: this.startFen, moves: [...this.ucis], level: this.settings.level };
+    this.lastAiRequest = req;
+    this.aiRequests++;
     if (this.worker) {
       this.worker.postMessage(req);
       return;
@@ -478,6 +525,76 @@ export class XadrezEngine {
     if (key === this.lastHud) return;
     this.lastHud = key;
     this.onHud({ ...hud, moves: [...this.sans] });
+  }
+
+  // ------------------------------------------------------------------ testes de ponta a ponta (e2eHook.ts)
+
+  /** Retrato do estado para o gancho dos testes (só leitura; nada aqui é o objeto vivo). */
+  e2eState(): XadrezE2EState {
+    const side = (c: Color | null) => (c === null ? null : c === WHITE ? 'w' : 'b');
+    const sq = (n: number) => (n >= 0 ? squareName(n) : null);
+    const req = this.lastAiRequest;
+    return {
+      mode: this.settings.mode,
+      level: this.settings.level,
+      autoFlip: this.settings.autoFlip,
+      fen: this.pos.fen(),
+      startFen: this.startFen,
+      moves: [...this.sans],
+      ucis: [...this.ucis],
+      plies: this.pos.plyCount,
+      turn: side(this.pos.turn)!,
+      check: !this.outcome && this.pos.inCheck(),
+      outcome: this.outcome ? { ...this.outcome } : null,
+      selected: sq(this.selected),
+      cursor: sq(this.cursor),
+      dragging: !!this.drag?.moved,
+      bottom: side(this.bottom)!,
+      humanColor: side(this.humanColor),
+      names: [...this.names],
+      thinking: this.thinking,
+      aiPending: !!this.aiMove,
+      animating: !!this.anim,
+      flipPending: this.flipAt >= 0,
+      promotion: this.promotion ? { color: side(this.pos.turn)!, from: squareName(this.promotion.from), to: squareName(this.promotion.to) } : null,
+      canUndo: this.canUndo(),
+      humanTurn: this.isHumanTurn(),
+      legalTargets: this.selected >= 0 ? this.legal.filter((m) => moveFrom(m) === this.selected).map((m) => squareName(moveTo(m))) : [],
+      worker: !!this.worker,
+      aiRequests: this.aiRequests,
+      lastAiRequest: req ? { ...req, moves: [...req.moves] } : null,
+    };
+  }
+
+  /** Centro de cada casa (\`a1\`..\`h8\`) em coordenadas lógicas, respeitando o giro do tabuleiro. */
+  e2eTargets(): Record<string, { x: number; y: number }> {
+    const out: Record<string, { x: number; y: number }> = {};
+    for (let r = 0; r < 8; r++) {
+      for (let f = 0; f < 8; f++) {
+        const [x, y] = this.squareXY(square(f, r));
+        out[squareName(square(f, r))] = { x: x + SQ / 2, y: y + SQ / 2 };
+      }
+    }
+    return out;
+  }
+
+  /** Pré-condição rara dos testes: troca a posição atual por \`fen\` (partida nova a partir dela). */
+  e2eSetFen(fen: string) {
+    this.cancelAi();
+    this.startFen = fen;
+    this.pos = Position.fromFen(fen);
+    this.legal = this.pos.legalMoves();
+    this.sans = [];
+    this.ucis = [];
+    this.captures = [];
+    this.outcome = gameOutcome(this.pos, this.legal);
+    this.selected = -1;
+    this.cursor = -1;
+    this.drag = null;
+    this.anim = null;
+    this.promotion = null;
+    this.flipAt = -1;
+    this.emit();
   }
 
   // ------------------------------------------------------------------ desenho
