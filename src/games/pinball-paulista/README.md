@@ -408,13 +408,72 @@ Detalhes do motor, armadilhas e receitas: `CLAUDE.md` desta pasta.
 ## 12. Testes
 
 ```bash
-npm run test:e2e -- pinball-paulista/                    # suíte rápida do jogo (desktop + celular)
-npm run test:e2e -- --project=celular pinball-paulista/  # só 390 px
-npm run test:e2e:longa -- pinball-paulista/              # piloto: partidas inteiras
+npm run test:e2e -- e2e/pinball-paulista/                  # suíte rápida do jogo (desktop + celular)
+npm run test:e2e -- --project=celular e2e/pinball-paulista/  # só 390 px
+npm run test:e2e:longa -- e2e/pinball-paulista/            # piloto: partidas inteiras
 npm run test:e2e:cobertura -- --jogo pinball-paulista    # RN do manual × testes
 ```
 
-Cobertura por arquivo e tabela regra → teste: preenchidas na entrega dos testes.
+Guia da base comum em [`e2e/README.md`](../../../e2e/README.md). Os testes jogam pela tela (teclas,
+mouse, toque real no celular) com o relógio sob controle do teste: 1 quadro = 1/60 s, a física roda os
+mesmos 8 subpassos e o `Math.random` é semeado, então a mesma semente e os mesmos gestos dão a mesma
+partida. O gancho `window.__e2e` (`game/e2eHook.ts`) só lê o estado; para levar a bola a um alvo os testes
+usam `prepare.ball`/`prepare.lights`, sempre comentados (o caminho natural fica com o piloto). Cada ação
+vira um PNG em `evidencias/` com o estado da mesa no cabeçalho (bola, placar, MOTOBOY, semáforos, bolas na
+mesa, segura-bola, tilt).
+
+| Arquivo | Cobertura |
+|---|---|
+| `e2e/pinball-paulista/navegacao.spec.ts` | título (recorde, Enter/Espaço), HUD, ← Menu, volta ao hub, gancho só na página de teste |
+| `e2e/pinball-paulista/flippers.spec.ts` | todas as teclas dos flippers, velocidades de subida/descida, rebote, mouse nas metades da mesa |
+| `e2e/pinball-paulista/lancador.spec.ts` | carga e velocidade de saída, carga mínima, lançamento fraco e forte, ↓ e botão Lançar, portão |
+| `e2e/pinball-paulista/nudge-tilt.spec.ts` | tranco (só em jogo, empurrão, intervalo, queda da conta), CUIDADO, TILT e suas consequências |
+| `e2e/pinball-paulista/semaforos.spec.ts` | pontos do bumper, 6ª batida, Onda Verde (dobro, duração, sem extra durante a onda) |
+| `e2e/pinball-paulista/raias.spec.ts` | acender raia, raia acesa, giro pelos flippers, multiplicador até ×5 |
+| `e2e/pinball-paulista/motoboy-multiball.spec.ts` | letras nova/acesa, lado do campo, Multiball, bumper em dobro, perda só da última bola |
+| `e2e/pinball-paulista/minhocao.spec.ts` | captura, tempo preso, entupido, bola rápida, ejeção, ciclo de prêmios e bola extra única |
+| `e2e/pinball-paulista/spinner-estilingue.spec.ts` | spinner, estilingue, fundo do corredor |
+| `e2e/pinball-paulista/segura-bola.spec.ts` | bola salva, tempo parado na rampa, perda depois do segura-bola |
+| `e2e/pinball-paulista/bonus-fim-bola.spec.ts` | bônus × multiplicador, o que zera por bola, bola extra, 3 bolas, fim de jogo, recorde, Jogar de novo |
+| `e2e/pinball-paulista/pausa.spec.ts` | P, Esc e botão, nada anda na pausa, perda de foco, som e sua persistência |
+| `e2e/pinball-paulista/bordas.spec.ts` | quadro gigante, storage bloqueado, dados corrompidos, um laço só, sair pela barra e voltar |
+| `e2e/pinball-paulista/responsivo.spec.ts` | 390 px (projeto `celular`): layout, toque real nas metades e nos botões |
+| `e2e/pinball-paulista/piloto.spec.ts` | projeto `longa`: 3 partidas inteiras (sementes 1–3) e a repetição da mesma semente |
+
+Regra → teste (gerada por `npm run test:e2e:cobertura -- --md pinball-paulista`):
+
+| Regra | Testes |
+|---|---|
+| PP-RN-01 | `navegacao.spec.ts` |
+| PP-RN-02 | `navegacao.spec.ts` |
+| PP-RN-03 | `bordas.spec.ts` |
+| PP-RN-04 | `flippers.spec.ts`, `lancador.spec.ts` |
+| PP-RN-05 | `flippers.spec.ts`, `responsivo.spec.ts` |
+| PP-RN-06 | `lancador.spec.ts`, `responsivo.spec.ts` |
+| PP-RN-07 | `nudge-tilt.spec.ts`, `responsivo.spec.ts` |
+| PP-RN-08 | `nudge-tilt.spec.ts` |
+| PP-RN-09 | `semaforos.spec.ts` |
+| PP-RN-10 | `semaforos.spec.ts` |
+| PP-RN-11 | `raias.spec.ts` |
+| PP-RN-12 | `motoboy-multiball.spec.ts` |
+| PP-RN-13 | `motoboy-multiball.spec.ts` |
+| PP-RN-14 | `minhocao.spec.ts` |
+| PP-RN-15 | `minhocao.spec.ts` |
+| PP-RN-16 | `bonus-fim-bola.spec.ts`, `minhocao.spec.ts` |
+| PP-RN-17 | `minhocao.spec.ts` |
+| PP-RN-18 | `bonus-fim-bola.spec.ts`, `spinner-estilingue.spec.ts` |
+| PP-RN-19 | `spinner-estilingue.spec.ts` |
+| PP-RN-20 | `spinner-estilingue.spec.ts` |
+| PP-RN-21 | `segura-bola.spec.ts` |
+| PP-RN-22 | `bonus-fim-bola.spec.ts`, `piloto.spec.ts` |
+| PP-RN-23 | `bonus-fim-bola.spec.ts` |
+| PP-RN-24 | `bonus-fim-bola.spec.ts`, `piloto.spec.ts` |
+| PP-RN-25 | `bonus-fim-bola.spec.ts`, `bordas.spec.ts` |
+| PP-RN-26 | `pausa.spec.ts` |
+| PP-RN-27 | `pausa.spec.ts` |
+| PP-RN-28 | `bordas.spec.ts`, `pausa.spec.ts` |
+| PP-RN-29 | `responsivo.spec.ts` |
+| PP-RN-30 | `bordas.spec.ts` |
 
 ---
 
@@ -424,6 +483,6 @@ Cobertura por arquivo e tabela regra → teste: preenchidas na entrega dos teste
 2. Regra nova ou mudada: atualize a seção dela neste manual, a tabela de parâmetros e o teste que cita o
    número, no mesmo commit.
 3. Números de equilíbrio só em `game/constants.ts`; mexeu em guia, flipper ou parede? Rode o piloto
-   (`npm run test:e2e:longa -- pinball-paulista/`) e procure bola parada fora da rampa/Minhocão.
+   (`npm run test:e2e:longa -- e2e/pinball-paulista/`) e procure bola parada fora da rampa/Minhocão.
 4. Antes de entregar: `npm run typecheck`, `npm run typecheck:e2e`, `npm run build` e
-   `npm run test:e2e -- pinball-paulista/`.
+   `npm run test:e2e -- e2e/pinball-paulista/`.

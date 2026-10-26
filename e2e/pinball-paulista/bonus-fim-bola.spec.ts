@@ -15,7 +15,7 @@ async function bumper(game: PinballPage, i: number): Promise<void> {
 }
 
 test.describe('Pinball Paulista — bônus, bolas, fim de jogo e recorde', () => {
-  test('PP-RN-22 PP-RN-23 PP-RN-24 PP-RN-25 PP-RN-16 bônus = base × mult, o que zera por bola, bola extra, 3 bolas, fim de jogo e recorde', async ({ game, page }) => {
+  test('PP-RN-22 PP-RN-23 PP-RN-24 PP-RN-25 PP-RN-16 PP-RN-18 bônus = base × mult, o que zera por bola, bola extra, 3 bolas, fim de jogo e recorde', async ({ game, page }) => {
     await game.open();
     const root = page.locator('.pinball-paulista');
 
