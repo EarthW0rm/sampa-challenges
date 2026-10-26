@@ -109,6 +109,12 @@ export function GameScreen({ assets, onExit }: Props) {
     onPointerLeave: hold(key, false),
   });
 
+  // sair para o título: salva o recorde antes (o título lê o recorde ao renderizar, antes do cleanup do motor)
+  const exitToTitle = () => {
+    engineRef.current?.dispose();
+    onExit();
+  };
+
   const restart = () => {
     setShowOver(false);
     engineRef.current?.restart();
@@ -134,7 +140,7 @@ export function GameScreen({ assets, onExit }: Props) {
   return (
     <main className="game">
       <nav className="game-bar">
-        <button type="button" onClick={onExit}>
+        <button type="button" onClick={exitToTitle}>
           ← Menu
         </button>
         {hud && (
@@ -241,7 +247,7 @@ export function GameScreen({ assets, onExit }: Props) {
                   <button type="button" className="primary" onClick={() => engineRef.current?.setPaused(false)} autoFocus>
                     Continuar
                   </button>
-                  <button type="button" onClick={onExit}>
+                  <button type="button" onClick={exitToTitle}>
                     Menu
                   </button>
                 </div>
@@ -259,7 +265,7 @@ export function GameScreen({ assets, onExit }: Props) {
                   <button type="button" className="primary" onClick={restart} autoFocus>
                     Jogar de novo
                   </button>
-                  <button type="button" onClick={onExit}>
+                  <button type="button" onClick={exitToTitle}>
                     Menu
                   </button>
                 </div>

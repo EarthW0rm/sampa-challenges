@@ -158,7 +158,8 @@ Três raias (sensores) no topo. A bola que passa numa raia apagada acende a raia
 (+`BONUS_PTS.raia` no bônus); raia já acesa não pontua. Cada aperto de flipper gira as luzes: o
 esquerdo para a esquerda, o direito para a direita (apertar os dois no mesmo quadro conta só o
 esquerdo). As 3 acesas: **multiplicador do bônus +1** (até `MAX_MULT`), `PTS.raias` e as raias apagam
-(no ×5 os pontos continuam valendo).
+(no ×5 os pontos continuam valendo). A bola que completou o trio ainda está no sensor quando as luzes
+apagam, então a mesma passagem reacende aquela raia (mais `PTS.raia` e `BONUS_PTS.raia`).
 
 ### PP-RN-12 Letras MOTOBOY
 

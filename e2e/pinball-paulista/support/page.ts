@@ -118,6 +118,34 @@ export class PinballPage extends BaseGamePage<PinballE2E> {
     await this.hook((h, a) => h.prepare.ball(a.x, a.y, a.vx, a.vy, a.i), { x, y, vx, vy, i });
   }
 
+  /** Pré-condição rara: luzes e contadores (`prepare.lights`). Comente o uso no teste. */
+  async lights(o: Parameters<PinballE2E['prepare']['lights']>[0]): Promise<void> {
+    await this.hook((h, a) => h.prepare.lights(a), o);
+  }
+
+  /** Pré-condição rara: leva a bola `i` para o ralo (entre os flippers, descendo). Comente o uso no teste. */
+  async drainBall(i = 0): Promise<void> {
+    await this.placeBall(111, 372, 0, 300, i);
+  }
+
+  /** Abaixa uma tecla (sem soltar) e roda `frames` quadros. */
+  async keyDown(key: string, frames = 1): Promise<void> {
+    await this.ev.quiet(async () => {
+      await this.page.keyboard.down(key);
+      await this.frames(frames);
+    });
+    await this.ev.action(`Abaixar ${key} e segurar (${frames} quadros)`);
+  }
+
+  /** Solta uma tecla e roda `frames` quadros. */
+  async keyUp(key: string, frames = 1): Promise<void> {
+    await this.ev.quiet(async () => {
+      await this.page.keyboard.up(key);
+      await this.frames(frames);
+    });
+    await this.ev.action(`Soltar ${key}`);
+  }
+
   /** Placar exibido no painel "Pontos" (desktop) como número. */
   async shownScore(): Promise<number> {
     const t = (await this.page.locator(`${this.root} .side-right .score`).textContent()) ?? '';

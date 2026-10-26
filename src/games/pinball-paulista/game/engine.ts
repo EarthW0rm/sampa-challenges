@@ -205,6 +205,8 @@ export class PinballEngine {
     this.extraPending = false;
     this.sparks = [];
     this.fxs = [];
+    // spinner parado: a roda que ainda girava no fim do jogo anterior não pontua no novo
+    this.spin = this.spin.map(() => ({ a: 0, w: 0, acc: 0 }));
     this.serveBall();
     this.msg('SEGURE ESPACO E SOLTE', 3);
     this.emit();
@@ -354,7 +356,8 @@ export class PinballEngine {
       this.tilt = true;
       this.msg('TILT!', 3);
       sfx.tilt();
-    } else if (this.nudges >= NUDGE_LIMIT) {
+    } else if (this.nudges > NUDGE_LIMIT - 1) {
+      // a conta cai continuamente (NUDGE_DECAY), então `>= NUDGE_LIMIT` nunca acontecia e o aviso não aparecia
       this.msg('CUIDADO!', 1.2);
     }
   }
@@ -511,6 +514,14 @@ export class PinballEngine {
     b.x += b.vx * STEP;
     b.y += b.vy * STEP;
 
+    // alvos MOTOBOY antes das paredes: a placa fica sobre a guia, e a parede, tratada antes, já rebatia a
+    // bola e o alvo nunca via o impacto (as letras só acendiam pelo prêmio do Minhocão)
+    TARGETS.forEach((t, i) => {
+      if (t.nx === 1 ? b.x < t.seg.ax : b.x > t.seg.ax) return;
+      const v = this.segHit(b, t.seg, E_WALL, out);
+      if (v > TARGET_MIN_HIT) this.hitTarget(i, b);
+    });
+
     let hitSpeed = 0;
     for (const s of WALLS) hitSpeed = Math.max(hitSpeed, this.segHit(b, s, E_WALL, out));
     if (hitSpeed > 80 && this.wallCd <= 0) {
@@ -544,12 +555,6 @@ export class PinballEngine {
         this.bonusBase += BONUS_PTS.estilingue;
         sfx.sling(b.x);
       }
-    });
-
-    TARGETS.forEach((t, i) => {
-      if (t.nx === 1 ? b.x < t.seg.ax : b.x > t.seg.ax) return;
-      const v = this.segHit(b, t.seg, E_WALL, out);
-      if (v > TARGET_MIN_HIT) this.hitTarget(i, b);
     });
 
     BUMPERS.forEach((bp, i) => {
@@ -674,7 +679,8 @@ export class PinballEngine {
       s.acc += s.w * dt / (Math.PI * 2) * 2;
       s.w = Math.max(0, s.w - dt * 6);
       const ticks = Math.floor(s.acc) - before;
-      if (ticks > 0) {
+      // depois do fim de jogo a roda ainda gira, mas não pontua (o placar final e o recorde já foram fechados)
+      if (ticks > 0 && this.phase !== 'over') {
         this.addScore(PTS.spinner * ticks, 'spinner', ticks);
         sfx.spinner(LANE_X / 2);
       }
@@ -888,6 +894,7 @@ export class PinballEngine {
         this.awardIdx = (idx - 1 + AWARDS.length) % AWARDS.length;
       }
       if (o.kickCd !== undefined) this.kickCd = o.kickCd;
+      if (o.saver !== undefined) this.saver = o.saver;
       this.emit();
     },
   };

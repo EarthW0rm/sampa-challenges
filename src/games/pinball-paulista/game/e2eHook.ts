@@ -82,7 +82,7 @@ export interface PinballTargets {
 export interface PinballPrepare {
   /** Coloca a bola `i` (padrão 0) livre em (x, y) com velocidade (vx, vy). */
   ball(x: number, y: number, vx: number, vy: number, i?: number): void;
-  /** Acende/ajusta luzes e contadores: letras, raias, batidas nos bumpers, multiplicador, próximo prêmio, entupido. */
+  /** Acende/ajusta luzes e contadores: letras, raias, batidas nos bumpers, multiplicador, próximo prêmio, entupido, segura-bola. */
   lights(o: {
     letters?: boolean[];
     rolls?: boolean[];
@@ -90,6 +90,7 @@ export interface PinballPrepare {
     mult?: number;
     nextAward?: (typeof AWARDS)[number];
     kickCd?: number;
+    saver?: number;
   }): void;
 }
 
