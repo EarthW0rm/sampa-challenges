@@ -72,7 +72,7 @@ Veja o mapa dos arquivos no `CLAUDE.md` desta pasta.
 
 ```bash
 npm run test:e2e -- __ID__/                    # suíte rápida do jogo (desktop)
-npm run test:e2e -- --project=celular __ID__/  # 390 px
+npx playwright test -c e2e/playwright.config.ts --project=celular e2e/__ID__/  # só o celular (390 px)
 npm run test:e2e:longa -- __ID__/              # piloto (partidas inteiras)
 npm run test:e2e:cobertura                     # RN do manual × testes
 ```
