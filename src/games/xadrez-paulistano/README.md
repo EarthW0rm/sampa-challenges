@@ -505,4 +505,80 @@ cd tools/pixelart && python3 xadrez_paulistano.py /tmp/xadrez
 
 ## 16. Testes
 
-Preenchida na entrega dos testes de ponta a ponta (cobertura por arquivo e tabela regra → teste).
+Ponta a ponta no navegador (Playwright), na raiz do repositório; guia geral em
+[`e2e/README.md`](../../../e2e/README.md) e detalhes do gancho, do piloto e da calibração no
+[`CLAUDE.md`](./CLAUDE.md) desta pasta.
+
+```bash
+npm run test:e2e -- e2e/xadrez-paulistano/                     # suíte rápida: desktop + 390 px
+npm run test:e2e -- e2e/xadrez-paulistano/ -g "XP-RN-09"       # uma regra
+caffeinate -dimsu npm run test:e2e:longa -- e2e/xadrez-paulistano/   # piloto (partidas inteiras)
+npm run test:e2e:cobertura -- --jogo xadrez-paulistano         # cada regra tem teste?
+```
+
+- Os testes jogam pela tela: clique, arraste, toque e teclado no tabuleiro; botões e menu pelo DOM.
+  O gancho `window.__e2e` (`game/e2eHook.ts`) só lê estado e o centro das casas; `prepare.fen` monta
+  posições raras (finais, roque proibido, promoção), sempre comentado no teste.
+- O relógio é do teste (1 quadro = 1/60 s); o computador, nos testes, sorteia com semente e para a
+  busca por número de nós (`E2E_NODES_PER_MS`), então a mesma semente dá os mesmos lances em qualquer
+  máquina. Fora dos testes nada disso existe.
+- Cada ação vira um PNG com cabeçalho (modo, nível, vez, último lance, xeque, selecionada, cursor,
+  IA pensando) em `evidencias/`.
+
+### Cobertura por arquivo
+
+| Arquivo | Cobertura |
+|---|---|
+| `navegacao.spec.ts` | telas: menu, partida, janela de fim (Jogar de novo, Ver tabuleiro, Menu), ← Menu, volta ao hub |
+| `lances.spec.ts` | clique (seleção, troca, solta, inválido), arraste (limiar, fora, ilegal), teclado (cursor, sentido, Esc, foco em botão), vez e animação |
+| `regras-especiais.spec.ts` | movimento, roque longo/curto da posição inicial, roque proibido (casa atacada, xeque, direito perdido, b1 atacada), en passant, promoção nas 4 peças e Cancelar |
+| `fim-de-partida.spec.ts` | xeque, mate e textos da janela, afogamento, 50 lances (mate no 100º vale), repetição tripla, material insuficiente (casos que empatam e que não) |
+| `notacao.spec.ts` | lista em português (captura, roque, desambiguação por coluna e fileira) e painel (status, nomes, destaque, capturadas, `+N`) |
+| `botoes.spec.ts` | Desfazer a dois com giro automático, Desistir e Nova partida com confirmação de 3 s, Girar, Som e sua gravação |
+| `menu.spec.ts` | nível 1–100 com faixas e dica, cor só contra o computador, nomes até 14, escolhas gravadas, config corrompida |
+| `computador.spec.ts` | brancas/pretas/sorteio, PENSANDO e atraso mínimo, Desfazer contra o computador, orçamento por nível, nível alto vence o baixo |
+| `ia-worker.spec.ts` | mesma semente → mesmos 10 lances em duas cargas, worker quebrado (reserva), nível 100 ≤ 5 s, Desfazer e Nova partida durante a busca |
+| `bordas.spec.ts` | sem pausa na perda de foco, salto de relógio, um laço/listener no StrictMode, armazenamento bloqueado, sair pelo hub durante a busca e voltar, card sem recorde |
+| `responsivo.spec.ts` (projeto `celular`) | 390 px sem rolagem lateral, tabuleiro e botões visíveis, toque e arraste por toque |
+| `piloto.spec.ts` (projeto `longa`) | partidas inteiras contra os níveis 10, 50 e 90 e a dois; resultado e notação recalculados; mesma semente → mesma partida |
+
+### Regra → teste
+
+Gerada por `npm run test:e2e:cobertura -- --md xadrez-paulistano`:
+
+| Regra | Testes |
+|---|---|
+| XP-RN-01 | `navegacao.spec.ts` |
+| XP-RN-02 | `lances.spec.ts` |
+| XP-RN-03 | `lances.spec.ts` |
+| XP-RN-04 | `lances.spec.ts` |
+| XP-RN-05 | `lances.spec.ts` |
+| XP-RN-06 | `regras-especiais.spec.ts` |
+| XP-RN-07 | `regras-especiais.spec.ts` |
+| XP-RN-08 | `regras-especiais.spec.ts` |
+| XP-RN-09 | `regras-especiais.spec.ts` |
+| XP-RN-10 | `regras-especiais.spec.ts` |
+| XP-RN-11 | `fim-de-partida.spec.ts` |
+| XP-RN-12 | `fim-de-partida.spec.ts` |
+| XP-RN-13 | `fim-de-partida.spec.ts` |
+| XP-RN-14 | `fim-de-partida.spec.ts` |
+| XP-RN-15 | `fim-de-partida.spec.ts` |
+| XP-RN-16 | `fim-de-partida.spec.ts` |
+| XP-RN-17 | `notacao.spec.ts` |
+| XP-RN-18 | `notacao.spec.ts` |
+| XP-RN-19 | `botoes.spec.ts`, `computador.spec.ts`, `ia-worker.spec.ts` |
+| XP-RN-20 | `botoes.spec.ts` |
+| XP-RN-21 | `botoes.spec.ts`, `ia-worker.spec.ts` |
+| XP-RN-22 | `botoes.spec.ts` |
+| XP-RN-23 | `botoes.spec.ts` |
+| XP-RN-24 | `computador.spec.ts`, `piloto.spec.ts` |
+| XP-RN-25 | `botoes.spec.ts`, `piloto.spec.ts` |
+| XP-RN-26 | `computador.spec.ts`, `ia-worker.spec.ts`, `piloto.spec.ts` |
+| XP-RN-27 | `computador.spec.ts`, `menu.spec.ts` |
+| XP-RN-28 | `bordas.spec.ts`, `fim-de-partida.spec.ts`, `piloto.spec.ts` |
+| XP-RN-29 | `menu.spec.ts` |
+| XP-RN-30 | `menu.spec.ts` |
+| XP-RN-31 | `bordas.spec.ts` |
+| XP-RN-32 | `bordas.spec.ts` |
+| XP-RN-33 | `bordas.spec.ts` |
+| XP-RN-34 | `responsivo.spec.ts` |
