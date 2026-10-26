@@ -20,3 +20,20 @@ export interface HudState {
   bonus: { base: number; mult: number; total: number } | null;
   charge: number;
 }
+
+/** Tipos de evento que dão pontos (ver `PTS` em `constants.ts`); `bonus` é o bônus de fim de bola. */
+export type ScoreKind =
+  | 'bumper'
+  | 'semaforoVerde'
+  | 'ondaVerde'
+  | 'raia'
+  | 'raias'
+  | 'letraNova'
+  | 'letraAcesa'
+  | 'multiball'
+  | 'minhocao'
+  | 'premioPontos'
+  | 'premioLetraCheia'
+  | 'spinner'
+  | 'estilingue'
+  | 'bonus';
