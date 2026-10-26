@@ -449,7 +449,79 @@ fácil tenta até 300 tiros "parecidos" que errem todo mundo.
 
 ## 12. Testes
 
-Seção preenchida na TF-129-07.
+Testes de ponta a ponta no navegador (Playwright), na raiz do repositório; guia geral em
+[`e2e/README.md`](../../../e2e/README.md).
+
+```bash
+npm run test:e2e -- capacete-voador/                    # suíte rápida (desktop + 390 px)
+npm run test:e2e -- --project=celular capacete-voador/  # só 390 px
+npm run test:e2e -- -g "CV-RN-18"                       # uma regra
+caffeinate -dimsu npm run test:e2e:longa -- capacete-voador/   # piloto: partidas inteiras
+npm run test:e2e:cobertura -- --jogo capacete-voador    # cada CV-RN tem teste?
+```
+
+- O relógio é do teste: cada quadro tem 1/60 s e `performance.now`/`Date.now` só andam com os quadros;
+  o `Math.random` é semeado, então a cidade, o vento e a IA saem iguais com a mesma semente.
+- Os testes jogam pela tela (menu, campos, Enter, botões). O gancho `window.__e2e`
+  (`game/e2eHook.ts`) só lê o estado e simula tiros (`simulateShot`, a mesma física do jogo) para achar
+  ângulo/velocidade de cada caso; `prepare.wind`/`prepare.city` só em pré-condições raras, comentadas.
+- Cada ação vira um PNG em `evidencias/` com o cabeçalho do jogo: modo, rodada, placar, vez, vento,
+  mira digitada, motos e capacete em voo.
+
+| Arquivo | Cobertura |
+|---|---|
+| `e2e/capacete-voador/navegacao.spec.ts` | abre, começa a partida, gancho presente, volta ao hub |
+| `e2e/capacete-voador/menu.spec.ts` | padrões, campos por modo, nomes, pontos, gravidade e atalhos, garoa, barra (← Menu, Reiniciar) |
+| `e2e/capacete-voador/mira.spec.ts` | formulário por teclado e botão, 2 jogadores, limites, entradas inválidas |
+| `e2e/capacete-voador/voo.spec.ts` | fórmula com vento e gravidade, vento por rodada, tiro para trás, lateral, tempo máximo, chão, sol |
+| `e2e/capacete-voador/acertos.spec.ts` | cratera, 3 acertos na moto e destruição, cabeça, acerto em si mesmo |
+| `e2e/capacete-voador/rodadas.spec.ts` | rodada nova, alternância de quem começa, fim de partida, regras da cidade |
+| `e2e/capacete-voador/computador.spec.ts` | tempos do computador, fácil/médio/difícil |
+| `e2e/capacete-voador/treino.spec.ts` | treino (Tiros/Acertos, sem fim de partida) |
+| `e2e/capacete-voador/som.spec.ts` | som liga/desliga e persiste |
+| `e2e/capacete-voador/bordas.spec.ts` | quadro gigante, foco, storage bloqueado/corrompido, laço único, sair no meio do voo |
+| `e2e/capacete-voador/responsivo.spec.ts` | 390 px (projeto `celular`) |
+| `e2e/capacete-voador/piloto.spec.ts` | partidas inteiras: 2 jogadores, computador fácil/médio/difícil, treino; mesma semente = mesma partida (projeto `longa`) |
+
+Regra → teste (gerada por `npm run test:e2e:cobertura -- --md capacete-voador`):
+
+| Regra | Testes |
+|---|---|
+| CV-RN-01 | `menu.spec.ts`, `navegacao.spec.ts` |
+| CV-RN-02 | `menu.spec.ts` |
+| CV-RN-03 | `menu.spec.ts` |
+| CV-RN-04 | `menu.spec.ts` |
+| CV-RN-05 | `menu.spec.ts` |
+| CV-RN-06 | `menu.spec.ts` |
+| CV-RN-07 | `menu.spec.ts` |
+| CV-RN-08 | `mira.spec.ts` |
+| CV-RN-09 | `mira.spec.ts` |
+| CV-RN-10 | `mira.spec.ts` |
+| CV-RN-11 | `voo.spec.ts` |
+| CV-RN-12 | `voo.spec.ts` |
+| CV-RN-13 | `voo.spec.ts` |
+| CV-RN-14 | `voo.spec.ts` |
+| CV-RN-15 | `voo.spec.ts` |
+| CV-RN-16 | `voo.spec.ts` |
+| CV-RN-17 | `acertos.spec.ts` |
+| CV-RN-18 | `acertos.spec.ts` |
+| CV-RN-19 | `acertos.spec.ts` |
+| CV-RN-20 | `acertos.spec.ts` |
+| CV-RN-21 | `acertos.spec.ts` |
+| CV-RN-22 | `piloto.spec.ts`, `rodadas.spec.ts` |
+| CV-RN-23 | `rodadas.spec.ts` |
+| CV-RN-24 | `piloto.spec.ts`, `rodadas.spec.ts` |
+| CV-RN-25 | `rodadas.spec.ts` |
+| CV-RN-26 | `mira.spec.ts` |
+| CV-RN-27 | `computador.spec.ts` |
+| CV-RN-28 | `computador.spec.ts` |
+| CV-RN-29 | `computador.spec.ts` |
+| CV-RN-30 | `computador.spec.ts` |
+| CV-RN-31 | `treino.spec.ts` |
+| CV-RN-32 | `bordas.spec.ts`, `som.spec.ts` |
+| CV-RN-33 | `bordas.spec.ts` |
+| CV-RN-34 | `bordas.spec.ts` |
+| CV-RN-35 | `responsivo.spec.ts` |
 
 ---
 
