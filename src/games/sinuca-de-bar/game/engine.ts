@@ -224,7 +224,8 @@ export class SinucaEngine {
       Object.assign(c, { x: p.x, y: p.y, on: true });
     }
     if (res.foul) {
-      this.toast(`Falta: ${res.foul}`);
+      // `resolveShot` já põe o aviso da falta nas mensagens, menos quando a tacada encerra a partida
+      if (!res.messages.some((m) => m.startsWith('Falta:'))) this.toast(`Falta: ${res.foul}`);
       sfx.foul();
     }
     if (res.assigned) this.toast(`${this.name(prev.turn)}: ${RULES[prev.rules].names[res.assigned]}`);
@@ -283,6 +284,8 @@ export class SinucaEngine {
   // ------------------------------------------------------------------ entrada
 
   setPower(p: number) {
+    // na vez do computador a força é dele (a barra fica desligada; isto protege de eventos atrasados)
+    if (this.isCpu(this.match.turn) && (this.phase === 'aim' || this.phase === 'stroke')) return;
     this.power = Math.max(0.05, Math.min(1, p));
     this.emitHud();
   }

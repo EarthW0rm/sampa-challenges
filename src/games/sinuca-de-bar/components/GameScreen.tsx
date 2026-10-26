@@ -193,6 +193,7 @@ export function GameScreen({ assets, settings, onExit }: Props) {
             min={5}
             max={100}
             step={1}
+            disabled={!!hud?.thinking}
             value={Math.round(power * 100)}
             onChange={(e) => engine?.setPower(Number(e.target.value) / 100)}
             style={{ '--fill': `${((power * 100 - 5) / 95) * 100}%` } as CSSProperties}

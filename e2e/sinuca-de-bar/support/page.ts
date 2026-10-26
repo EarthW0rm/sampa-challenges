@@ -142,6 +142,53 @@ export class SinucaPage extends BaseGamePage<SinucaE2E> {
     await this.evidence('Mesa preparada (pré-condição)');
   }
 
+  /**
+   * Pré-condição rara (spec RN-15): mesa e vez montadas pelo `prepare`. Padrão: vez do jogador 1, mesa
+   * aberta, fora da saída, sem bola na mão.
+   */
+  setTable(
+    balls: { n: number; x: number; y: number }[],
+    o: { turn?: 0 | 1; groups?: SinucaE2EPrepareTurn['groups']; isBreak?: boolean; ballInHand?: SinucaE2EPrepareTurn['ballInHand'] } = {},
+  ): Promise<void> {
+    return this.prepare(balls, o.turn ?? 0, { groups: o.groups ?? [null, null], isBreak: o.isBreak ?? false, ballInHand: o.ballInHand ?? null });
+  }
+
+  /** Mira em (x, y), ajusta a força (%) e taca; devolve o estado com as bolas paradas. */
+  async shotAt(x: number, y: number, pct: number): Promise<SinucaE2EState> {
+    await this.aimToward(x, y);
+    await this.power(pct);
+    return this.shootAndSettle();
+  }
+
+  /** Toque de dedo (touch) num ponto lógico do canvas. */
+  async touchTap(x: number, y: number): Promise<void> {
+    const p = await this.toClient(x, y);
+    await this.ev.quiet(async () => {
+      await this.page.touchscreen.tap(p.x, p.y);
+      await this.frames(1);
+    });
+    await this.ev.action(`Toque de dedo no canvas em (${Math.round(x)}, ${Math.round(y)}) lógico`);
+  }
+
+  /** Arraste de dedo (touch, via CDP) de um ponto lógico a outro em `n` passos. */
+  async touchDrag(a: { x: number; y: number }, b: { x: number; y: number }, n = 8): Promise<void> {
+    const pa = await this.toClient(a.x, a.y);
+    const pb = await this.toClient(b.x, b.y);
+    await this.ev.quiet(async () => {
+      const cdp = await this.page.context().newCDPSession(this.page);
+      const at = (k: number) => [{ x: pa.x + ((pb.x - pa.x) * k) / n, y: pa.y + ((pb.y - pa.y) * k) / n, id: 1 }];
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: at(0) });
+      for (let k = 1; k <= n; k++) {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: at(k) });
+        await this.frames(1);
+      }
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await this.frames(1);
+      await cdp.detach();
+    });
+    await this.ev.action(`Arrastar o dedo de (${Math.round(a.x)}, ${Math.round(a.y)}) a (${Math.round(b.x)}, ${Math.round(b.y)}) lógico`);
+  }
+
   /** Mira exata em direção a (x, y) lógico, tocando num ponto distante na mesma reta (menos erro de arredondamento). */
   async aimToward(x: number, y: number): Promise<void> {
     const cue = (await this.state()).balls[0];
