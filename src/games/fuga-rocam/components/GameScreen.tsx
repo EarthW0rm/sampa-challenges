@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { assetUrl, type Assets } from '../game/assets';
 import { H, HEAT_MAX, W } from '../game/constants';
+import { e2eSeed } from '../../../shared/e2e/hook';
+import { exposeFuga } from '../game/e2eHook';
 import { FugaEngine } from '../game/engine';
 import { SCALE } from '../game/hires';
 import { Input } from '../game/input';
@@ -30,8 +32,10 @@ export function GameScreen({ assets, mapId, onExit }: Props) {
 
   useEffect(() => {
     const ctx = canvasRef.current!.getContext('2d')!;
-    const engine = new FugaEngine(assets, inputRef.current, setHud, mapId);
+    // nos testes a semente segue o Math.random semeado (fora deles, e2eSeed() = undefined: semente da hora)
+    const engine = new FugaEngine(assets, inputRef.current, setHud, mapId, e2eSeed());
     engineRef.current = engine;
+    const disposeHook = exposeFuga(engine);
     let raf = 0;
     let last = performance.now();
     const loop = (now: number) => {
@@ -43,6 +47,7 @@ export function GameScreen({ assets, mapId, onExit }: Props) {
     raf = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(raf);
+      disposeHook();
       engine.dispose();
       engineRef.current = null;
     };

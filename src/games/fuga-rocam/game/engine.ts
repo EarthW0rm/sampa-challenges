@@ -958,7 +958,51 @@ export class FugaEngine {
     };
   }
 
-  /** Atalhos para testes. */
+  /** Retrato completo para o gancho dos testes de ponta a ponta (`game/e2eHook.ts`): só leitura, serializável. */
+  e2eState() {
+    const s = this.snapshot();
+    return {
+      ...s,
+      job: this.job ? { ...this.job, pickup: [...this.job.pickup] as [number, number], drop: [...this.job.drop] as [number, number] } : null,
+      map: this.map.id,
+      want: this.input.want,
+      turbo: this.turbo,
+      turboLocked: this.turboLocked,
+      turboOn: this.turboOn,
+      invuln: this.invuln,
+      garageCd: this.garageCd,
+      hideT: this.hideT,
+      record: this.record,
+      newRecord: this.newRecord,
+      message: this.message,
+      time: this.time,
+      phaseT: this.phaseT,
+      jobDelay: this.jobDelay,
+      lastSeen: this.lastSeen ? { ...this.lastSeen } : null,
+      itemList: this.items.map((i) => ({ ...i })),
+      puddles: this.puddles.map((o) => ({ ...o })),
+      copList: this.cops.map((c) => ({ id: c.id, cls: c.cls, persona: c.persona, tx: c.tx, ty: c.ty, dir: c.dir, off: c.off, x: px(c), y: py(c), stun: c.stun, alpha: c.alpha, leaving: c.leaving, sees: c.sees, d: c.pathToPlayer })),
+      heliPos: this.heli ? { ...this.heli } : null,
+    };
+  }
+
+  /** Alvos em coordenadas lógicas (centro dos pinos, itens e garagens) para o gancho dos testes. */
+  e2eTargets() {
+    const job = this.job;
+    const garages: { tx: number; ty: number; x: number; y: number }[] = [];
+    for (let ty = 0; ty < ROWS; ty++)
+      for (let tx = 0; tx < COLS; tx++) if (this.map.tiles[ty][tx] === 'g') garages.push({ tx, ty, x: center([tx, ty])[0], y: center([tx, ty])[1] });
+    const pin = (t: [number, number]) => ({ tx: t[0], ty: t[1], x: center(t)[0], y: center(t)[1] });
+    return {
+      player: { x: px(this.player), y: py(this.player) },
+      pickup: job && job.stage === 'pickup' ? pin(job.pickup) : null,
+      drop: job ? pin(job.drop) : null,
+      items: this.items.map((i) => ({ kind: i.kind, ...pin([i.tx, i.ty]) })),
+      garages,
+    };
+  }
+
+  /** Atalhos para testes (pré-condições raras; o gancho só os expõe em `prepare`). */
   cheat = {
     heat: (v: number) => {
       this.heat = v;
@@ -966,6 +1010,23 @@ export class FugaEngine {
     player: () => this.player,
     nav: () => this.nav,
     map: () => this.map,
+    /** Põe um item num tile (substitui o que houver nele). */
+    item: (kind: ItemKind, tx: number, ty: number) => {
+      this.items = this.items.filter((i) => i.tx !== tx || i.ty !== ty);
+      this.items.push({ kind, tx, ty, life: ITEM_LIFETIME });
+    },
+    /** Põe uma viatura já visível num tile, virada para `dir`. */
+    cop: (cls: 'moto' | 'car', tx: number, ty: number, dir: Dir = 0) => {
+      const persona = PERSONAS[cls][0];
+      this.cops.push({ id: this.nextId++, cls, persona, tx, ty, dir, off: 0, stun: 0, alpha: 1, leaving: false, patrol: null, sees: false, pathToPlayer: -1, moving: 0 });
+    },
+    /** Troca o tipo do pedido atual. */
+    jobKind: (kind: JobKind) => {
+      if (this.job) this.job.kind = kind;
+    },
+    lives: (n: number) => {
+      this.lives = n;
+    },
   };
 
   // ------------------------------------------------------------------ desenho
