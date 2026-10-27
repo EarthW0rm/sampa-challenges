@@ -162,7 +162,9 @@ function plan(cmd: Command): Step[] {
           return { kind: 'tap', ...center(ctl), why: `escolher ${ref.kind} ${ref.id}` };
         },
         () => {
-          const id = owner();
+          const t = hook().tickets().find((x) => x.id === cmd.ticketId);
+          if (t?.rect) return { kind: 'tap', x: t.rect.x + t.rect.w / 2, y: t.rect.y + t.rect.h / 2, why: `pôr na comanda ${t.label}` };
+          const id = owner(); // comanda no "+N": o atalho de tocar no dono (RN-185)
           const q = hook().queue().find((c) => c.id === id);
           if (!q) return miss(`dono da comanda ${cmd.ticketId} fora da fila`);
           return { kind: 'tap', x: q.x, y: q.y - 20, why: `pôr na comanda do cliente ${id}` };

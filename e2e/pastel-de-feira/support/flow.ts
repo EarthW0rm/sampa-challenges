@@ -88,9 +88,9 @@ export function mill(game: GamePage, seconds: number, label: string | RegExp = '
   });
 }
 
-/** No balcão: seleciona o pastel pronto (ou copo) pelo id e toca no cliente da frente. */
+/** No balcão: seleciona o pronto (ou copo) pelo id e toca na comanda do cliente da fila (RN-182). */
 export function deliver(game: GamePage, ref: { kind: 'pastel' | 'copo'; id: number }, queueIndex = 0): Promise<void> {
-  return game.step(`Entregar ${ref.kind} #${ref.id} ao cliente na posição ${queueIndex} da fila`, () => deliverSteps(game, ref, queueIndex));
+  return game.step(`Pôr ${ref.kind} #${ref.id} na comanda do cliente na posição ${queueIndex} da fila`, () => deliverSteps(game, ref, queueIndex));
 }
 
 async function deliverSteps(game: GamePage, ref: { kind: 'pastel' | 'copo'; id: number }, queueIndex: number): Promise<void> {
@@ -111,7 +111,11 @@ async function deliverSteps(game: GamePage, ref: { kind: 'pastel' | 'copo'; id: 
   });
   await game.ev.action(`Selecionar ${ref.kind} #${ref.id} no painel do balcão ("${ctl.label}")`);
   expect(await game.hook((pf) => pf.env.ui.selected), 'item selecionado').toEqual(ref);
-  await game.tapCustomer(queueIndex);
+  const owner = await game.hook((pf, i) => pf.queue()[i]?.id ?? -1, queueIndex);
+  const t = await game.comanda({ owner });
+  // a comanda do trilho; se ela estiver no "+N", o atalho de tocar no dono (RN-185)
+  if (t?.rect) await game.porNaComanda(t.label);
+  else await game.tapCustomer(queueIndex);
 }
 
 /** Atende por completo o cliente da frente (anota, monta, frita no ponto, mói, entrega). Devolve o id. */

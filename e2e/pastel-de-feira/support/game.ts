@@ -213,6 +213,38 @@ export class GamePage extends BaseGamePage<E2EHook> {
     await this.ev.action(`Toque no cliente #${c.id} (posição ${i} da fila)`);
   }
 
+  /** Comanda aberta pelo rótulo ("#3", "M1", "APP 7", "E1") ou pelo dono (id do cliente) (RN-180). */
+  async comanda(which: string | { owner: number }): Promise<ReturnType<E2EHook['tickets']>[number] | null> {
+    const list = await this.hook((pf) => pf.tickets());
+    return list.find((t) => (typeof which === 'string' ? t.label === which : t.owner === which.owner)) ?? null;
+  }
+
+  /** Ids das comandas destacadas para o pronto selecionado (RN-184). */
+  destaques(): Promise<number[]> {
+    return this.hook((pf) => pf.destinations());
+  }
+
+  /** Toca na comanda no trilho (RN-182): com um pronto escolhido, põe nele; sem seleção, a placa do dono pisca. */
+  async porNaComanda(label: string): Promise<void> {
+    const t = await this.comanda(label);
+    if (!t) throw new Error(`comanda ${label} não está aberta`);
+    if (!t.rect) throw new Error(`comanda ${label} está no "+N" do trilho`);
+    const r = t.rect;
+    await this.ev.quiet(async () => {
+      await this.tapAt(r.x + r.w / 2, r.y + r.h / 2);
+      await this.frames(1);
+    });
+    await this.ev.action(`Toque na comanda ${label} no trilho`);
+  }
+
+  /** Toca no dono da comanda na fila do balcão (atalho de RN-185). */
+  async tocarDono(label: string): Promise<void> {
+    const t = await this.comanda(label);
+    if (!t || t.owner === null) throw new Error(`comanda ${label} sem dono na barraca`);
+    const i = (await this.hook((pf) => pf.queue())).findIndex((c) => c.id === t.owner);
+    if (i < 0) throw new Error(`dono da comanda ${label} fora da fila`);
+    await this.tapCustomer(i);
+  }
 }
 
 /** Fixtures do Pastel: evidência a cada ação com o cabeçalho do dia e coleta de erros do console. */
