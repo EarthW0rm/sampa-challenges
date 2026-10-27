@@ -3,7 +3,7 @@ import {
 } from '../../src/games/pastel-de-feira/game/constants';
 import { ITEMS } from '../../src/games/pastel-de-feira/game/data/recipes';
 import { expect, frontOrder, test } from './support/game';
-import { assemble, collect, deliver, fry, fryTimes, isDrink, mill, serveCustomer, serveFront, takeOrder } from './support/flow';
+import { assemble, collect, deliver, fry, fryTimes, mill, serveCustomer, serveFront, takeOrder } from './support/flow';
 
 const money = (n: number) => `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
