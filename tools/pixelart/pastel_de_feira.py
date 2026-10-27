@@ -747,6 +747,38 @@ def faixa(kind):
     return im
 
 
+def trilho():
+    """Trilho de comandas (RN-181): barra de madeira de 6 px de altura, 3-slice 8 + 16 + 8."""
+    w, h = 32, 6
+    im = new(w, h); p = Pen(im)
+    R(p, 0, 0, w, h, MOLD_O)
+    R(p, 1, 1, w - 2, 4, MAD); R(p, 1, 1, w - 2, 1, MAD_L); R(p, 1, 4, w - 2, 1, MAD_D)
+    for x in (3, w - 4): R(p, x, 2, 1, 2, BORDA_L)   # parafusos nas pontas
+    return im
+
+
+def pregador():
+    """Pregador que prende a comanda no trilho: 4×6, metal."""
+    im = new(4, 6); p = Pen(im)
+    R(p, 0, 0, 4, 6, ACO_O); R(p, 1, 1, 2, 4, ACO); R(p, 1, 1, 2, 1, ACO_L)
+    return im
+
+
+def comanda():
+    """Papel da comanda (RN-181): 9-slice 9×9, cantos de 3, papel com a faixa do topo picotada."""
+    im = new(9, 9); p = Pen(im)
+    R(p, 0, 0, 9, 9, INK); R(p, 1, 1, 7, 7, PAPEL); R(p, 1, 1, 7, 1, PERG_D)
+    for x in (1, 3, 5, 7): p.put(x, 2, PERG_L)
+    return im
+
+
+def placa_num():
+    """Placa de número do dono da comanda (RN-185): 9-slice 7×7, cantos de 2, dourada."""
+    im = new(7, 7); p = Pen(im)
+    R(p, 0, 0, 7, 7, OURO_O); R(p, 1, 1, 5, 5, OURO); R(p, 1, 1, 5, 1, OURO_L); R(p, 1, 5, 5, 1, OURO_D)
+    return im
+
+
 def placa(part):
     """Placa de nome da zona: 3-slice 3 + 8 + 3, 15 de altura (texto k=2 em y+3)."""
     w = {'esq': 3, 'meio': 8, 'dir': 3}[part]
@@ -1113,6 +1145,8 @@ def main():
     for k in ('alerta', 'evento', 'oferta'): save(faixa(k), f'ui/faixa_{k}')
     for k in ('esq', 'meio', 'dir'): save(placa(k), f'ui/placa_{k}')
     save(placa_xepa(), 'ui/placa_xepa')
+    slice3(trilho(), 'equip/trilho'); save(pregador(), 'equip/pregador')
+    save(comanda(), 'ui/comanda'); save(placa_num(), 'ui/placa_num')
     for k in HUD: save(hud(k), f'ui/hud_{k}')
     for k in ('fiscal', 'energia', 'excursao', 'fogo', 'queimado', 'chuva', 'calor'): save(icone(k), f'icones/{k}')
     for k in ('economico', 'padrao', 'exigente'): save(perfil(k), f'icones/perfil_{k}')
