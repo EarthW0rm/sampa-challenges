@@ -229,3 +229,8 @@ export function stepsFor(acc: number, dt: number, speed: 1 | 2): { steps: number
 // RN-50: meta de lucro do dia N = GOAL_BASE × GOAL_GROWTH^(N−1) (calibrada pelos robôs, TF-123-02)
 export const GOAL_BASE = 70;
 export const GOAL_GROWTH = 1.12;
+
+// RN-181: trilho de comandas (quantas aparecem antes do "+N") e alvo mínimo de toque de uma comanda (P)
+export const RAIL_VISIBLE = 6;
+export const TICKET_MIN_W = 28;
+export const TICKET_H = 28;

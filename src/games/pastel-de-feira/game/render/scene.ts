@@ -9,6 +9,8 @@ import { fryWindow, isChanging, isDirty, isLocked } from '../sim/stations/fryer'
 import { millSeconds } from '../sim/stations/cane';
 import { workerStation } from '../sim/staff';
 import { now, type Customer, type DayState } from '../sim/state';
+import { ticketOf } from '../sim/tickets';
+import { drawOwnerPlate, drawRail } from './rail';
 import type { UiState } from '../ui';
 import { SCALE } from '../hires';
 import { aparenciaDe, type Pose } from '../assets';
@@ -143,7 +145,7 @@ const CRUMBS: readonly (readonly [number, number])[] = [
 /** Visto (✓) em pixels de 2×2 sobre o selo da linha entregue. */
 const CHECK: readonly (readonly [number, number])[] = [[1, 6], [3, 8], [5, 6], [7, 4], [9, 2]];
 
-function drawBalloon(ctx: CanvasRenderingContext2D, c: Customer, x: number, y: number): void {
+function drawBalloon(ctx: CanvasRenderingContext2D, st: DayState, ui: UiState, c: Customer, x: number, y: number): void {
   const w = 14 * c.lines.length + 6;
   const bx = Math.round(x - w / 2);
   if (drawNine(ctx, 'ui/balao', { x: bx, y: y - 22, w, h: 20 }, 3)) drawArt(ctx, 'ui/balao_rabo', Math.round(x) - 3, y - 3);
@@ -168,6 +170,8 @@ function drawBalloon(ctx: CanvasRenderingContext2D, c: Customer, x: number, y: n
     });
   }
   bar(ctx, bx, y - 26, w, 4, c.patience / c.patienceMax, c.patience / c.patienceMax > 0.4 ? PAL.green : PAL.red);
+  const t = ticketOf(st, c.id);
+  if (t) drawOwnerPlate(ctx, t, x, y - 37, ui.flash?.ticketId === t.id && Math.floor(ui.clock * 6) % 2 === 0); // placa com o número da comanda (RN-185)
 }
 
 function drawTacho(ctx: CanvasRenderingContext2D, st: DayState, ui: UiState, z: Zone, index: number): void {
@@ -258,7 +262,7 @@ function drawTables(ctx: CanvasRenderingContext2D, st: DayState, z: Zone, ui: Ui
     });
     const first = seatSpot(z, g.table, g.seats[0]);
     if (c.place === 'comendo') bar(ctx, first.x - 10, first.y - 46, 40, 4, 1 - c.timer / 25, PAL.gold);
-    else if (c.place === 'mesa') drawBalloon(ctx, c, first.x + 14, first.y - 30);
+    else if (c.place === 'mesa') drawBalloon(ctx, st, ui, c, first.x + 14, first.y - 30);
   }
 }
 
@@ -324,17 +328,18 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   queueOf(st).forEach((c, i) => {
     const p = queueSpot(layout, i);
     drawCliente(ctx, aparenciaDe(st.seed, c.id), c.patience < c.patienceMax * 0.3 ? 'bravo' : 'parado', p.x, p.y, { flip: true, ribbon: PROFILE_COLOR[c.profile] });
-    drawBalloon(ctx, c, p.x, p.y - 38);
+    drawBalloon(ctx, st, ui, c, p.x, p.y - 38);
   });
 
   // balcão: prontos, copos e moedas
   const bal = layout.byId.get('balcao');
   if (bal) {
     drawWarmer(ctx, st, bal, ui);
-    st.ready.filter((r) => !r.warmed).slice(0, 10).forEach((r, i) => {
+    // prontos, copos e moedas numa fileira só, abaixo do trilho de comandas (RN-181)
+    st.ready.filter((r) => !r.warmed).slice(0, 6).forEach((r, i) => {
       const q = currentQuality(r, now(st));
-      const x = bal.x + 8 + (i % 5) * 28;
-      const y = bal.y + 26 + Math.floor(i / 5) * 22;
+      const x = bal.x + 8 + i * 24;
+      const y = bal.y + 54;
       if (!drawPastelFlavor(ctx, r.item, q >= 50 ? 'ponto' : 'passado', x, y, 22, 14)) {
         ctx.fillStyle = itemColor(r.item);
         ctx.fillRect(x, y, 22, 14);
@@ -345,16 +350,17 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
         ctx.strokeRect(x - 1.5, y - 1.5, 25, 17);
       }
     });
-    st.cups.slice(0, 6).forEach((c, i) => {
-      if (drawPastel(ctx, c.item, 'ponto', bal.x + 150 + i * 12, bal.y + 28, 10, 14)) return;
+    st.cups.slice(0, 4).forEach((c, i) => {
+      if (drawPastel(ctx, c.item, 'ponto', bal.x + 160 + i * 12, bal.y + 54, 10, 14)) return;
       ctx.fillStyle = itemColor(c.item);
-      ctx.fillRect(bal.x + 150 + i * 12, bal.y + 28, 10, 14);
+      ctx.fillRect(bal.x + 160 + i * 12, bal.y + 54, 10, 14);
     });
-    st.coins.slice(0, 6).forEach((_c, i) => {
-      if (drawArt(ctx, 'itens/moeda', bal.x + bal.w - 22 - i * 12, bal.y + 52)) return;
+    st.coins.slice(0, 3).forEach((_c, i) => {
+      if (drawArt(ctx, 'itens/moeda', bal.x + bal.w - 22 - i * 12, bal.y + 56)) return;
       ctx.fillStyle = PAL.gold;
-      ctx.fillRect(bal.x + bal.w - 22 - i * 12, bal.y + 52, 10, 10);
+      ctx.fillRect(bal.x + bal.w - 22 - i * 12, bal.y + 56, 10, 10);
     });
+    drawRail(ctx, layout, st, ui, 'balcao');
   }
 
   // bancada

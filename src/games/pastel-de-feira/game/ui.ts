@@ -22,6 +22,8 @@ export interface UiState {
   gesture: number;
   /** Relógio de animação em segundos (não pausa a UI). */
   clock: number;
+  /** Placa do dono piscando depois de tocar na comanda sem seleção (RN-185). */
+  flash: { ticketId: number; left: number } | null;
 }
 
 export const createUi = (): UiState => ({
@@ -35,6 +37,7 @@ export const createUi = (): UiState => ({
   keyboard: false,
   gesture: 0,
   clock: 0,
+  flash: null,
 });
 
 /** Painel recolhe depois de 4 s sem interação (D-05). */
