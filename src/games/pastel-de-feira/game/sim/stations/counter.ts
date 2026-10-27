@@ -10,10 +10,12 @@ import { currentQuality, drinkValue, pastryValue, roundCents } from '../quality'
 import { recordFailure, recordSuccess } from '../reputation';
 import { collectPayment } from './tables';
 import { emit, newId, now, type Customer, type DayState, type OrderLine, type Worker } from '../state';
+import { dropTicket, ticketForCustomer, ticketOf } from '../tickets';
 
 /** Anota um cliente (RN-42). Quem anota com o curso de Atendimento deixa o cliente mais paciente (RN-118). */
 export function noteOrder(s: DayState, c: Customer, by?: Worker): void {
   c.state = 'anotado';
+  ticketForCustomer(s, c); // o pedido vira a comanda #N no trilho do balcão (RN-180)
   if (by?.courses.includes('atendimento')) {
     c.patience += c.patienceMax * PATIENCE_COURSE_BONUS;
     c.patienceMax *= 1 + PATIENCE_COURSE_BONUS;
@@ -120,6 +122,11 @@ export function deliverItem(s: DayState, ref: ItemRef, customerId: number, by?: 
     if (s.dirt >= DIRT_FAIL_LIMIT) recordFailure(s, DIRT_FAIL_WEIGHT); // entregue com a barraca imunda (RN-133)
     addDirt(s, DIRT_PER_ORDER * (by?.courses.includes('higiene') ? HYGIENE_DIRT_FACTOR : 1)); // RN-131, RN-118
     s.stats.served++;
+    const t = ticketOf(s, c.id);
+    if (t) {
+      dropTicket(s, t); // comanda completa sai do trilho (RN-186)
+      emit(s, 'ticket_entregue', t.id);
+    }
     if (c.group) {
       // o grupo come na mesa e paga depois, no balcão (RN-82, RN-87)
       const i = s.customers.indexOf(c);

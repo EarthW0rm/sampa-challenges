@@ -193,6 +193,7 @@ export class DaySim {
     const s = this.state;
     s.over = true;
     s.customers.length = 0; // quem estava na fila vai embora sem pagar e sem falha
+    s.tickets.length = 0; // comandas abertas somem sem falha (RN-07)
     s.eating.length = 0; // grupos nas mesas e na fila de pagamento também (RN-07)
     s.payQueue.length = 0;
     s.bigOrders.length = 0; // encomenda pendente às 14h se perde sem multa nem falha (RN-07)

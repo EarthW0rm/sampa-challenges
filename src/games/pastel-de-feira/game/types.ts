@@ -212,6 +212,11 @@ export type SimEventType =
   | 'cobrou'
   | 'paciencia_esgotou'
   | 'troca_sabor'
+  | 'ticket_criada'
+  | 'ticket_preenchida'
+  | 'ticket_recusou'
+  | 'ticket_entregue'
+  | 'ticket_cancelada'
   | 'corte_seco';
 
 export interface SimEvent {

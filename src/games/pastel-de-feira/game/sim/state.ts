@@ -199,6 +199,30 @@ export interface Motoboy {
   waitLeft: number;
 }
 
+/** Tipo da comanda: define o prefixo do número, o trilho e a saída (RN-180, RN-181). */
+export type TicketKind = 'balcao' | 'mesa' | 'app' | 'encomenda';
+
+/** Trilho onde a comanda fica pendurada (RN-181). */
+export type Track = 'balcao' | 'expedicao';
+
+/**
+ * Comanda: todo pedido vira uma, no momento em que entra (RN-180). Nas comandas de cliente e de mesa,
+ * `slots` é o próprio `Customer.lines` (mesmos objetos), então a troca por esgotamento (RN-35) e o balão
+ * enxergam a mesma coisa.
+ */
+export interface Ticket {
+  id: number;
+  /** Número visível, sequencial no dia a partir de 1. */
+  num: number;
+  kind: TicketKind;
+  track: Track;
+  /** Cliente ou grupo dono (balcão e mesa); null no app e na encomenda até o dono chegar. */
+  owner: number | null;
+  /** Instante da entrada do pedido: ordena a lista de produção (RN-187). */
+  enteredAt: number;
+  slots: OrderLine[];
+}
+
 /** Encomenda em andamento no dia (RN-102, RN-104). */
 export interface BigOrder {
   id: number;
@@ -290,6 +314,10 @@ export interface DayState {
   stock: StockLot[];
   consumables: Record<ConsumableId, number>;
   customers: Customer[];
+  /** Comandas abertas nos trilhos, da mais antiga para a mais nova (RN-180). */
+  tickets: Ticket[];
+  /** Próximo número visível de comanda (RN-180). */
+  nextTicketNum: number;
   /** Grupos que já receberam o pedido e estão comendo. */
   bigOrders: BigOrder[];
   offers: AppOffer[];
@@ -347,6 +375,8 @@ export function createState(config: DayConfig, seed: number): DayState {
     stock: config.stock.map((l) => ({ ...l })),
     consumables: { ...config.consumables },
     customers: [],
+    tickets: [],
+    nextTicketNum: 1,
     bigOrders: config.orders.map((o) => ({ ...o, boxed: [], state: 'pendente' as const, waitLeft: 0 })),
     offers: [],
     comandas: [],

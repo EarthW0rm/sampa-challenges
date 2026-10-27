@@ -15,6 +15,7 @@ import { FORECAST } from '../data/events';
 import { drawGroupSize, findTable, occupySeats, releaseSeats, waiterPresent } from './stations/tables';
 import { canMake, unitsMakeable } from './stock';
 import { emit, newId, now, type Customer, type DayState } from './state';
+import { cancelTicket, ticketOf } from './tickets';
 
 const EPS = 1e-9;
 const clamp01 = (x: number): number => Math.max(0, Math.min(1, x));
@@ -151,6 +152,8 @@ export function addCustomer(s: DayState, profile: Profile, items: readonly ItemI
 export function removeCustomer(s: DayState, c: Customer): void {
   const i = s.customers.indexOf(c);
   if (i >= 0) s.customers.splice(i, 1);
+  const t = ticketOf(s, c.id);
+  if (t) cancelTicket(s, t); // saiu antes de receber tudo: a comanda é cancelada (RN-06)
   if (c.place === 'fila' || c.place === 'mesa') releaseSeats(s, c, 'livre'); // quem desiste antes de comer deixa os lugares limpos
 }
 
