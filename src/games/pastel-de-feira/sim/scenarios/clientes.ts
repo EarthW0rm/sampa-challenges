@@ -1,3 +1,4 @@
+import { noteOrder } from '../../game/sim/stations/counter';
 import { DAY_TICKS, PATIENCE, QUEUE_CALM_MIN, STEP, hourAt } from '../../game/constants';
 import { devConfig } from '../testConfig';
 import {
@@ -99,7 +100,7 @@ export const clientes: Scenario[] = [
         sim.state.arrivalLeft = 1e9;
         const c = addCustomer(sim.state, profile, ['carne']);
         checkEq(c.patience, PATIENCE[profile], `${profile}: paciência base`);
-        c.state = 'anotado';
+        noteOrder(sim.state, c);
         advance(sim, Math.round((PATIENCE[profile] - 1) / STEP));
         check(sim.state.customers.includes(c), `${profile} ainda espera 1 s antes do fim`);
         advance(sim, Math.round(2 / STEP));
@@ -118,7 +119,7 @@ export const clientes: Scenario[] = [
       const first = addCustomer(sim.state, 'padrao', ['carne']);
       const second = addCustomer(sim.state, 'padrao', ['carne']);
       const third = addCustomer(sim.state, 'padrao', ['carne']);
-      for (const c of [first, second, third]) c.state = 'anotado'; // a paciência só conta depois de anotar (RN-06)
+      for (const c of [first, second, third]) noteOrder(sim.state, c); // a paciência só conta depois de anotar (RN-06)
       advance(sim, Math.round(10 / STEP));
       checkNear(first.patience, PATIENCE.padrao - 10, 'primeiro: ritmo normal', 0.05);
       checkNear(second.patience, PATIENCE.padrao - 10 * queueCalm(1), 'segundo: mais calmo', 0.05);

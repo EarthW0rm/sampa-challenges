@@ -6,6 +6,8 @@ import { devConfig } from '../testConfig';
 import { advance, check, checkEq, checkNear, fillCmd, makeSim, type Scenario } from '../harness';
 import type { DaySim } from '../../game/sim/day';
 import type { Command } from '../../game/types';
+import { unmet } from '../../game/sim/production';
+import { crewSim, member } from './posicoes';
 
 /** Sem chegadas aleatórias: o cenário controla os clientes. */
 const quiet = (seed: number, config = devConfig()) => {
@@ -209,6 +211,51 @@ export const comandas: Scenario[] = [
       const filled = ticketOf(s, c.id)!.slots[0].filled as { warmed?: boolean };
       checkEq(filled.warmed, false, 'na comanda o pastel não está mais na estufa');
       checkEq(s.ready.filter((r) => r.warmed).length, 0, 'a vaga da estufa liberou');
+    },
+  },
+  {
+    id: 'rn187-lista-segue-a-ordem-de-entrada',
+    rules: 'RN-187',
+    run(seed) {
+      const sim = quiet(seed);
+      const s = sim.state;
+      const a = addCustomer(s, 'padrao', ['carne']);
+      const b = addCustomer(s, 'padrao', ['queijo']);
+      noteOrder(s, b); // o segundo da fila é anotado antes
+      advance(sim, 1);
+      noteOrder(s, a);
+      checkEq(unmet(s, false).join(','), 'queijo,carne', 'quem entrou antes vem primeiro, não quem está na frente da fila');
+      s.ready.push({ id: 900, item: 'queijo', quality: 80, readyAt: s.tick * STEP });
+      checkEq(unmet(s, false).join(','), 'carne', 'pronto sem comanda desconta o item');
+    },
+  },
+  {
+    id: 'rn187-encomenda-entra-as-7h-sem-prioridade',
+    rules: 'RN-187, CE-21',
+    run(seed) {
+      const sim = makeSim(seed, devConfig({ orders: [{ id: 1, item: 'queijo', qty: 2, pickupAt: 4 * 3600, pay: 30, fine: 15 }] }));
+      const s = sim.state;
+      s.arrivalLeft = 1e9;
+      s.offerLeft = 1e9;
+      advance(sim, 10);
+      noteOrder(s, addCustomer(s, 'padrao', ['carne']));
+      checkEq(unmet(s, false).join(','), 'queijo,queijo,carne', 'a encomenda entrou às 7h, antes do cliente');
+    },
+  },
+  {
+    id: 'rn187-montagem-produz-na-ordem-da-lista',
+    rules: 'RN-187, RN-40',
+    run(seed) {
+      const sim = crewSim(seed, [member('geral', { mode: 'fixo', position: 'montagem1' })]);
+      const s = sim.state;
+      sim.step();
+      const a = addCustomer(s, 'padrao', ['carne']);
+      const b = addCustomer(s, 'padrao', ['queijo']);
+      noteOrder(s, b);
+      advance(sim, 1);
+      noteOrder(s, a);
+      for (let i = 0; i < 600 && s.assembled.length === 0; i++) sim.step();
+      checkEq(s.assembled[0]?.item, 'queijo', 'a Montagem monta primeiro o pedido que entrou primeiro');
     },
   },
 ];

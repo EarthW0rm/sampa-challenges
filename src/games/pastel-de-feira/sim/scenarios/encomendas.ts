@@ -6,7 +6,7 @@ import { cloneCampaign, newCampaign, toDayConfig } from '../../game/campaign/cam
 import { closeDay } from '../../game/campaign/closing';
 import { isCampaign } from '../../game/campaign/save';
 import type { ActionResult, Campaign } from '../../game/campaign/types';
-import { unmetItems } from '../../game/sim/demand';
+import { unmet } from '../../game/sim/production';
 import { boxPastry } from '../../game/sim/orders';
 import { currentQuality } from '../../game/sim/quality';
 import { warmedCount } from '../../game/sim/stations/warmer';
@@ -137,9 +137,9 @@ export const encomendas: Scenario[] = [
     rules: 'RN-102',
     run(seed) {
       const sim = orderSim(seed, order({ qty: 12 }));
-      checkEq(unmetItems(sim.state, false).length, 12, 'os 12 pastéis precisam ser produzidos');
+      checkEq(unmet(sim.state, false).length, 12, 'os 12 pastéis precisam ser produzidos');
       boxN(sim, 5);
-      checkEq(unmetItems(sim.state, false).length, 7, 'os encaixotados já contam');
+      checkEq(unmet(sim.state, false).length, 7, 'os encaixotados já contam');
     },
   },
   {

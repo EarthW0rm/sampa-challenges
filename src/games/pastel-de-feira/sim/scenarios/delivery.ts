@@ -1,6 +1,6 @@
 import { STEP } from '../../game/constants';
 import { acceptOffer, dailyCap, packPastry } from '../../game/sim/delivery';
-import { unmetItems } from '../../game/sim/demand';
+import { unmet } from '../../game/sim/production';
 import type { DaySim } from '../../game/sim/day';
 import type { DayConfig } from '../../game/types';
 import { advance, check, checkEq, checkNear, makeSim, type Scenario } from '../harness';
@@ -240,10 +240,10 @@ export const delivery: Scenario[] = [
     run(seed) {
       const sim = appSim(seed);
       accept(sim, ['carne', 'queijo']);
-      checkEq(unmetItems(sim.state, false).join(','), 'carne,queijo', 'itens da comanda precisam ser produzidos');
+      checkEq(unmet(sim.state, false).join(','), 'carne,queijo', 'itens da comanda precisam ser produzidos');
       ready(sim, 1, 'carne');
       packPastry(sim.state, 1);
-      checkEq(unmetItems(sim.state, false).join(','), 'queijo', 'o reservado já cobre o seu item');
+      checkEq(unmet(sim.state, false).join(','), 'queijo', 'o reservado já cobre o seu item');
     },
   },
   {

@@ -1,3 +1,4 @@
+import { noteOrder } from '../../game/sim/stations/counter';
 import { STEP } from '../../game/constants';
 import { buyEquipment, buyTachoUpgrade } from '../../game/campaign/actions/upgrades';
 import { addCustomer } from '../../game/sim/customers';
@@ -119,7 +120,7 @@ export const automacao: Scenario[] = [
       advance(sim, secs(3));
       checkEq(sim.state.cups.length, 0, 'sem pedido de caldo, não faz');
       const c = addCustomer(sim.state, 'padrao', ['caldo-puro']);
-      c.state = 'anotado';
+      noteOrder(sim.state, c);
       advance(sim, secs(2.7));
       checkEq(sim.state.cups.length, 0, 'extração leva 2,5 s + 0,3 s do chorinho');
       advance(sim, secs(0.3));
@@ -138,7 +139,7 @@ export const automacao: Scenario[] = [
       sim.state.pasteleiro.at = 'escritorio';
       sim.step();
       const c = addCustomer(sim.state, 'padrao', ['caldo-puro']);
-      c.state = 'anotado';
+      noteOrder(sim.state, c);
       advance(sim, 2);
       checkEq(sim.state.workers[0].task, null, 'com a moenda automática ativa o funcionário da Moenda não soma (RN-161)');
       advance(sim, secs(4));
@@ -148,7 +149,7 @@ export const automacao: Scenario[] = [
       sem.state.pasteleiro.at = 'escritorio';
       sem.step();
       const d = addCustomer(sem.state, 'padrao', ['caldo-puro']);
-      d.state = 'anotado';
+      noteOrder(sem.state, d);
       sem.state.world.powerLeft = 20;
       advance(sem, 2);
       check(sem.state.workers[0].task !== null, 'sem energia a automação para e o funcionário volta a trabalhar');

@@ -1,3 +1,4 @@
+import { noteOrder } from '../../game/sim/stations/counter';
 import { STEP } from '../../game/constants';
 import { buyIngredient } from '../../game/campaign/actions/inventory';
 import { chooseTheme, setPromo } from '../../game/campaign/actions/menu';
@@ -69,7 +70,7 @@ export const xepaTema: Scenario[] = [
       const pago = makeSim(1, tableConfig(0, { promo: { brindeN: 0, chorinho: 0, xepa: true, xepaDiscount: 0.5 }, menu: [{ item: 'carne', price: 8 }] }));
       pago.state.tick = secs(atHour(13.5));
       const c = addCustomer(pago.state, 'padrao', ['carne']);
-      c.state = 'anotado';
+      noteOrder(pago.state, c);
       pago.state.ready.push({ id: 1, item: 'carne', quality: 80, readyAt: pago.state.tick * STEP });
       serve(pago.state, { kind: 'pastel', id: 1 }, c.id);
       checkNear(c.owed, 4 * (0.8 + 0.4 * 0.8), 'paga o preço de xepa');

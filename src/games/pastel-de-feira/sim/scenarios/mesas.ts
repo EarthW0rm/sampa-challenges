@@ -1,3 +1,4 @@
+import { noteOrder } from '../../game/sim/stations/counter';
 import { STEP } from '../../game/constants';
 import { Rng } from '../../game/rng';
 import { spawnCustomer } from '../../game/sim/customers';
@@ -46,7 +47,7 @@ const resetRoom = (s: DayState) => {
 
 /** Entrega ao grupo, um a um, os itens do pedido já prontos (qualidade boa). */
 export function feedGroup(s: DayState, c: Customer): void {
-  c.state = 'anotado';
+  noteOrder(s, c);
   for (const line of c.lines) {
     const id = 9000 + s.nextId++;
     if (line.item === 'caldo-puro') s.cups.push({ id, item: line.item });
@@ -187,7 +188,7 @@ export const mesas: Scenario[] = [
         c = s.customers.find((x) => x.group);
       }
       check(c !== undefined && c.lines.length >= 2, 'grupo com 2+ itens');
-      c!.state = 'anotado';
+      noteOrder(s, c!);
       const first = c!.lines[0].item;
       const id = 7000;
       if (first === 'caldo-puro') s.cups.push({ id, item: first });

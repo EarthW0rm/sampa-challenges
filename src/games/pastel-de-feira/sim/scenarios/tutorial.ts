@@ -1,3 +1,4 @@
+import { noteOrder } from '../../game/sim/stations/counter';
 import { STEP } from '../../game/constants';
 import { devConfig } from '../testConfig';
 import { Tutorial } from '../../game/tutorial';
@@ -162,7 +163,7 @@ export const tutorial: Scenario[] = [
       crew.setHold(true);
       checkEq(crew.state.hold, false, 'com equipe: o relógio segue');
       const c = addCustomer(crew.state, 'padrao', ['carne']);
-      c.state = 'anotado';
+      noteOrder(crew.state, c);
       advance(crew, Math.round(3 / STEP));
       check(crew.state.assembled.length + crew.state.tachos[0].baskets.filter((b) => b.frying).length >= 1, 'a Montagem monta o pedido anotado durante o tutorial');
     },

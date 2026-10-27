@@ -19,7 +19,7 @@ import { fatigueFactor, ignite, maybeBurnWorker, canSurprise } from './world';
 import { emit, now, type Customer, type DayState, type Worker, type WorkerTask } from './state';
 import { canMake } from './stock';
 import { BENCH_CAPACITY, OIL_DIRTY_THRESHOLD } from '../constants';
-import { unmetItems } from './demand';
+import { unmet } from './production';
 
 const EPS = 1e-9;
 
@@ -294,7 +294,7 @@ const pickPlaceAny = (s: DayState, w: Worker): boolean => s.tachos.some((_, i) =
 function pickAssemble(s: DayState, w: Worker): boolean {
   if (s.assembled.length >= BENCH_CAPACITY) return false;
   const inProgress = s.workers.filter((o) => o.task?.kind === 'montar').map((o) => o.task!.item as ItemId);
-  const want = unmetItems(s, false, inProgress).find((id) => canMake(s, ITEMS[id]));
+  const want = unmet(s, false, inProgress).find((id) => canMake(s, ITEMS[id]));
   if (!want) return false;
   const item = ITEMS[want];
   start(w, s, { kind: 'montar', item: want }, WORK.assembleBase + WORK.assemblePerStep * item.steps);
@@ -304,7 +304,7 @@ function pickAssemble(s: DayState, w: Worker): boolean {
 function pickCaldo(s: DayState, w: Worker): boolean {
   if (autoMillActive(s)) return false; // moenda automática: o funcionário não soma (RN-161)
   const inProgress = s.workers.filter((o) => o.task?.kind === 'caldo').map((o) => o.task!.item as ItemId);
-  const want = unmetItems(s, true, inProgress).find((id) => canMake(s, ITEMS[id]));
+  const want = unmet(s, true, inProgress).find((id) => canMake(s, ITEMS[id]));
   if (!want) return false;
   start(w, s, { kind: 'caldo', item: want }, millSeconds(s) + WORK.drinkExtra);
   return true;

@@ -1,3 +1,4 @@
+import { noteOrder } from '../../game/sim/stations/counter';
 /**
  * Combinações das regras novas entre si e com as antigas: paciência a partir do pedido anotado (RN-06),
  * Fritador e Montagem por tacho (RN-40, RN-44), cesto avulso (RN-73), opções da campanha (RN-55a) e save v2.
@@ -80,7 +81,7 @@ export const combinacoes: Scenario[] = [
       advance(sim, secs(120));
       check(s.customers.includes(g), 'o grupo não desiste antes de anotado');
       checkEq(g.patience, g.patienceMax, 'paciência intacta na mesa');
-      g.state = 'anotado';
+      noteOrder(s, g);
       advance(sim, secs(10));
       check(g.patience < g.patienceMax, 'depois de anotado, a paciência do grupo corre');
     },

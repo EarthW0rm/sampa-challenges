@@ -1,6 +1,6 @@
 import { STEP } from '../game/constants';
 import { ITEMS, type ItemId } from '../game/data/recipes';
-import { unmetItems } from '../game/sim/demand';
+import { unmet } from '../game/sim/production';
 import type { DaySim } from '../game/sim/day';
 import { fryOutcome, fryWindow, isChanging, isDirty, isLocked, nextFreeBasket } from '../game/sim/stations/fryer';
 import type { DayState } from '../game/sim/state';
@@ -56,7 +56,7 @@ export class Player {
     const hold = s.pasteleiro.hold;
     if (hold?.action === 'moenda') {
       // um copo por vez: solta para entregar e voltar a moer se ainda faltar
-      if (s.cups.length > 0 || unmetItems(s, true).length === 0 || burnIn(s) < 0.8) sim.dispatch({ type: 'holdEnd' });
+      if (s.cups.length > 0 || unmet(s, true).length === 0 || burnIn(s) < 0.8) sim.dispatch({ type: 'holdEnd' });
       return;
     }
     if (hold?.action === 'limpar') {
@@ -120,13 +120,13 @@ export class Player {
       }
     }
     // 7) montar o que falta
-    const missing = unmetItems(s, false);
+    const missing = unmet(s, false);
     if (missing.length > 0 && s.assembled.length < 4) {
       const cmd = this.assemble(s, missing[0]);
       if (cmd) return cmd;
     }
     // 8) caldo
-    if (unmetItems(s, true).length > 0 && s.config.stations.includes('moenda') && burnIn(s) > 6.5) {
+    if (unmet(s, true).length > 0 && s.config.stations.includes('moenda') && burnIn(s) > 6.5) {
       return s.pasteleiro.at === 'moenda'
         ? { type: 'holdStart', station: 'moenda', action: 'moenda' }
         : { type: 'tapStation', station: 'moenda' };

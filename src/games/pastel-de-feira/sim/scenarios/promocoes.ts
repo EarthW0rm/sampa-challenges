@@ -1,3 +1,4 @@
+import { noteOrder } from '../../game/sim/stations/counter';
 import { CHARM_GIFT, STEP } from '../../game/constants';
 import { giftFor, spawnCustomer, addCustomer } from '../../game/sim/customers';
 import { stockQty } from '../../game/sim/stock';
@@ -60,7 +61,7 @@ export const promocoes: Scenario[] = [
       check(c !== undefined, 'pedido com brinde');
       const gifts = c!.lines.filter((l) => l.gift).length;
       checkEq(gifts, 1, 'um brinde');
-      c!.state = 'anotado';
+      noteOrder(s, c!);
       let id = 100;
       const paid = c!.lines.filter((l) => !l.gift);
       for (const l of paid) {
@@ -124,7 +125,7 @@ export const promocoes: Scenario[] = [
       checkNear(9999 - stockQty(s, 'cana'), 1.3, 'consome 1,3 dose de cana por copo', 1e-6);
       // encanto na entrega: +0,1 por nível
       const c = addCustomer(s, 'padrao', ['caldo-puro']);
-      c.state = 'anotado';
+      noteOrder(s, c);
       serve(s, { kind: 'copo', id: s.cups[0].id }, c.id);
       checkNear(s.rep.charm, 0.3, 'chorinho 3: +0,3 de encanto');
     },
