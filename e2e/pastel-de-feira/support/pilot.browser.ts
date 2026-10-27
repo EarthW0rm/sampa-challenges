@@ -145,8 +145,9 @@ function plan(cmd: Command): Step[] {
           return { kind: 'up', why: 'soltar' };
         },
       ];
-    case 'deliver': {
+    case 'fill': {
       const ref = cmd.item;
+      const owner = (): number | null => hook().sim.state.tickets.find((t) => t.id === cmd.ticketId)?.owner ?? null;
       return [
         ...openPanel('balcao'),
         () => {
@@ -161,9 +162,10 @@ function plan(cmd: Command): Step[] {
           return { kind: 'tap', ...center(ctl), why: `escolher ${ref.kind} ${ref.id}` };
         },
         () => {
-          const q = hook().queue().find((c) => c.id === cmd.customerId);
-          if (!q) return miss(`cliente ${cmd.customerId} fora da fila`);
-          return { kind: 'tap', x: q.x, y: q.y - 20, why: `entregar ao cliente ${cmd.customerId}` };
+          const id = owner();
+          const q = hook().queue().find((c) => c.id === id);
+          if (!q) return miss(`dono da comanda ${cmd.ticketId} fora da fila`);
+          return { kind: 'tap', x: q.x, y: q.y - 20, why: `pôr na comanda do cliente ${id}` };
         },
       ];
     }

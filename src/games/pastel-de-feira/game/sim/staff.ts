@@ -4,7 +4,8 @@ import { MANAGEMENT_SPEED, MANAGER_SPEED } from '../data/office';
 import { AUTO_PRIORITY, ATTENDANCE_FACTOR, CARE_BONUS, ENERGY, FRYER_ONLY, FRY_COURSE_BONUS, OIL_COURSE_FACTOR, RAPID_FACTOR, RESISTANT_FATIGUE, WORK, WRONG_FLAVOR_CHANCE, type PositionId } from '../data/staff';
 import { ITEMS, type ItemId } from '../data/recipes';
 import type { ItemRef, StationId } from '../types';
-import { lineMatches, deliverItem, noteOrder, takeCoins } from './stations/counter';
+import { noteOrder, takeCoins } from './stations/counter';
+import { fill, slotFor, ticketOf } from './tickets';
 import { chargeGroup } from './stations/tables';
 import { packPastry } from './delivery';
 import { autoMillActive, cardMachineActive, timerActive } from './automation';
@@ -201,15 +202,14 @@ function start(w: Worker, s: DayState, task: Omit<WorkerTask, 'total' | 'left'>,
 function bestFor(s: DayState, c: Customer): ItemRef | null {
   let pastry: { id: number; q: number } | null = null;
   let cup: number | null = null;
-  for (const line of c.lines) {
-    if (line.delivered !== null) continue;
-    for (const r of s.ready) {
-      if (r.reservedFor !== undefined || !lineMatches(c, line, r.item)) continue;
-      const q = currentQuality(r, now(s));
-      if (!pastry || q > pastry.q) pastry = { id: r.id, q };
-    }
-    for (const x of s.cups) if (cup === null && lineMatches(c, line, x.item)) cup = x.id;
+  const t = ticketOf(s, c.id);
+  if (!t) return null;
+  for (const r of s.ready) {
+    if (r.reservedFor !== undefined || slotFor(s, t, r.item) < 0) continue;
+    const q = currentQuality(r, now(s));
+    if (!pastry || q > pastry.q) pastry = { id: r.id, q };
   }
+  for (const x of s.cups) if (cup === null && slotFor(s, t, x.item) >= 0) cup = x.id;
   if (pastry) return { kind: 'pastel', id: pastry.id };
   return cup !== null ? { kind: 'copo', id: cup } : null;
 }
@@ -400,7 +400,10 @@ function complete(s: DayState, w: Worker, t: WorkerTask): void {
       addDirt(s, -HELPER_CLEAN_POINTS);
       break;
     case 'entregar':
-      if (t.customerId !== undefined && t.ref) deliverItem(s, t.ref, t.customerId, w);
+      if (t.customerId !== undefined && t.ref) {
+        const ticket = ticketOf(s, t.customerId);
+        if (ticket) fill(s, ticket, t.ref, w);
+      }
       break;
     case 'montar': {
       assembleItem(s, flavorFor(s, w, t.item!), w.traits.includes('caprichoso') ? CARE_BONUS : 0);

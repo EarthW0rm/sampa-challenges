@@ -6,9 +6,10 @@ import { isAt, tapStation } from './pasteleiro';
 import { sendToRest } from './staff';
 import { addIngredient, clearTray, closeAssembly, selectAssembled } from './stations/bench';
 import { startMill, stopMill } from './stations/cane';
-import { chargeNextGroup, collectCoins, deliver, takeOrder, takeTableOrder } from './stations/counter';
+import { chargeNextGroup, collectCoins, takeOrder, takeTableOrder } from './stations/counter';
 import { cancelOilChange, startOilChange, tapBasket } from './stations/fryer';
 import type { DayState } from './state';
+import { fill, freeItem } from './tickets';
 
 /** Aplica um comando do jogador. Devolve false se ele não vale no estado atual (vira `rejected`). */
 export function applyCommand(s: DayState, cmd: Command): boolean {
@@ -58,8 +59,15 @@ export function applyCommand(s: DayState, cmd: Command): boolean {
       return acceptOffer(s, cmd.offerId);
     case 'sendRest':
       return sendToRest(s, cmd.staffId);
-    case 'deliver':
-      return deliver(s, cmd.item, cmd.customerId);
+    case 'fill': {
+      // pôr na comanda: só quem está na estação do trilho (RN-183)
+      const t = s.tickets.find((x) => x.id === cmd.ticketId);
+      if (!t) return false;
+      const here = t.track === 'expedicao' ? isAt(s, 'expedicao') : isAt(s, 'balcao') || (t.kind === 'mesa' && isAt(s, 'mesas'));
+      if (!here || !freeItem(s, cmd.item)) return false;
+      fill(s, t, cmd.item);
+      return true; // recusa por sabor vale como gesto feito, sem custo (RN-182)
+    }
     default:
       return false;
   }

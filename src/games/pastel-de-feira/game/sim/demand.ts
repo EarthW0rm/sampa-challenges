@@ -6,7 +6,7 @@ export function pendingLines(s: DayState, drinks: boolean): { c: Customer; item:
   const out: { c: Customer; item: ItemId }[] = [];
   for (const c of s.customers) {
     if (c.state !== 'anotado') continue;
-    for (const line of c.lines) if (line.delivered === null && (ITEMS[line.item].kind === 'bebida') === drinks) out.push({ c, item: line.item });
+    for (const line of c.lines) if (line.filled === null && (ITEMS[line.item].kind === 'bebida') === drinks) out.push({ c, item: line.item });
   }
   return out;
 }

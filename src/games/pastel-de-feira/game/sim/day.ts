@@ -49,8 +49,8 @@ function isCommand(v: unknown): v is Command {
       return typeof v.staffId === 'number';
     case 'acceptOffer':
       return typeof v.offerId === 'number';
-    case 'deliver':
-      return isObject(v.item) && typeof v.item.id === 'number' && typeof v.customerId === 'number';
+    case 'fill':
+      return isObject(v.item) && typeof v.item.id === 'number' && (v.item.kind === 'pastel' || v.item.kind === 'copo') && typeof v.ticketId === 'number';
     default:
       return false;
   }

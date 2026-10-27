@@ -135,7 +135,7 @@ async function serveSteps(game: GamePage, id: number): Promise<void> {
     if (st === 'anotado') break;
     await game.tapControl('ANOTAR');
   }
-  const items = await game.hook((pf, cid) => pf.sim.state.customers.find((k) => k.id === cid)!.lines.filter((l) => l.delivered === null).map((l) => l.item), id);
+  const items = await game.hook((pf, cid) => pf.sim.state.customers.find((k) => k.id === cid)!.lines.filter((l) => l.filled === null).map((l) => l.item), id);
   for (const item of items) {
     if (isDrink(item)) {
       const before = await game.hook((pf) => pf.sim.state.cups.map((x) => x.id));

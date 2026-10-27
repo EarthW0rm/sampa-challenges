@@ -154,8 +154,8 @@ function drawBalloon(ctx: CanvasRenderingContext2D, c: Customer, x: number, y: n
     c.lines.forEach((l, i) => {
       const sx = bx + 4 + i * 14;
       // o selo mostra o sabor pela forma; sem arte, o quadrado de cor
-      if (!drawFlavor(ctx, l.item, sx, y - 18)) box(ctx, { x: sx, y: y - 17, w: 10, h: 10 }, l.delivered ? '#d9b27a' : itemColor(l.item), PAL.ink);
-      else if (l.delivered) {
+      if (!drawFlavor(ctx, l.item, sx, y - 18)) box(ctx, { x: sx, y: y - 17, w: 10, h: 10 }, l.filled ? '#d9b27a' : itemColor(l.item), PAL.ink);
+      else if (l.filled) {
         ctx.fillStyle = 'rgba(251,246,232,0.6)'; // entregue: véu claro e um visto
         ctx.fillRect(sx, y - 18, 12, 12);
         ctx.fillStyle = PAL.green;

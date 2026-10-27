@@ -3,13 +3,24 @@ import { addCustomer } from '../../game/sim/customers';
 import { noteOrder } from '../../game/sim/stations/counter';
 import { ticketLabel, ticketOf } from '../../game/sim/tickets';
 import { devConfig } from '../testConfig';
-import { advance, check, checkEq, makeSim, type Scenario } from '../harness';
+import { advance, check, checkEq, checkNear, fillCmd, makeSim, type Scenario } from '../harness';
+import type { DaySim } from '../../game/sim/day';
+import type { Command } from '../../game/types';
 
 /** Sem chegadas aleatórias: o cenário controla os clientes. */
 const quiet = (seed: number, config = devConfig()) => {
   const sim = makeSim(seed, config);
   sim.state.arrivalLeft = 1e9;
   return sim;
+};
+
+const slot = (sim: DaySim, station: 'balcao' | 'mesas', k: 'anotar') => {
+  sim.dispatch({ type: 'tapSlot', station, slot: { k } } as Command);
+  sim.step();
+};
+const send = (sim: DaySim, cmd: Command) => {
+  sim.dispatch(cmd);
+  sim.step();
 };
 
 export const comandas: Scenario[] = [
@@ -44,7 +55,7 @@ export const comandas: Scenario[] = [
       const sim = quiet(seed, devConfig({ promo: { brindeN: 2, chorinho: 0, xepa: false, xepaDiscount: 0.3 } }));
       const s = sim.state;
       const c = addCustomer(s, 'padrao', ['queijo', 'carne']);
-      c.lines.push({ item: 'queijo', gift: true, delivered: null });
+      c.lines.push({ item: 'queijo', gift: true, filled: null });
       noteOrder(s, c);
       const t = ticketOf(s, c.id)!;
       checkEq(t.slots.length, 3, 'brinde ocupa um item da comanda');
@@ -80,6 +91,124 @@ export const comandas: Scenario[] = [
       check(sim.isOver(), 'o dia terminou');
       checkEq(s.tickets.length, 0, 'nenhuma comanda aberta depois das 14h');
       checkEq(s.rep.failures, failures, 'sem falha no corte seco');
+    },
+  },
+  {
+    id: 'rn186-completa-entrega-sozinha',
+    rules: 'RN-186, RN-182, RN-20',
+    run(seed) {
+      const sim = quiet(seed);
+      const s = sim.state;
+      const c = addCustomer(s, 'padrao', ['carne', 'caldo-puro']);
+      slot(sim, 'balcao', 'anotar');
+      s.ready.push({ id: 1, item: 'carne', quality: 80, readyAt: s.tick * STEP });
+      s.cups.push({ id: 2, item: 'caldo-puro' });
+      send(sim, fillCmd(sim, { kind: 'pastel', id: 1 }, c.id));
+      checkEq(s.ready.length, 0, 'o pastel sai do balcão e entra na comanda');
+      checkEq(s.coins.length, 0, 'comanda incompleta não entrega nada');
+      check(ticketOf(s, c.id)!.slots[0].filled !== null, 'o item fica preenchido na comanda');
+      send(sim, fillCmd(sim, { kind: 'copo', id: 2 }, c.id));
+      checkEq(s.tickets.length, 0, 'comanda completa sai do trilho');
+      checkEq(s.customers.length, 0, 'o cliente recebe tudo e sai');
+      checkEq(s.coins.length, 1, 'uma moeda só, com o pedido inteiro');
+      checkNear(s.coins[0].amount, 7 * (0.8 + 0.4 * 0.8) + 6, 'pastel nota 80 + caldo');
+      checkEq(s.rep.successes, 1, 'sucesso');
+    },
+  },
+  {
+    id: 'rn182-rn63-versao-errada-entra-e-falha',
+    rules: 'RN-182, RN-63',
+    run(seed) {
+      const sim = quiet(seed, devConfig({ menu: [{ item: 'carne+1', price: 9 }, { item: 'carne', price: 7 }, { item: 'queijo', price: 7 }] }));
+      const s = sim.state;
+      const c = addCustomer(s, 'exigente', ['carne+1']);
+      slot(sim, 'balcao', 'anotar');
+      s.ready.push({ id: 1, item: 'carne', quality: 90, readyAt: s.tick * STEP });
+      send(sim, fillCmd(sim, { kind: 'pastel', id: 1 }, c.id));
+      checkEq(s.tickets.length, 0, 'a versão errada entra e completa a comanda');
+      checkEq(s.stats.wrong, 1, 'conta como item errado');
+      checkEq(s.coins.length, 1, 'é pago normalmente');
+      checkNear(s.rep.failures, 1, 'falha de peso 1,0');
+      checkEq(s.rep.successes, 0, 'sem sucesso');
+      // quem não é Exigente aceita outra versão do mesmo sabor sem falha
+      const d = addCustomer(s, 'padrao', ['carne+1']);
+      slot(sim, 'balcao', 'anotar');
+      s.ready.push({ id: 2, item: 'carne', quality: 90, readyAt: s.tick * STEP });
+      send(sim, fillCmd(sim, { kind: 'pastel', id: 2 }, d.id));
+      checkEq(s.rep.successes, 1, 'Padrão aceita a outra versão');
+    },
+  },
+  {
+    id: 'rn186-rn83-comanda-de-mesa-leva-o-grupo-a-comer',
+    rules: 'RN-186, RN-83, RN-82',
+    run(seed) {
+      const sim = makeSim(seed, devConfig({ tables: 1, stations: ['balcao', 'bancada', 'tacho1', 'moenda', 'mesas'], positions: ['balcao', 'montagem1', 'fritador1', 'trocador', 'moenda', 'garcom'] }));
+      const s = sim.state;
+      s.arrivalLeft = 1e9;
+      const c = addCustomer(s, 'padrao', ['queijo']);
+      c.group = { size: 1, table: 0, seats: [0], profiles: ['padrao'] };
+      c.place = 'mesa';
+      c.service = 'mesa';
+      s.tables[0].seats[0] = 'ocupado';
+      noteOrder(s, c);
+      const t = ticketOf(s, c.id)!;
+      checkEq(ticketLabel(t), 'M1', 'comanda de mesa com o prefixo M');
+      s.pasteleiro.at = 'mesas';
+      s.ready.push({ id: 1, item: 'queijo', quality: 90, readyAt: s.tick * STEP });
+      send(sim, fillCmd(sim, { kind: 'pastel', id: 1 }, c.id));
+      checkEq(s.eating.length, 1, 'o grupo passa a comer');
+      checkEq(s.tickets.length, 0, 'a comanda M sai do trilho');
+    },
+  },
+  {
+    id: 'rn183-fora-da-estacao-nao-preenche',
+    rules: 'RN-183',
+    run(seed) {
+      const sim = quiet(seed);
+      const s = sim.state;
+      const c = addCustomer(s, 'padrao', ['carne']);
+      slot(sim, 'balcao', 'anotar');
+      s.ready.push({ id: 1, item: 'carne', quality: 80, readyAt: s.tick * STEP });
+      s.pasteleiro.at = 'bancada';
+      const before = s.rejected;
+      send(sim, fillCmd(sim, { kind: 'pastel', id: 1 }, c.id));
+      checkEq(s.rejected, before + 1, 'pasteleiro fora do balcão: rejeitado');
+      checkEq(s.ready.length, 1, 'o pastel continua pronto');
+      send(sim, { type: 'fill', ticketId: 9999, item: { kind: 'pastel', id: 1 } });
+      checkEq(s.rejected, before + 2, 'comanda inexistente: rejeitado');
+    },
+  },
+  {
+    id: 'rn182-gesto-repetido-vale-uma-vez',
+    rules: 'RN-182, spec 4',
+    run(seed) {
+      const sim = quiet(seed);
+      const s = sim.state;
+      const c = addCustomer(s, 'padrao', ['carne', 'carne']);
+      slot(sim, 'balcao', 'anotar');
+      s.ready.push({ id: 1, item: 'carne', quality: 80, readyAt: s.tick * STEP });
+      s.ready.push({ id: 2, item: 'carne', quality: 80, readyAt: s.tick * STEP });
+      const cmd: Command = { ...fillCmd(sim, { kind: 'pastel', id: 1 }, c.id), g: 77 } as Command;
+      sim.dispatch(cmd);
+      sim.dispatch(cmd);
+      sim.step();
+      checkEq(ticketOf(s, c.id)!.slots.filter((l) => l.filled !== null).length, 1, 'o item entrou uma vez só');
+      checkEq(s.ready.length, 1, 'o outro pastel continua pronto');
+    },
+  },
+  {
+    id: 'rn27-pastel-sai-da-estufa-ao-entrar-na-comanda',
+    rules: 'RN-27, RN-182',
+    run(seed) {
+      const sim = quiet(seed, devConfig({ equipment: { drainer: false, warmer: 6, mill: 'manual', thermalBag: false, autoMill: false, cardMachine: false } }));
+      const s = sim.state;
+      const c = addCustomer(s, 'padrao', ['carne', 'carne']);
+      slot(sim, 'balcao', 'anotar');
+      s.ready.push({ id: 1, item: 'carne', quality: 80, readyAt: s.tick * STEP, warmed: true });
+      send(sim, fillCmd(sim, { kind: 'pastel', id: 1 }, c.id));
+      const filled = ticketOf(s, c.id)!.slots[0].filled as { warmed?: boolean };
+      checkEq(filled.warmed, false, 'na comanda o pastel não está mais na estufa');
+      checkEq(s.ready.filter((r) => r.warmed).length, 0, 'a vaga da estufa liberou');
     },
   },
 ];

@@ -1,7 +1,7 @@
 import { STEP } from '../../game/constants';
 import { spawnCustomer } from '../../game/sim/customers';
 import type { Customer, DayState } from '../../game/sim/state';
-import { advance, check, checkEq, checkNear, type Scenario } from '../harness';
+import { advance, check, checkEq, checkNear, type Scenario, fillCmd } from '../harness';
 import { feedGroup, tableSim } from './mesas';
 import { member } from './posicoes';
 
@@ -179,9 +179,9 @@ export const pagamento: Scenario[] = [
       const first = c!.lines[0].item;
       s.ready.push({ id: 1, item: 'carne', quality: 90, readyAt: s.tick * STEP });
       s.cups.push({ id: 2, item: 'caldo-puro' });
-      sim.dispatch({ type: 'deliver', item: first === 'caldo-puro' ? { kind: 'copo', id: 2 } : { kind: 'pastel', id: 1 }, customerId: c!.id });
+      sim.dispatch(fillCmd(sim, first === 'caldo-puro' ? { kind: 'copo', id: 2 } : { kind: 'pastel', id: 1 }, c!.id));
       sim.step();
-      check(c!.lines.some((l) => l.delivered !== null) || sim.state.rejected > 0, 'entrega processada nas mesas');
+      check(c!.lines.some((l) => l.filled !== null) || sim.state.rejected > 0, 'entrega processada nas mesas');
     },
   },
 ];

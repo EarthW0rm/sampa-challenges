@@ -3,6 +3,7 @@ import { ALERT_BAND, hitTest, inside, orderStations, PANEL, type Layout } from '
 import { controlAt, panelControls } from './render/panel';
 import { customerAt, workerAt } from './render/scene';
 import type { DayState } from './sim/state';
+import { ticketOf } from './sim/tickets';
 import type { Command, StationId } from './types';
 import { PANEL_IDLE_SECONDS, type UiState } from './ui';
 
@@ -67,7 +68,8 @@ export function pointerDown(env: InputEnv, x: number, y: number): Command[] {
     if (c && ui.selected && atCounter) {
       const item = ui.selected;
       ui.selected = null;
-      return stamp(ui, [{ type: 'deliver', item, customerId: c.id }]);
+      const t = ticketOf(state, c.id); // tocar no dono põe o item na comanda dele (RN-185)
+      return t ? stamp(ui, [{ type: 'fill', item, ticketId: t.id }]) : [];
     }
     return stamp(ui, goTo(env, 'balcao'));
   }

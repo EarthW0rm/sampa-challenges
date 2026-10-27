@@ -1,9 +1,8 @@
 import { CHARM_GIFT, STEP } from '../../game/constants';
 import { giftFor, spawnCustomer, addCustomer } from '../../game/sim/customers';
-import { deliverItem } from '../../game/sim/stations/counter';
 import { stockQty } from '../../game/sim/stock';
 import type { DayConfig } from '../../game/types';
-import { advance, check, checkEq, checkNear, makeSim, type Scenario } from '../harness';
+import { advance, check, checkEq, checkNear, makeSim, type Scenario, serve } from '../harness';
 import { devConfig } from '../testConfig';
 import { acceptOffer } from '../../game/sim/delivery';
 import { appSim } from './delivery';
@@ -67,13 +66,13 @@ export const promocoes: Scenario[] = [
       for (const l of paid) {
         if (l.item === 'caldo-puro') s.cups.push({ id: ++id, item: l.item });
         else s.ready.push({ id: ++id, item: l.item, quality: 90, readyAt: s.tick * STEP });
-        deliverItem(s, { kind: l.item === 'caldo-puro' ? 'copo' : 'pastel', id }, c!.id);
+        serve(s, { kind: l.item === 'caldo-puro' ? 'copo' : 'pastel', id }, c!.id);
       }
       check(s.customers.includes(c!), 'o pedido só fecha com o brinde entregue');
       checkEq(s.rep.charm, 0, 'sem encanto antes do brinde');
       const g = c!.lines.find((l) => l.gift)!;
       s.ready.push({ id: ++id, item: g.item, quality: 90, readyAt: s.tick * STEP });
-      deliverItem(s, { kind: 'pastel', id }, c!.id);
+      serve(s, { kind: 'pastel', id }, c!.id);
       check(!s.customers.includes(c!), 'fechou');
       checkNear(s.rep.charm, CHARM_GIFT, 'brinde entregue: encanto calibrado (P)');
       checkNear(s.stats.giftCost > 0 ? 1 : 0, 1, 'custo do brinde registrado');
@@ -126,7 +125,7 @@ export const promocoes: Scenario[] = [
       // encanto na entrega: +0,1 por nível
       const c = addCustomer(s, 'padrao', ['caldo-puro']);
       c.state = 'anotado';
-      deliverItem(s, { kind: 'copo', id: s.cups[0].id }, c.id);
+      serve(s, { kind: 'copo', id: s.cups[0].id }, c.id);
       checkNear(s.rep.charm, 0.3, 'chorinho 3: +0,3 de encanto');
     },
   },

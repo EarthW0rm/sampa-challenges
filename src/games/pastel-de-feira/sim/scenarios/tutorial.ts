@@ -4,7 +4,7 @@ import { Tutorial } from '../../game/tutorial';
 import { pendingUnlock, loadSeen, saveSeen, UNLOCKS, type SeenStore } from '../../game/unlocks';
 import { addCustomer } from '../../game/sim/customers';
 import type { StationId } from '../../game/types';
-import { advance, check, checkEq, makeSim, type Scenario } from '../harness';
+import { advance, check, checkEq, makeSim, type Scenario, fillCmd } from '../harness';
 
 const secs = (n: number): number => Math.round(n / STEP);
 
@@ -72,7 +72,7 @@ export const tutorial: Scenario[] = [
       check(s.ready.length > 0, 'pastel pronto');
       drive('balcao');
       for (let i = 0; i < 60 && s.pasteleiro.at !== 'balcao'; i++) sim.step();
-      sim.dispatch({ type: 'deliver', item: { kind: 'pastel', id: s.ready[0].id }, customerId: s.customers[0].id });
+      sim.dispatch(fillCmd(sim, { kind: 'pastel', id: s.ready[0].id }, s.customers[0].id));
       sim.step();
       check(tut.observe(s).step === 'cobrar', 'entregou: falta cobrar');
       sim.dispatch({ type: 'tapSlot', station: 'balcao', slot: { k: 'moedas' } });

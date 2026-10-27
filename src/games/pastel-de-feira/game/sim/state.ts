@@ -12,8 +12,8 @@ export interface OrderLine {
   profile?: Profile;
   /** Pastel de brinde: não paga, dá encanto na entrega (RN-120, RN-122). */
   gift?: boolean;
-  /** Item entregue, quando já foi. */
-  delivered: ItemId | null;
+  /** Pronto já posto na comanda (pastel ou copo), ou null enquanto falta (RN-182). */
+  filled: Ready | Cup | null;
 }
 
 export type SeatState = 'livre' | 'ocupado' | 'sujo';

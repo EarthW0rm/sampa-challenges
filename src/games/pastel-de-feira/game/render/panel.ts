@@ -8,6 +8,7 @@ import { fryWindow, isChanging, isDirty, isLocked } from '../sim/stations/fryer'
 import { millSeconds } from '../sim/stations/cane';
 import { now, type DayState } from '../sim/state';
 import { stockQty } from '../sim/stock';
+import { openTickets, ticketAccepts } from '../sim/tickets';
 import type { Command } from '../types';
 import { PANEL_IDLE_SECONDS, type UiState } from '../ui';
 import { bar, box, drawArt, drawFlavor, drawNine, itemColor, PAL, pastelCat, shortName, textCenter, type PastelState } from './draw';
@@ -190,11 +191,10 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
       run: () => [{ type: 'holdStart', station: 'mesas', action: 'limpar' }],
       release: () => [{ type: 'holdEnd' }],
     });
-    // entregar na mesa: o item vai para o primeiro grupo anotado que o aceita
-    const wants = st.customers.filter((c) => c.place === 'mesa' && c.state === 'anotado');
+    // pôr na comanda M: a mais antiga das mesas que aceita o item (RN-182)
     const deliverTo = (item: ItemId, ref: { kind: 'pastel' | 'copo'; id: number }): Command[] => {
-      const g = wants.find((c) => c.lines.some((l) => l.delivered === null && ITEMS[l.item].base === ITEMS[item].base));
-      return g ? [{ type: 'deliver', item: ref, customerId: g.id }] : [];
+      const t = openTickets(st, 'balcao').find((x) => x.kind === 'mesa' && ticketAccepts(st, x, item));
+      return t ? [{ type: 'fill', item: ref, ticketId: t.id }] : [];
     };
     for (const r of st.ready.slice(0, 7)) {
       out.push({

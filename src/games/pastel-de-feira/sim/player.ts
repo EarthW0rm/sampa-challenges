@@ -4,6 +4,7 @@ import { unmetItems } from '../game/sim/demand';
 import type { DaySim } from '../game/sim/day';
 import { fryOutcome, fryWindow, isChanging, isDirty, isLocked, nextFreeBasket } from '../game/sim/stations/fryer';
 import type { DayState } from '../game/sim/state';
+import { ticketOf } from '../game/sim/tickets';
 import type { Command, StationId } from '../game/types';
 
 /** Jogador automático do Dia de Feira: lê o estado e manda `Command` como o toque faria. Só para testes e calibração. */
@@ -136,16 +137,18 @@ export class Player {
   private findDelivery(s: DayState): Command | null {
     for (const c of s.customers) {
       if (c.state !== 'anotado' || c.place !== 'fila') continue;
+      const t = ticketOf(s, c.id);
+      if (!t) continue;
       for (const line of c.lines) {
-        if (line.delivered !== null) continue;
+        if (line.filled !== null) continue;
         const wanted = ITEMS[line.item];
         if (wanted.kind === 'bebida') {
           const cup = s.cups.find((x) => x.item === line.item);
-          if (cup) return { type: 'deliver', item: { kind: 'copo', id: cup.id }, customerId: c.id };
+          if (cup) return { type: 'fill', item: { kind: 'copo', id: cup.id }, ticketId: t.id };
           continue;
         }
         const ready = s.ready.find((r) => r.reservedFor === undefined && (r.item === line.item || (c.profile !== 'exigente' && ITEMS[r.item].base === wanted.base)));
-        if (ready) return { type: 'deliver', item: { kind: 'pastel', id: ready.id }, customerId: c.id };
+        if (ready) return { type: 'fill', item: { kind: 'pastel', id: ready.id }, ticketId: t.id };
       }
     }
     return null;

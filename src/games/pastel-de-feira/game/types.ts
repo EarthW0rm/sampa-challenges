@@ -48,7 +48,7 @@ export type Command =
   | { type: 'tapSlot'; station: StationId; slot: Slot; g?: number }
   | { type: 'holdStart'; station: StationId; action: HoldAction; item?: ItemId; g?: number }
   | { type: 'holdEnd'; g?: number }
-  | { type: 'deliver'; item: ItemRef; customerId: number; g?: number }
+  | { type: 'fill'; ticketId: number; item: ItemRef; g?: number }
   | { type: 'sendRest'; staffId: number; g?: number }
   | { type: 'acceptOffer'; offerId: number; g?: number }
   | { type: 'pause' }

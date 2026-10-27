@@ -2,12 +2,11 @@ import { STEP } from '../../game/constants';
 import { Rng } from '../../game/rng';
 import { spawnCustomer } from '../../game/sim/customers';
 import { drawGroupSize } from '../../game/sim/stations/tables';
-import { deliverItem } from '../../game/sim/stations/counter';
 import type { Customer, DayState } from '../../game/sim/state';
 import type { DayConfig } from '../../game/types';
 import { PATIENCE } from '../../game/constants';
 import { devConfig } from '../testConfig';
-import { advance, check, checkEq, makeSim, type Scenario } from '../harness';
+import { advance, check, checkEq, makeSim, type Scenario, serve } from '../harness';
 import { member } from './posicoes';
 
 const secs = (n: number): number => Math.round(n / STEP);
@@ -52,7 +51,7 @@ export function feedGroup(s: DayState, c: Customer): void {
     const id = 9000 + s.nextId++;
     if (line.item === 'caldo-puro') s.cups.push({ id, item: line.item });
     else s.ready.push({ id, item: line.item, quality: 90, readyAt: s.tick * STEP });
-    deliverItem(s, { kind: line.item === 'caldo-puro' ? 'copo' : 'pastel', id }, c.id);
+    serve(s, { kind: line.item === 'caldo-puro' ? 'copo' : 'pastel', id }, c.id);
   }
 }
 
@@ -193,7 +192,7 @@ export const mesas: Scenario[] = [
       const id = 7000;
       if (first === 'caldo-puro') s.cups.push({ id, item: first });
       else s.ready.push({ id, item: first, quality: 90, readyAt: 0 });
-      deliverItem(s, { kind: first === 'caldo-puro' ? 'copo' : 'pastel', id }, c!.id);
+      serve(s, { kind: first === 'caldo-puro' ? 'copo' : 'pastel', id }, c!.id);
       check(s.customers.includes(c!), 'com um item entregue o pedido ainda está aberto');
       checkEq(s.eating.length, 0, 'ainda não está comendo');
       feedGroup(s, c!);

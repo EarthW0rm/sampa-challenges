@@ -5,9 +5,8 @@ import { newCampaign, toDayConfig } from '../../game/campaign/campaign';
 import { closeDay } from '../../game/campaign/closing';
 import type { ActionResult, Campaign } from '../../game/campaign/types';
 import { addCustomer, minQuality, profileShares, salePrice, spawnCustomer, tablePremium, xepaActive } from '../../game/sim/customers';
-import { deliverItem } from '../../game/sim/stations/counter';
 import { devConfig } from '../testConfig';
-import { advance, check, checkEq, checkNear, makeSim, runDay, type Scenario } from '../harness';
+import { advance, check, checkEq, checkNear, makeSim, runDay, type Scenario, serve } from '../harness';
 import { tableConfig } from './mesas';
 
 const secs = (n: number): number => Math.round(n / STEP);
@@ -72,7 +71,7 @@ export const xepaTema: Scenario[] = [
       const c = addCustomer(pago.state, 'padrao', ['carne']);
       c.state = 'anotado';
       pago.state.ready.push({ id: 1, item: 'carne', quality: 80, readyAt: pago.state.tick * STEP });
-      deliverItem(pago.state, { kind: 'pastel', id: 1 }, c.id);
+      serve(pago.state, { kind: 'pastel', id: 1 }, c.id);
       checkNear(c.owed, 4 * (0.8 + 0.4 * 0.8), 'paga o preço de xepa');
     },
   },
