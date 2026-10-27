@@ -1,11 +1,12 @@
 import { H, W } from './constants';
 import { ALERT_BAND, hitTest, inside, orderStations, PANEL, type Layout } from './layout';
 import { controlAt, panelControls } from './render/panel';
+import { ticketAt } from './render/rail';
 import { customerAt, workerAt } from './render/scene';
 import type { DayState } from './sim/state';
 import { ticketOf } from './sim/tickets';
 import type { Command, StationId } from './types';
-import { PANEL_IDLE_SECONDS, type UiState } from './ui';
+import { FLASH_SECONDS, PANEL_IDLE_SECONDS, type UiState } from './ui';
 
 export interface InputEnv {
   state: DayState;
@@ -57,6 +58,20 @@ export function pointerDown(env: InputEnv, x: number, y: number): Command[] {
     // Só o fixo descansa por ordem do jogador; o automático descansa sozinho (RN-116)
     return w && w.mode === 'fixo' && !w.resting ? stamp(ui, [{ type: 'sendRest', staffId: w.id }]) : [];
   }
+  const ticket = ticketAt(layout, state, x, y);
+  if (ticket) {
+    // toque na comanda: com um pronto escolhido, põe nela (RN-182); sem seleção, a placa do dono pisca (RN-185)
+    const station: StationId = ticket.track === 'expedicao' ? 'expedicao' : 'balcao';
+    const p = state.pasteleiro;
+    const here = p.to === null && (p.at === station || (ticket.kind === 'mesa' && p.at === 'mesas'));
+    if (ui.selected && here) {
+      const item = ui.selected;
+      ui.selected = null;
+      return stamp(ui, [{ type: 'fill', item, ticketId: ticket.id }]);
+    }
+    if (!ui.selected) ui.flash = { ticketId: ticket.id, left: FLASH_SECONDS };
+    return here ? [] : stamp(ui, goTo(env, station));
+  }
   const zone = hitTest(layout, x, y);
   if (!zone) {
     if (ui.panel) ui.panel = null; // toque fora do painel recolhe
@@ -100,6 +115,10 @@ export function syncUi(env: InputEnv, dt: number): void {
   if (ui.panel) {
     ui.idle = p.hold ? 0 : ui.idle + dt;
     if (ui.idle >= PANEL_IDLE_SECONDS) ui.panel = null;
+  }
+  if (ui.flash) {
+    ui.flash.left -= dt;
+    if (ui.flash.left <= 0 || !state.tickets.some((t) => t.id === ui.flash!.ticketId)) ui.flash = null;
   }
   if (ui.selected) {
     const sel = ui.selected;

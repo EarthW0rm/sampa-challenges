@@ -173,6 +173,9 @@ class Sound {
       case 'cliente_perdido_fila':
         this.tone(196, 0.25, 'square', 0.2, s, 130);
         break;
+      case 'ticket_recusou':
+        this.tone(165, 0.12, 'square', 0.18, s); // a comanda não aceita esse sabor (RN-182)
+        break;
       case 'corte_seco':
         this.tone(392, 0.5, 'triangle', 0.35, s, 196);
         break;

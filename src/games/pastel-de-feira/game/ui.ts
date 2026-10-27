@@ -40,5 +40,8 @@ export const createUi = (): UiState => ({
   flash: null,
 });
 
+/** A placa do dono pisca por 1 s depois de tocar na comanda sem seleção (RN-185). */
+export const FLASH_SECONDS = 1;
+
 /** Painel recolhe depois de 4 s sem interação (D-05). */
 export const PANEL_IDLE_SECONDS = 4;

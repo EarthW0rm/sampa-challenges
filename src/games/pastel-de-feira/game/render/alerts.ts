@@ -6,6 +6,7 @@ import type { DayState } from '../sim/state';
 import { canMake } from '../sim/stock';
 import type { UiState } from '../ui';
 import { box, drawArt, PAL, textCenter } from './draw';
+import { railSpots } from './rail';
 
 /** Avisos ativos, do mais urgente ao menos (RN-75). Texto curto, sem acento (fonte de pixels). */
 export function activeAlerts(st: DayState): string[] {
@@ -45,10 +46,12 @@ export function drawAlerts(ctx: CanvasRenderingContext2D, st: DayState, ui: UiSt
 }
 
 /** Contorno dourado pulsante na estação do passo do tutorial (RN-170). */
-export function drawHighlight(ctx: CanvasRenderingContext2D, layout: Layout, station: StationId | null, ui: UiState): void {
+export function drawHighlight(ctx: CanvasRenderingContext2D, layout: Layout, station: StationId | null, ui: UiState, st?: DayState, ticket: number | null = null): void {
   const z = station ? layout.byId.get(station) : undefined;
   if (!z) return;
   ctx.strokeStyle = Math.floor(ui.clock * 3) % 2 === 0 ? PAL.gold : PAL.paper;
   ctx.lineWidth = 2;
   ctx.strokeRect(z.x + 1, z.y + 1, z.w - 2, z.h - 2);
+  const spot = st && ticket !== null ? railSpots(layout, st, 'balcao').spots.find((s) => s.ticket.id === ticket) : undefined;
+  if (spot) ctx.strokeRect(spot.rect.x - 3, spot.rect.y - 3, spot.rect.w + 6, spot.rect.h + 6); // a comanda do passo
 }
