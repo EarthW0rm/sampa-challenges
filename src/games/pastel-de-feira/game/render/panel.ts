@@ -8,9 +8,10 @@ import { fryWindow, isChanging, isDirty, isLocked } from '../sim/stations/fryer'
 import { millSeconds } from '../sim/stations/cane';
 import { now, type DayState } from '../sim/state';
 import { stockQty } from '../sim/stock';
-import { openTickets, ticketAccepts } from '../sim/tickets';
+import { openTickets, ticketAccepts, ticketLabel } from '../sim/tickets';
+import { destinations } from './rail';
 import type { Command } from '../types';
-import { PANEL_IDLE_SECONDS, type UiState } from '../ui';
+import { FLASH_SECONDS, PANEL_IDLE_SECONDS, type UiState } from '../ui';
 import { bar, box, drawArt, drawFlavor, drawNine, itemColor, PAL, pastelCat, shortName, textCenter, type PastelState } from './draw';
 import { getAssets, LIB_PX } from '../assets';
 
@@ -81,26 +82,13 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
     if (st.tables.length > 0) {
       out.push({ rect: next(), label: 'PAGAR', sub: `${st.payQueue.length}/4`, fill: PAL.orange, icon: 'icones/ctrl_pagar', run: () => tap('balcao', { k: 'pagar' }) });
     }
-    const open = st.bigOrders.filter((o) => o.boxed.length < o.qty);
-    if (open.length > 0) {
-      const left = open.reduce((n, o) => n + o.qty - o.boxed.length, 0);
-      out.push({
-        rect: next(), label: 'CAIXA', sub: `FALTAM ${left}`, fill: PAL.gold, icon: 'icones/ctrl_caixa',
-        run: () => {
-          const sel = ui.selected;
-          if (sel?.kind !== 'pastel') return [];
-          ui.selected = null;
-          return tap('balcao', { k: 'encomenda', id: sel.id }); // guarda o pastel selecionado na caixa da encomenda (RN-104)
-        },
-      });
-    }
     out.push({
       rect: next(), label: 'VASSOURA', sub: `${Math.round(st.dirt)}%`, fill: st.dirt >= 80 ? PAL.red : st.dirt >= 60 ? PAL.orange : PAL.tile, icon: 'icones/ctrl_vassoura',
       bar: { frac: st.pasteleiro.hold?.action === 'limpar' ? st.cleaning.progress / HOLD_BROOM : 0, color: PAL.green },
       run: () => [{ type: 'holdStart', station: 'balcao', action: 'limpar' }],
       release: () => [{ type: 'holdEnd' }],
     });
-    for (const r of st.ready.filter((x) => x.reservedFor === undefined).slice(0, 7)) {
+    for (const r of st.ready.slice(0, 7)) {
       const q = Math.round(currentQuality(r, now(st)));
       const sel = ui.selected?.kind === 'pastel' && ui.selected.id === r.id;
       out.push({
@@ -208,16 +196,39 @@ export function panelControls(st: DayState, ui: UiState): Control[] {
   } else if (station === 'escritorio') {
     out.push({ rect: next(2), label: 'GESTAO', sub: st.config.roles.includes('gerente') ? '+15% +10%' : '+15%', fill: PAL.green, icon: 'icones/ctrl_gestao', inert: true, run: () => [] });
     out.push({ rect: next(), label: 'CARGOS', sub: String(st.config.roles.length), fill: PAL.tile, icon: 'icones/ctrl_cargos', inert: true, run: () => [] });
-    for (const o of st.bigOrders.slice(0, 3)) {
-      out.push({ rect: next(), label: 'ENCOMENDA', sub: `${o.boxed.length}/${o.qty}`, fill: PAL.gold, icon: 'icones/ctrl_encomenda', bar: { frac: o.boxed.length / o.qty, color: PAL.green }, run: () => [] });
+    for (const t of st.tickets.filter((x) => x.kind === 'encomenda').slice(0, 3)) {
+      const done = t.slots.filter((l) => l.filled !== null).length;
+      out.push({ rect: next(), label: 'ENCOMENDA', sub: `${done}/${t.slots.length}`, fill: PAL.gold, icon: 'icones/ctrl_encomenda', bar: { frac: done / t.slots.length, color: PAL.green }, inert: true, run: () => [] });
     }
   } else if (station === 'expedicao') {
-    out.push({ rect: next(), label: 'COMANDAS', sub: String(st.comandas.length), fill: PAL.blue, icon: 'icones/ctrl_comandas', inert: true, run: () => [] });
-    out.push({ rect: next(), label: 'EMBALAGEM', sub: String(st.consumables.embalagem), fill: PAL.tile, icon: 'icones/ctrl_embalagem', inert: true, run: () => [] });
-    for (const r of st.ready.filter((x) => x.reservedFor === undefined).slice(0, 6)) {
+    // comandas do trilho da Expedição (RN-181, RN-75): com um pronto escolhido, tocar põe nela (RN-182)
+    const dest = destinations(st, ui.selected);
+    for (const t of openTickets(st, 'expedicao').slice(0, 4)) {
+      const done = t.slots.filter((l) => l.filled !== null).length;
       out.push({
-        rect: next(), label: shortName(r.item), sub: String(Math.round(currentQuality(r, now(st)))), fill: itemColor(r.item), icon: itemIcon(r.item), flavor: r.item,
-        run: () => tap('expedicao', { k: 'pronto', id: r.id }),
+        rect: next(), label: ticketLabel(t), sub: `${done}/${t.slots.length}`, fill: PAL.blue, icon: t.kind === 'encomenda' ? 'icones/ctrl_encomenda' : 'icones/ctrl_comandas',
+        selected: ui.selected !== null && dest.has(t.id), bar: { frac: done / t.slots.length, color: PAL.green },
+        run: () => {
+          const sel = ui.selected;
+          if (!sel) {
+            ui.flash = { ticketId: t.id, left: FLASH_SECONDS };
+            return [];
+          }
+          ui.selected = null;
+          return [{ type: 'fill', item: sel, ticketId: t.id }];
+        },
+      });
+    }
+    out.push({ rect: next(), label: 'EMBALAGEM', sub: String(st.consumables.embalagem), fill: PAL.tile, icon: 'icones/ctrl_embalagem', inert: true, run: () => [] });
+    // os prontos ficam no balcão e na estufa: daqui eles vão direto para a sacola ou a caixa (CE-20)
+    for (const r of st.ready.slice(0, 6)) {
+      const sel = ui.selected?.kind === 'pastel' && ui.selected.id === r.id;
+      out.push({
+        rect: next(), label: shortName(r.item), sub: `${r.warmed ? 'E ' : ''}${Math.round(currentQuality(r, now(st)))}`, fill: itemColor(r.item), selected: sel, icon: itemIcon(r.item), flavor: r.item,
+        run: () => {
+          ui.selected = sel ? null : { kind: 'pastel', id: r.id };
+          return [];
+        },
       });
     }
   } else if (station === 'moenda') {

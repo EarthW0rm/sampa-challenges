@@ -99,6 +99,11 @@ export class Assets {
     return this.recolored(`lib/caes_pe/${raca}_${porte}_${pose}`, cor);
   }
 
+  /** Motoboy do app: capacete, jaqueta e baú fixos; pelo na cor dada (RN-194). `null` sem o sprite. */
+  motoboy(cor: string, pose: Pose): HTMLCanvasElement | null {
+    return this.recolored(`lib/caes_pe/motoboy_${pose}`, cor);
+  }
+
   /** Pasteleiro e funcionários (avental e chapéu fixos; pelo na cor dada). */
   equipe(kind: Equipe, cor: string, pose: Pose): HTMLCanvasElement | null {
     return this.recolored(`lib/caes_pe/${kind}_${pose}`, cor);

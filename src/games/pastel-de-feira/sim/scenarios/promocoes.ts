@@ -1,3 +1,4 @@
+import { openTickets } from '../../game/sim/tickets';
 import { noteOrder } from '../../game/sim/stations/counter';
 import { CHARM_GIFT, STEP } from '../../game/constants';
 import { giftFor, spawnCustomer, addCustomer } from '../../game/sim/customers';
@@ -138,10 +139,9 @@ export const promocoes: Scenario[] = [
       sim.state.config.promo = { brindeN: 2, chorinho: 0, xepa: false, xepaDiscount: 0.3 };
       sim.state.offers.push({ id: 1, items: ['carne', 'queijo'], left: 10 });
       check(acceptOffer(sim.state, 1), 'aceitou');
-      const c = sim.state.comandas[0];
-      checkEq(c.items.length, 3, 'a comanda ganhou 1 brinde');
-      checkEq(c.gifts.filter(Boolean).length, 1, 'marcado como brinde');
-      sim.state.ready.push({ id: 1, item: 'carne', quality: 90, readyAt: 0 }, { id: 2, item: 'queijo', quality: 90, readyAt: 0 }, { id: 3, item: c.items[2], quality: 90, readyAt: 0 });
+      const c = openTickets(sim.state, 'expedicao')[0];
+      checkEq(c.slots.length, 3, 'a comanda ganhou 1 brinde');
+      checkEq(c.slots.filter((l) => l.gift).length, 1, 'marcado como brinde');
     },
   },
   {

@@ -1,5 +1,6 @@
-import { APP_PICKUP_DELAY } from '../constants';
-import { ITEMS, type ItemId } from '../data/recipes';
+import type { IngredientId } from '../data/catalog';
+import { ITEMS, itemIngredients, type ItemId } from '../data/recipes';
+import { stockQty } from './stock';
 import type { DayState } from './state';
 
 /** Item que ainda falta produzir: o sabor pedido e se só a versão exata serve (Exigente, RN-18). */
@@ -23,13 +24,6 @@ export function productionList(s: DayState): Want[] {
       out.push({ item: slot.item, exact: (slot.profile ?? owner?.profile) === 'exigente', at: t.enteredAt });
     }
   }
-  // comandas do app e encomendas ainda no modelo anterior (até a US-136): entram pela hora em que foram aceitas
-  for (const c of s.comandas) {
-    c.items.forEach((item, k) => {
-      if (c.packed[k] === null) out.push({ item, exact: false, at: c.pickupAt - APP_PICKUP_DELAY });
-    });
-  }
-  for (const o of s.bigOrders) for (let k = o.boxed.length; k < o.qty; k++) out.push({ item: o.item, exact: false, at: 0 });
   // ordem estável: entrada do pedido; empate mantém a ordem de criação
   return out.map((w, i) => ({ w, i })).sort((a, b) => a.w.at - b.w.at || a.i - b.i).map((x) => x.w);
 }
@@ -43,7 +37,7 @@ function supplyMap(s: DayState, drinks: boolean, inProgress: readonly ItemId[]):
   } else {
     for (const a of s.assembled) add(a.item);
     for (const t of s.tachos) for (const b of t.baskets) if (b.frying && !b.frying.burned) add(b.frying.item);
-    for (const r of s.ready) if (r.reservedFor === undefined) add(r.item);
+    for (const r of s.ready) add(r.item);
   }
   for (const id of inProgress) if ((ITEMS[id].kind === 'bebida') === drinks) add(id);
   return m;
@@ -72,4 +66,20 @@ export function unmet(s: DayState, drinks: boolean, inProgress: readonly ItemId[
     out.push(want.item);
   }
   return out;
+}
+
+/**
+ * Há insumo para produzir todos os itens, descontando o que a lista de produção já reservou (aceite
+ * automático, RN-95, DCE-07)? A reserva é só de cálculo: nada é consumido aqui.
+ */
+export function canCover(s: DayState, items: readonly ItemId[]): boolean {
+  const need = new Map<IngredientId, number>();
+  const add = (id: ItemId) => {
+    for (const [ing, n] of itemIngredients(ITEMS[id])) need.set(ing, (need.get(ing) ?? 0) + n);
+  };
+  for (const id of unmet(s, false)) add(id);
+  for (const id of unmet(s, true)) add(id);
+  for (const id of items) add(id);
+  for (const [ing, n] of need) if (stockQty(s, ing) < n) return false;
+  return true;
 }

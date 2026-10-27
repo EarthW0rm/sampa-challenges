@@ -181,7 +181,6 @@ export const APP_OFFER_SECONDS = 10;
 export const APP_PICKUP_DELAY = 35;
 export const APP_MOTO_WAIT = 25;
 export const APP_MOTO_WAIT_LOW_REP = 0.6;
-export const APP_MOTO_MAX_ORDERS = 2;
 export const APP_FEE = 0.2;
 export const APP_TRANSPORT_LOSS = 20;
 export const APP_ORDER_MIN = 2;
@@ -234,3 +233,8 @@ export const GOAL_GROWTH = 1.12;
 export const RAIL_VISIBLE = 6;
 export const TICKET_MIN_W = 28;
 export const TICKET_H = 28;
+
+// RN-189: na sacola do app e na caixa da encomenda o decaimento da nota é multiplicado por este fator (P)
+export const BAG_DECAY_FACTOR = 0.25;
+// RN-191: entrega na fila da Expedição (s) (P)
+export const DISPATCH_HANDOFF = 1.5;

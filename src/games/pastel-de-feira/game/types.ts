@@ -32,9 +32,7 @@ export type Slot =
   | { k: 'limpar' }
   | { k: 'montado'; id: number }
   | { k: 'pagar' }
-  | { k: 'encomenda'; id: number }
-  | { k: 'cesto'; index: number }
-  | { k: 'pronto'; id: number };
+  | { k: 'cesto'; index: number };
 
 /** Item pronto que pode ser entregue a um cliente. */
 export type ItemRef = { kind: 'pastel' | 'copo'; id: number };

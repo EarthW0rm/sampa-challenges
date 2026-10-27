@@ -1,5 +1,5 @@
 import {
-  DECAY_DELAY, DECAY_PER_SECOND, QUALITY_FACTOR_MIN, QUALITY_FACTOR_SPAN, REPUTATION_PREMIUM,
+  BAG_DECAY_FACTOR, DECAY_DELAY, DECAY_PER_SECOND, QUALITY_FACTOR_MIN, QUALITY_FACTOR_SPAN, REPUTATION_PREMIUM,
 } from '../constants';
 import { WARMER } from '../data/equipment';
 import { starTier } from './customers';
@@ -25,7 +25,12 @@ export const drinkValue = (price: number, rep: number): number => price * reputa
  * fica congelada por 60 s e depois cai 1 ponto/s (RN-27).
  */
 export function currentQuality(r: Ready, t: number): number {
-  if (r.warmed || r.boxed) {
+  if (r.bagged) {
+    // na sacola do app ou na caixa da encomenda o decaimento é reduzido até a retirada (RN-189)
+    const waited = Math.max(0, t - r.readyAt - DECAY_DELAY);
+    return clampQuality(r.quality - waited * DECAY_PER_SECOND * BAG_DECAY_FACTOR);
+  }
+  if (r.warmed) {
     const waited = Math.max(0, t - r.readyAt - WARMER.holdSeconds);
     return clampQuality(r.quality - waited * WARMER.decayPerSecond);
   }

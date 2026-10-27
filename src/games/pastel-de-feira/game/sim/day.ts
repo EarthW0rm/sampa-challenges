@@ -4,7 +4,8 @@ import { applyCommand } from './commands';
 import { updateCleaning } from './dirt';
 import { updateDelivery } from './delivery';
 import { updateAutomation } from './automation';
-import { updateOrders } from './orders';
+import { startOrders } from './orders';
+import { updateDispatch } from './dispatch';
 import { planWorld, updateWorld } from './world';
 import { updateCustomers } from './customers';
 import { updatePasteleiro } from './pasteleiro';
@@ -71,6 +72,7 @@ export class DaySim {
 
   constructor(config: DayConfig, seed: number) {
     this.state = createState(config, seed);
+    startOrders(this.state); // encomendas viram comandas E às 07h (RN-104, RN-187)
     planWorld(this.state);
     this.view = { t: 0, hour: hourAt(0), over: false, paused: false, speed: 1, rejected: 0 };
   }
@@ -140,7 +142,7 @@ export class DaySim {
     updateCustomers(s, STEP);
     updateTables(s, STEP);
     updateDelivery(s, STEP);
-    updateOrders(s, STEP);
+    updateDispatch(s, STEP);
     updateWorld(s, STEP);
     updateAutomation(s, STEP);
     if (s.tick >= DAY_TICKS) this.close();
@@ -196,10 +198,8 @@ export class DaySim {
     s.tickets.length = 0; // comandas abertas somem sem falha (RN-07)
     s.eating.length = 0; // grupos nas mesas e na fila de pagamento também (RN-07)
     s.payQueue.length = 0;
-    s.bigOrders.length = 0; // encomenda pendente às 14h se perde sem multa nem falha (RN-07)
     s.offers.length = 0; // comandas e motoboys pendentes se perdem sem falha (RN-07)
-    s.comandas.length = 0;
-    s.motoboys.length = 0;
+    s.dispatchQueue.length = 0; // quem estava na fila da Expedição vai embora sem falha (RN-07)
     emit(s, 'corte_seco');
     this.cached = buildResult(s);
   }

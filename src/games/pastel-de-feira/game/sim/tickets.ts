@@ -96,7 +96,7 @@ export const ticketAccepts = (s: DayState, t: Ticket, item: ItemId): boolean => 
 
 /** Item pronto livre (sem comanda) de uma referência. */
 export function freeItem(s: DayState, ref: ItemRef): Ready | Cup | undefined {
-  return ref.kind === 'pastel' ? s.ready.find((r) => r.id === ref.id && r.reservedFor === undefined) : s.cups.find((x) => x.id === ref.id);
+  return ref.kind === 'pastel' ? s.ready.find((r) => r.id === ref.id) : s.cups.find((x) => x.id === ref.id);
 }
 
 /**
@@ -115,10 +115,13 @@ export function fill(s: DayState, t: Ticket, ref: ItemRef, by?: Worker): boolean
   const slot = t.slots[k];
   if (slotMatch(profileOf(s, t, slot), slot, x.item) === 'versao') markWrongVersion(s, t);
   if (isPastry(x)) {
-    if (x.warmed) {
-      x.quality = currentQuality(x, now(s)); // sai da estufa: a espera recomeça fora dela (RN-27)
+    const bag = t.track === 'expedicao';
+    if (x.warmed || bag) {
+      // sai da estufa (RN-27) ou entra na sacola/caixa (RN-189): a nota de agora vale como ponto de partida
+      x.quality = currentQuality(x, now(s));
       x.readyAt = now(s);
       x.warmed = false;
+      x.bagged = bag;
     }
     s.ready.splice(s.ready.indexOf(x), 1);
   } else {

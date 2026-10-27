@@ -147,7 +147,7 @@ export class Player {
           if (cup) return { type: 'fill', item: { kind: 'copo', id: cup.id }, ticketId: t.id };
           continue;
         }
-        const ready = s.ready.find((r) => r.reservedFor === undefined && (r.item === line.item || (c.profile !== 'exigente' && ITEMS[r.item].base === wanted.base)));
+        const ready = s.ready.find((r) => (r.item === line.item || (c.profile !== 'exigente' && ITEMS[r.item].base === wanted.base)));
         if (ready) return { type: 'fill', item: { kind: 'pastel', id: ready.id }, ticketId: t.id };
       }
     }

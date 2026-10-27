@@ -1,5 +1,8 @@
 import { STEP } from '../../game/constants';
-import { acceptOffer, dailyCap, packPastry } from '../../game/sim/delivery';
+import { acceptOffer, dailyCap } from '../../game/sim/delivery';
+import { currentQuality } from '../../game/sim/quality';
+import { fill, openTickets } from '../../game/sim/tickets';
+import type { Ticket } from '../../game/sim/state';
 import { unmet } from '../../game/sim/production';
 import type { DaySim } from '../../game/sim/day';
 import type { DayConfig } from '../../game/types';
@@ -42,6 +45,24 @@ const ready = (sim: DaySim, id: number, item = 'carne', quality = 90) => {
   sim.state.ready.push({ id, item, quality, readyAt: sim.state.tick * STEP });
 };
 
+/** Comandas do app abertas, da mais antiga para a mais nova. */
+export const appTickets = (sim: DaySim): Ticket[] => openTickets(sim.state, 'expedicao').filter((t) => t.kind === 'app');
+
+/** Põe o pronto na sacola da comanda do app mais antiga (atalho dos cenários, sem passar pela estação). */
+function pack(sim: DaySim, id: number): boolean {
+  const t = appTickets(sim).find((x) => x.slots.some((l) => l.filled === null));
+  return !!t && fill(sim.state, t, { kind: 'pastel', id });
+}
+
+/** O pasteleiro fica no balcão da Expedição: há atendente na fila (RN-191). */
+const attend = (sim: DaySim) => {
+  sim.state.pasteleiro.at = 'expedicao';
+};
+
+/** Nota na retirada de um pastel posto na sacola no instante `t0`: a sacola reduz o decaimento (RN-189). */
+const bagNote = (q: number, waited: number) => q - Math.max(0, waited - 20) * 0.25;
+
+
 export const delivery: Scenario[] = [
   {
     id: 'rn95-teto-por-reputacao',
@@ -80,8 +101,8 @@ export const delivery: Scenario[] = [
     },
   },
   {
-    id: 'pa14-aceite-de-qualquer-posicao-e-embalagem',
-    rules: 'PA-14, RN-39a',
+    id: 'rn91-rn180-aceite-cria-comanda-app-de-qualquer-posicao',
+    rules: 'RN-91, RN-180, PA-14, RN-39a',
     run(seed) {
       const sim = appSim(seed);
       sim.dispatch({ type: 'tapStation', station: 'bancada' });
@@ -89,9 +110,12 @@ export const delivery: Scenario[] = [
       sim.state.offers.push({ id: 77, items: ['carne', 'queijo'], left: 10 });
       sim.dispatch({ type: 'acceptOffer', offerId: 77 });
       sim.step();
-      checkEq(sim.state.comandas.length, 1, 'aceitou estando na bancada');
+      const t = appTickets(sim);
+      checkEq(t.length, 1, 'aceitou estando na bancada: comanda APP no trilho da Expedição');
+      checkEq(t[0].track, 'expedicao', 'trilho da Expedição');
+      checkEq(t[0].slots.map((l) => l.item).join(','), 'carne,queijo', 'um item por pastel da oferta');
       checkEq(sim.state.consumables.embalagem, 19, 'consumiu 1 embalagem do app');
-      checkNear(sim.state.comandas[0].pickupAt - sim.state.tick * STEP, 35, 'retirada 35 s depois do aceite', 0.1);
+      checkNear(t[0].pickupAt! - sim.state.tick * STEP, 35, 'o motoboy chega 35 s depois do aceite', 0.1);
       const sem = appSim(seed, { consumables: { copo: 1, saquinho: 1, embalagem: 0 } });
       sem.state.offers.push({ id: 78, items: ['carne', 'carne'], left: 10 });
       check(!acceptOffer(sem.state, 78), 'sem embalagem do app nenhuma comanda nova é aceita');
@@ -122,60 +146,109 @@ export const delivery: Scenario[] = [
       sim.step();
       for (let i = 0; i < 5; i++) sim.state.offers.push({ id: 100 + i, items: ['carne', 'queijo'], left: 10 });
       advance(sim, 3);
-      checkEq(sim.state.comandas.length, 3, 'aceita toda oferta até o teto (3)');
+      checkEq(appTickets(sim).length, 3, 'aceita toda oferta até o teto (3)');
       checkEq(sim.state.acceptedToday, 3, 'contagem do dia');
       const sem = appSim(seed, { delivery: { on: true, auto: true, partner: false } });
       sem.state.offers.push({ id: 1, items: ['carne', 'queijo'], left: 10 });
       advance(sem, 3);
-      checkEq(sem.state.comandas.length, 0, 'sem Expedição o aceite é manual');
+      checkEq(appTickets(sem).length, 0, 'sem Expedição o aceite é manual');
     },
   },
   {
-    id: 'rn92-93-retirada-e-pagamento',
-    rules: 'RN-92, RN-93, RN-25',
+    id: 'rn95-aceite-automatico-exige-insumo',
+    rules: 'RN-95, DCE-07',
+    run(seed) {
+      const base = appConfig();
+      const stock = base.stock.map((l) => (l.ingredient === 'carne' ? { ...l, qty: 2 } : l));
+      const sim = appSim(seed, { delivery: { on: true, auto: true, partner: false }, stock, staff: [member('geral', { mode: 'fixo', position: 'expedicao' })] });
+      sim.step();
+      sim.state.offers.push({ id: 1, items: ['carne', 'carne', 'carne'], left: 10 });
+      advance(sim, 3);
+      checkEq(appTickets(sim).length, 0, 'carne para 2, oferta de 3: não aceita');
+      sim.state.offers.push({ id: 2, items: ['carne', 'queijo'], left: 10 });
+      advance(sim, 3);
+      checkEq(appTickets(sim).length, 1, 'oferta coberta pelo estoque: aceita');
+      sim.state.offers.push({ id: 3, items: ['carne', 'carne'], left: 10 });
+      advance(sim, 3);
+      checkEq(appTickets(sim).length, 1, 'a carne restante já está reservada pela lista de produção');
+      check(acceptOffer(sim.state, 3), 'o aceite manual continua permitido sem insumo');
+    },
+  },
+  {
+    id: 'rn193-rn191-motoboy-chega-e-leva-a-sacola-completa',
+    rules: 'RN-193, RN-191, RN-93, RN-25, RN-189',
     run(seed) {
       const sim = appSim(seed);
+      attend(sim);
       accept(sim, ['carne', 'queijo']);
       ready(sim, 1, 'carne', 90);
       ready(sim, 2, 'queijo', 90);
-      check(packPastry(sim.state, 1) && packPastry(sim.state, 2), 'embalou os dois');
-      advance(sim, secs(36));
-      checkEq(sim.state.stats.appPicked, 1, 'retirada no horário');
-      // 7 × 0,8 × (0,8 + 0,4 × 0,70) × 1 por pastel; nota 90 − 20 de transporte = 70
-      const esperado = Math.round(2 * 7 * 0.8 * (0.8 + 0.4 * 0.7) * 100) / 100;
-      checkNear(sim.state.stats.appRevenue, esperado, 'preço −20% × qualidade, sem teto de perfil');
+      check(pack(sim, 1) && pack(sim, 2), 'pôs os dois na sacola');
+      advance(sim, secs(34.9));
+      checkEq(sim.state.dispatchQueue.length, 0, 'o motoboy ainda não chegou');
+      advance(sim, secs(0.2));
+      checkEq(sim.state.dispatchQueue.length, 1, 'o motoboy chega 35 s depois do aceite e entra na fila');
+      advance(sim, secs(1.6));
+      checkEq(sim.state.stats.appPicked, 1, 'sacola completa e atendente: entrega em 1,5 s');
+      checkEq(sim.state.dispatchQueue.length, 0, 'o motoboy saiu');
+      checkEq(appTickets(sim).length, 0, 'a comanda saiu do trilho');
+      // 7 × 0,8 × qualidade(nota da retirada − 20 de transporte) por pastel
+      const nota = bagNote(90, 36.6) - 20;
+      checkNear(sim.state.stats.appRevenue, Math.round(2 * 7 * 0.8 * (0.8 + 0.4 * nota / 100) * 100) / 100, 'preço −20% × qualidade, sem teto de perfil', 0.02);
       checkEq(sim.state.rep.successes, 1, 'sucesso');
       const termica = appSim(seed, { equipment: { ...appConfig().equipment, thermalBag: true } });
+      attend(termica);
       accept(termica, ['carne']);
       ready(termica, 1, 'carne', 90);
-      packPastry(termica.state, 1);
-      advance(termica, secs(36));
-      checkNear(termica.state.stats.appRevenue, Math.round(7 * 0.8 * (0.8 + 0.4 * 0.9) * 100) / 100, 'Embalagem Térmica: sem perda no transporte');
+      pack(termica, 1);
+      advance(termica, secs(37));
+      checkNear(termica.state.stats.appRevenue, Math.round(7 * 0.8 * (0.8 + 0.4 * bagNote(90, 36.6) / 100) * 100) / 100, 'Embalagem Térmica: sem perda no transporte', 0.02);
     },
   },
   {
-    id: 'rn94-comanda-incompleta-cancela',
-    rules: 'RN-94, RN-61',
+    id: 'rn191-sem-atendente-a-fila-cresce',
+    rules: 'RN-191, RN-193',
+    run(seed) {
+      const sim = appSim(seed, { reputation: 4.6 });
+      accept(sim, ['carne']);
+      accept(sim, ['queijo']);
+      accept(sim, ['carne']);
+      ready(sim, 1, 'carne');
+      pack(sim, 1);
+      advance(sim, secs(36));
+      checkEq(sim.state.dispatchQueue.length, 3, 'uma sacola por motoboy: três na fila');
+      checkEq(sim.state.stats.appPicked, 0, 'sem atendente ninguém é atendido, nem com a sacola completa');
+      attend(sim);
+      advance(sim, secs(2));
+      checkEq(sim.state.stats.appPicked, 1, 'com o atendente, o da frente leva a sua sacola');
+      checkEq(sim.state.dispatchQueue.length, 2, 'os outros continuam na fila');
+    },
+  },
+  {
+    id: 'rn192-rn94-paciencia-esgotada-cancela',
+    rules: 'RN-192, RN-94, RN-61',
     run(seed) {
       const sim = appSim(seed);
+      attend(sim);
       accept(sim, ['carne', 'queijo']);
       ready(sim, 1, 'carne');
-      packPastry(sim.state, 1); // só metade
+      pack(sim, 1); // só metade
       advance(sim, secs(35.5));
-      checkEq(sim.state.motoboys.length, 1, 'o motoboy chegou');
+      checkEq(sim.state.dispatchQueue.length, 1, 'o motoboy chegou');
       advance(sim, secs(24));
       checkEq(sim.state.stats.appCancelled, 0, 'espera até 25 s');
       advance(sim, secs(2));
       checkEq(sim.state.stats.appCancelled, 1, 'cancelada ao sair');
       checkNear(sim.state.rep.failures, 3, 'falha de peso 3,0');
       checkNear(sim.state.stats.appRevenue, 0, 'não paga');
-      checkEq(sim.state.ready.length, 0, 'os pastéis já feitos se perdem');
-      checkEq(sim.state.comandas.length, 0, 'comanda encerrada');
+      checkEq(sim.state.ready.length, 0, 'o pastel posto na sacola se perde');
+      checkEq(appTickets(sim).length, 0, 'comanda encerrada');
+      checkEq(sim.state.dispatchQueue.length, 0, 'o motoboy foi embora');
     },
   },
   {
-    id: 'rn92-reputacao-baixa-motoboy-espera-menos',
-    rules: 'RN-92',
+    id: 'rn192-reputacao-baixa-motoboy-espera-menos',
+    rules: 'RN-192',
     run(seed) {
       const sim = appSim(seed, { reputation: 1.5 });
       accept(sim, ['carne']);
@@ -187,63 +260,59 @@ export const delivery: Scenario[] = [
     },
   },
   {
-    id: 'rn92-motoboy-leva-ate-2-comandas',
-    rules: 'RN-92',
-    run(seed) {
-      const sim = appSim(seed, { reputation: 4.6 });
-      accept(sim, ['carne']);
-      accept(sim, ['queijo']);
-      accept(sim, ['carne']);
-      advance(sim, secs(36));
-      checkEq(sim.state.motoboys.length, 2, 'três comandas no mesmo horário: 2 motoboys');
-      checkEq(sim.state.motoboys.map((m) => m.comandas.length).sort().join(','), '1,2', 'até 2 por motoboy');
-    },
-  },
-  {
     id: 'rn94-nota-baixa-vira-falha-1',
     rules: 'RN-61',
     run(seed) {
       const sim = appSim(seed);
+      attend(sim);
       accept(sim, ['carne']);
-      ready(sim, 1, 'carne', 50); // 50 − 20 = 30 < 40
-      packPastry(sim.state, 1);
-      advance(sim, secs(36));
+      ready(sim, 1, 'carne', 50); // 50 − 20 de transporte < 40
+      pack(sim, 1);
+      advance(sim, secs(37));
       checkEq(sim.state.stats.appPicked, 1, 'entregue');
       checkEq(sim.state.rep.successes, 0, 'não é sucesso');
       checkNear(sim.state.rep.failures, 1, 'falha de peso 1,0');
     },
   },
   {
-    id: 'rn96-estufa-compartilhada',
-    rules: 'RN-96, RN-27',
+    id: 'rn189-sacola-reduz-o-decaimento',
+    rules: 'RN-189, RN-25',
     run(seed) {
       const sim = appSim(seed);
-      const s = sim.state;
-      for (let i = 0; i < 5; i++) {
-        ready(sim, 10 + i);
-        s.ready[s.ready.length - 1].warmed = true; // balcão ocupa 5 das 6 vagas
-      }
       accept(sim, ['carne', 'carne']);
-      ready(sim, 1);
-      ready(sim, 2);
-      packPastry(s, 1);
-      packPastry(s, 2);
-      const warmed = s.ready.filter((r) => r.warmed).length;
-      checkEq(warmed, 6, 'só sobrou 1 vaga: um pastel da comanda entra, o outro fica na bancada da Expedição');
-      check(s.ready.find((r) => r.id === 1)!.warmed === true, 'o primeiro ocupa a vaga');
-      check(!s.ready.find((r) => r.id === 2)!.warmed, 'o segundo decai normalmente');
+      ready(sim, 1, 'carne', 80);
+      pack(sim, 1);
+      const r = appTickets(sim)[0].slots[0].filled as { quality: number; readyAt: number; bagged?: boolean };
+      checkEq(r.bagged, true, 'na sacola');
+      checkNear(currentQuality(r as never, r.readyAt + 60), 80 - 40 * 0.25, 'na sacola cai 1/4 do ritmo depois dos 20 s');
+      checkNear(currentQuality({ id: 9, item: 'carne', quality: 80, readyAt: r.readyAt }, r.readyAt + 60), 40, 'fora da sacola, o ritmo normal');
     },
   },
   {
-    id: 'comanda-entra-na-demanda-de-producao',
-    rules: 'RN-96',
+    id: 'rn27-pastel-sai-da-estufa-ao-entrar-na-sacola',
+    rules: 'RN-27, RN-189',
+    run(seed) {
+      const sim = appSim(seed);
+      const s = sim.state;
+      accept(sim, ['carne']);
+      ready(sim, 1, 'carne');
+      s.ready[0].warmed = true;
+      pack(sim, 1);
+      checkEq(s.ready.filter((r) => r.warmed).length, 0, 'a vaga da estufa liberou');
+      const r = appTickets(sim)[0].slots[0].filled as { warmed?: boolean; bagged?: boolean };
+      check(!r.warmed && r.bagged === true, 'na sacola, fora da estufa');
+    },
+  },
+  {
+    id: 'rn187-comanda-app-entra-na-lista-de-producao',
+    rules: 'RN-187',
     run(seed) {
       const sim = appSim(seed);
       accept(sim, ['carne', 'queijo']);
       checkEq(unmet(sim.state, false).join(','), 'carne,queijo', 'itens da comanda precisam ser produzidos');
       ready(sim, 1, 'carne');
-      packPastry(sim.state, 1);
-      checkEq(unmet(sim.state, false).join(','), 'queijo', 'o reservado já cobre o seu item');
+      pack(sim, 1);
+      checkEq(unmet(sim.state, false).join(','), 'queijo', 'o item já na sacola sai da lista');
     },
   },
   {
@@ -258,21 +327,22 @@ export const delivery: Scenario[] = [
       check(sim.isOver(), 'dia terminou');
       checkNear(sim.state.rep.failures, f0, 'perdida sem falha');
       checkEq(sim.state.stats.appCancelled, 0, 'sem cancelamento');
-      checkEq(sim.state.comandas.length, 0, 'limpo');
+      checkEq(appTickets(sim).length, 0, 'limpo');
+      checkEq(sim.state.dispatchQueue.length, 0, 'fila vazia');
     },
   },
   {
-    id: 'expedicao-embala-sozinha',
-    rules: 'RN-40',
+    id: 'rn183-rn188-expedicao-preenche-e-entrega-sozinha',
+    rules: 'RN-183, RN-188, RN-191, RN-40',
     run(seed) {
       const sim = appSim(seed, { staff: [member('geral', { mode: 'fixo', position: 'expedicao' })] });
       sim.step();
       accept(sim, ['carne']);
       ready(sim, 1, 'carne', 90);
       advance(sim, secs(3));
-      check(sim.state.comandas[0].packed[0] === 1, 'a Expedição embalou o pastel pronto');
-      advance(sim, secs(34));
-      checkEq(sim.state.stats.appPicked, 1, 'e o motoboy levou');
+      check(appTickets(sim)[0].slots[0].filled !== null, 'a Expedição pôs o pastel na sacola');
+      advance(sim, secs(35));
+      checkEq(sim.state.stats.appPicked, 1, 'e entregou ao motoboy');
     },
   },
 ];
