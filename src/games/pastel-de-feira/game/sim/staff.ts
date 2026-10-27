@@ -5,7 +5,7 @@ import { AUTO_PRIORITY, ATTENDANCE_FACTOR, CARE_BONUS, ENERGY, FRYER_ONLY, FRY_C
 import { ITEMS, type ItemId } from '../data/recipes';
 import type { ItemRef, StationId } from '../types';
 import { noteOrder, takeCoins } from './stations/counter';
-import { fill, slotFor, ticketOf } from './tickets';
+import { fill, openTickets, slotFor } from './tickets';
 import { chargeGroup } from './stations/tables';
 import { packPastry } from './delivery';
 import { autoMillActive, cardMachineActive, timerActive } from './automation';
@@ -16,7 +16,7 @@ import { makeCup, millSeconds } from './stations/cane';
 import { fryWindow, isChanging, nextFreeBasket, placeBasket, startWorkerOilChange, takeBasket } from './stations/fryer';
 import { currentQuality } from './quality';
 import { fatigueFactor, ignite, maybeBurnWorker, canSurprise } from './world';
-import { emit, now, type Customer, type DayState, type Worker, type WorkerTask } from './state';
+import { emit, now, type Customer, type DayState, type Ticket, type Worker, type WorkerTask } from './state';
 import { canMake } from './stock';
 import { BENCH_CAPACITY, OIL_DIRTY_THRESHOLD } from '../constants';
 import { unmet } from './production';
@@ -198,31 +198,42 @@ function start(w: Worker, s: DayState, task: Omit<WorkerTask, 'total' | 'left'>,
   w.task = { ...task, total, left: total };
 }
 
-/** Melhor item pronto para um cliente: o pastel de maior nota que atende; senão um copo (RN-18). */
-function bestFor(s: DayState, c: Customer): ItemRef | null {
+/** Pronto que outro funcionário já vai pôr numa comanda. */
+const refTaken = (s: DayState, me: Worker, ref: ItemRef): boolean =>
+  s.workers.some((o) => o !== me && o.task?.kind === 'preencher' && o.task.ref?.kind === ref.kind && o.task.ref.id === ref.id);
+
+/** Melhor pronto livre para a comanda: o pastel de maior nota que ela aceita; senão um copo (RN-18, RN-182). */
+function bestFor(s: DayState, w: Worker, t: Ticket): ItemRef | null {
   let pastry: { id: number; q: number } | null = null;
   let cup: number | null = null;
-  const t = ticketOf(s, c.id);
-  if (!t) return null;
   for (const r of s.ready) {
-    if (r.reservedFor !== undefined || slotFor(s, t, r.item) < 0) continue;
+    if (r.reservedFor !== undefined || slotFor(s, t, r.item) < 0 || refTaken(s, w, { kind: 'pastel', id: r.id })) continue;
     const q = currentQuality(r, now(s));
     if (!pastry || q > pastry.q) pastry = { id: r.id, q };
   }
-  for (const x of s.cups) if (cup === null && slotFor(s, t, x.item) >= 0) cup = x.id;
+  for (const x of s.cups) if (cup === null && slotFor(s, t, x.item) >= 0 && !refTaken(s, w, { kind: 'copo', id: x.id })) cup = x.id;
   if (pastry) return { kind: 'pastel', id: pastry.id };
   return cup !== null ? { kind: 'copo', id: cup } : null;
 }
 
-function pickBalcao(s: DayState, w: Worker): boolean {
-  for (const c of s.customers) {
-    if (c.state !== 'anotado' || c.place !== 'fila' || claimed(s, w, 'entregar', c.id)) continue;
-    const found = bestFor(s, c);
+/**
+ * Põe um pronto na comanda mais antiga que o aceita (RN-188), entre as do trilho do balcão cujo dono está
+ * no lugar dado: na fila (Balcão) ou na mesa (Garçom). 1,5 s, −20% com o curso de Atendimento.
+ */
+function pickFill(s: DayState, w: Worker, place: Customer['place']): boolean {
+  for (const t of openTickets(s, 'balcao')) {
+    if (s.customers.find((c) => c.id === t.owner)?.place !== place) continue;
+    const found = bestFor(s, w, t);
     if (found) {
-      start(w, s, { kind: 'entregar', customerId: c.id, ref: found }, WORK.deliver, true);
+      start(w, s, { kind: 'preencher', ticketId: t.id, ref: found }, WORK.deliver, true);
       return true;
     }
   }
+  return false;
+}
+
+function pickBalcao(s: DayState, w: Worker): boolean {
+  if (pickFill(s, w, 'fila')) return true;
   if (!cardMachineActive(s) && s.payQueue.length > 0 && !claimed(s, w, 'pagar')) {
     start(w, s, { kind: 'pagar' }, WORK.collect, true);
     return true;
@@ -241,14 +252,7 @@ function pickBalcao(s: DayState, w: Worker): boolean {
 
 /** Garçom: anota o grupo na mesa e entrega o pedido pronto (RN-83, RN-86). */
 function pickWaiter(s: DayState, w: Worker): boolean {
-  for (const c of s.customers) {
-    if (c.state !== 'anotado' || c.place !== 'mesa' || claimed(s, w, 'entregar', c.id)) continue;
-    const found = bestFor(s, c);
-    if (found) {
-      start(w, s, { kind: 'entregar', customerId: c.id, ref: found }, WORK.deliver, true);
-      return true;
-    }
-  }
+  if (pickFill(s, w, 'mesa')) return true;
   const next = s.customers.find((c) => c.state === 'aguardando' && c.place === 'mesa' && !claimed(s, w, 'anotar', c.id));
   if (!next) return false;
   start(w, s, { kind: 'anotar', customerId: next.id }, WORK.takeOrder, true);
@@ -399,12 +403,11 @@ function complete(s: DayState, w: Worker, t: WorkerTask): void {
     case 'varrer':
       addDirt(s, -HELPER_CLEAN_POINTS);
       break;
-    case 'entregar':
-      if (t.customerId !== undefined && t.ref) {
-        const ticket = ticketOf(s, t.customerId);
-        if (ticket) fill(s, ticket, t.ref, w);
-      }
+    case 'preencher': {
+      const ticket = s.tickets.find((x) => x.id === t.ticketId);
+      if (ticket && t.ref) fill(s, ticket, t.ref, w); // revalida: o pronto ou a comanda podem ter sumido
       break;
+    }
     case 'montar': {
       assembleItem(s, flavorFor(s, w, t.item!), w.traits.includes('caprichoso') ? CARE_BONUS : 0);
       break;

@@ -258,4 +258,40 @@ export const comandas: Scenario[] = [
       checkEq(s.assembled[0]?.item, 'queijo', 'a Montagem monta primeiro o pedido que entrou primeiro');
     },
   },
+  {
+    id: 'rn188-balcao-preenche-a-comanda-mais-antiga',
+    rules: 'RN-188, RN-40',
+    run(seed) {
+      const sim = crewSim(seed, [member('geral', { mode: 'fixo', position: 'balcao' })]);
+      const s = sim.state;
+      sim.step();
+      const a = addCustomer(s, 'padrao', ['carne']);
+      const b = addCustomer(s, 'padrao', ['carne']);
+      noteOrder(s, b); // b entrou antes
+      advance(sim, 1);
+      noteOrder(s, a);
+      s.ready.push({ id: 900, item: 'carne', quality: 80, readyAt: s.tick * STEP });
+      advance(sim, Math.round(4 / STEP));
+      check(!s.customers.includes(b), 'a comanda mais antiga (b) recebeu o pastel e saiu');
+      check(s.customers.includes(a), 'a mais nova continua esperando');
+    },
+  },
+  {
+    id: 'rn188-rn118-preencher-leva-1-5-s-e-atendimento-encurta',
+    rules: 'RN-188, RN-43, RN-118',
+    run(seed) {
+      for (const [courses, secs] of [[[], 1.5], [['atendimento'], 1.2]] as const) {
+        const sim = crewSim(seed, [member('geral', { mode: 'fixo', position: 'balcao' }, [], [...courses])]);
+        const s = sim.state;
+        s.pasteleiro.at = 'moenda'; // fora do escritório: sem o bônus de gestão (RN-101)
+        sim.step();
+        noteOrder(s, addCustomer(s, 'padrao', ['carne']));
+        s.ready.push({ id: 900, item: 'carne', quality: 80, readyAt: s.tick * STEP });
+        sim.step();
+        const task = s.workers[0].task;
+        checkEq(task?.kind, 'preencher', 'o Balcão vai pôr na comanda');
+        checkNear(task!.total, secs, `tempo de pôr na comanda (${courses.join(',') || 'sem curso'})`, 1e-6);
+      }
+    },
+  },
 ];

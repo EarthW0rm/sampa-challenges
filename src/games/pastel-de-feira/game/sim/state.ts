@@ -137,13 +137,15 @@ export interface Pasteleiro {
   hold: { action: HoldAction; station: StationId; item?: ItemId } | null;
 }
 
-export type TaskKind = 'anotar' | 'cobrar' | 'pagar' | 'entregar' | 'montar' | 'colocar' | 'caldo' | 'trocar' | 'limpar' | 'varrer' | 'embalar';
+export type TaskKind = 'anotar' | 'cobrar' | 'pagar' | 'preencher' | 'montar' | 'colocar' | 'caldo' | 'trocar' | 'limpar' | 'varrer' | 'embalar';
 
 export interface WorkerTask {
   kind: TaskKind;
   total: number;
   left: number;
   customerId?: number;
+  /** Comanda que recebe o pronto (tarefa `preencher`, RN-188). */
+  ticketId?: number;
   ref?: ItemRef;
   item?: ItemId;
   tacho?: number;
