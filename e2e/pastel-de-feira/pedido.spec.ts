@@ -3,7 +3,7 @@ import {
 } from '../../src/games/pastel-de-feira/game/constants';
 import { ITEMS } from '../../src/games/pastel-de-feira/game/data/recipes';
 import { expect, frontOrder, test } from './support/game';
-import { assemble, collect, deliver, fry, fryTimes, isDrink, mill, serveFront, takeOrder } from './support/flow';
+import { assemble, collect, deliver, fry, fryTimes, isDrink, mill, serveCustomer, serveFront, takeOrder } from './support/flow';
 
 const money = (n: number) => `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -110,38 +110,29 @@ test.describe('Pedido de balcão de ponta a ponta', () => {
   });
 
   test('RN-20/RN-21: pastel no ponto (nota 80) é pago a preço × (0,8 + 0,4 × 0,8)', async ({ game }) => {
-    await game.waitCustomer();
-    await takeOrder(game);
+    // pedido de um pastel só: a comanda completa na hora em que ele entra, sem esperar outros itens (RN-186)
+    await game.advanceUntil((pf) => pf.sim.state.customers.some((k) => k.place === 'fila' && k.lines.length === 1 && k.lines[0].item !== 'caldo-puro'), 120, undefined, 6);
     const c = await game.hook((pf) => {
-      const x = pf.sim.state.customers.find((k) => k.state === 'anotado')!;
-      return { id: x.id, items: x.lines.map((l) => l.item), rep: pf.sim.state.config.reputation, prices: pf.sim.state.config.menu };
+      const x = pf.sim.state.customers.find((k) => k.place === 'fila' && k.lines.length === 1 && k.lines[0].item !== 'caldo-puro')!;
+      return { id: x.id, item: x.lines[0].item, prices: pf.sim.state.config.menu };
     });
-    const pastry = c.items.find((i) => !isDrink(i))!;
-    await assemble(game, pastry);
-    const t = fryTimes(pastry);
-    const p = await fry(game, (t.ponto[0] + t.ponto[1]) / 2);
-    expect(p.quality).toBe(QUALITY_PONTO);
-    await deliver(game, { kind: 'pastel', id: p.id });
-    const owed = await game.hook((pf, id) => pf.sim.state.customers.find((x) => x.id === id)?.owed ?? null, c.id);
-    const price = c.prices.find((m) => m.item === pastry)!.price;
+    await serveCustomer(game, c.id);
+    const price = c.prices.find((m) => m.item === c.item)!.price;
     const expected = price * (QUALITY_FACTOR_MIN + (QUALITY_FACTOR_SPAN * QUALITY_PONTO) / 100); // reputação 3: prêmio 1,0
-    if (owed !== null) expect(owed).toBeCloseTo(expected, 2);
-    else expect(await game.hook((pf) => pf.sim.state.coins.at(-1)?.amount)).toBeCloseTo(expected, 2);
+    expect(await game.hook((pf) => pf.sim.state.coins.at(-1)?.amount)).toBeCloseTo(expected, 2);
   });
 
   test('RN-39a/RN-28: cada pastel entregue gasta 1 saquinho', async ({ game }) => {
     await game.waitCustomer();
     const bags = await game.hook((pf) => pf.sim.state.consumables.saquinho);
-    await takeOrder(game);
-    const c = await game.hook((pf) => pf.sim.state.customers.find((k) => k.state === 'anotado')!.lines.map((l) => l.item));
-    const pastry = c.find((i) => !isDrink(i))!;
-    await assemble(game, pastry);
-    const p = await fry(game, (fryTimes(pastry).ponto[0] + fryTimes(pastry).ponto[1]) / 2);
-    await deliver(game, { kind: 'pastel', id: p.id });
-    expect(await game.hook((pf) => pf.sim.state.consumables.saquinho)).toBe(bags - 1);
+    const id = await game.hook((pf) => pf.queue()[0].id);
+    const pastries = await game.hook((pf, cid) => pf.sim.state.customers.find((k) => k.id === cid)!.lines.filter((l) => l.item !== 'caldo-puro').length, id);
+    await serveCustomer(game, id);
+    // o saquinho é gasto na entrega da comanda completa, um por pastel (RN-186, RN-28)
+    expect(await game.hook((pf) => pf.sim.state.consumables.saquinho)).toBe(bags - pastries);
   });
 
-  test('RN-63: item errado é recusado, volta para a bancada e o pedido vira falha uma vez só', async ({ game }) => {
+  test('RN-63/RN-182: sabor errado é recusado pela comanda sem custo e o pastel continua pronto', async ({ game }) => {
     await game.waitCustomer();
     await takeOrder(game);
     const c = await game.hook((pf) => {
@@ -160,13 +151,13 @@ test.describe('Pedido de balcão de ponta a ponta', () => {
       wrong: pf.sim.state.customers.find((x) => x.id === a.cid)?.wrong,
       failures: pf.sim.state.rep.failures,
       stat: pf.sim.state.stats.wrong,
+      filled: pf.tickets().find((t) => t.owner === a.cid)?.slots.filter((x) => x.filled).length,
     }), { pid: p.id, cid: c.id });
-    expect(r1.stillReady).toBe(true);
-    expect(r1.wrong).toBe(true);
-    expect(r1.stat).toBe(1);
-    expect(r1.failures - failures0).toBe(1);
-    await deliver(game, { kind: 'pastel', id: p.id });
-    expect(await game.hook((pf) => ({ f: pf.sim.state.rep.failures, s: pf.sim.state.stats.wrong }))).toEqual({ f: r1.failures, s: 1 });
+    expect(r1.stillReady, 'o pastel continua pronto no balcão').toBe(true);
+    expect(r1.filled, 'nada entrou na comanda').toBe(0);
+    expect(r1.wrong).toBe(false);
+    expect(r1.stat).toBe(0);
+    expect(r1.failures - failures0, 'sem falha').toBe(0);
   });
 
   test('spec 4: COBRAR duas vezes seguidas não cobra em dobro', async ({ game }) => {
