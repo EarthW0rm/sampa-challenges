@@ -9,6 +9,7 @@ import type { DayConfig } from '../../game/types';
 import { advance, check, checkEq, checkNear, makeSim, type Scenario } from '../harness';
 import { devConfig } from '../testConfig';
 import { member } from './posicoes';
+import { DEFAULT_STYLE, Player } from '../player';
 
 const secs = (n: number): number => Math.round(n / STEP);
 
@@ -343,6 +344,21 @@ export const delivery: Scenario[] = [
       check(appTickets(sim)[0].slots[0].filled !== null, 'a Expedição pôs o pastel na sacola');
       advance(sim, secs(35));
       checkEq(sim.state.stats.appPicked, 1, 'e entregou ao motoboy');
+    },
+  },
+  {
+    id: 'jogador-automatico-atende-a-expedicao',
+    rules: 'RN-183, RN-191, RN-187',
+    run(seed) {
+      const sim = appSim(seed);
+      sim.state.pasteleiro.at = 'balcao';
+      accept(sim, ['carne', 'queijo']);
+      const p = new Player({ ...DEFAULT_STYLE, attendDispatch: true });
+      for (let i = 0; i < secs(90) && sim.state.stats.appPicked === 0; i++) {
+        p.act(sim);
+        sim.step();
+      }
+      checkEq(sim.state.stats.appPicked, 1, 'produziu, pôs na sacola e entregou ao motoboy');
     },
   },
 ];

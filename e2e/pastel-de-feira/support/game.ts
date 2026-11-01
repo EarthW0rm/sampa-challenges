@@ -237,6 +237,19 @@ export class GamePage extends BaseGamePage<E2EHook> {
     await this.ev.action(`Toque na comanda ${label} no trilho`);
   }
 
+  /** Fila da Expedição na ordem: motoboys e clientes de encomenda (RN-191). */
+  filaExpedicao(): Promise<ReturnType<E2EHook['dispatch']>> {
+    return this.hook((pf) => pf.dispatch());
+  }
+
+  /** Leva o pasteleiro ao balcão da Expedição e espera até o dono da frente receber a comanda completa (RN-191). */
+  async atenderExpedicao(maxSeconds = 10): Promise<void> {
+    await this.goTo('expedicao');
+    const before = await this.hook((pf) => pf.sim.state.stats.appPicked + pf.sim.state.stats.encDone);
+    await this.advanceUntil((pf, b) => pf.sim.state.stats.appPicked + pf.sim.state.stats.encDone > b, maxSeconds, before);
+    await this.ev.action('Atender a fila da Expedição');
+  }
+
   /** Toca no dono da comanda na fila do balcão (atalho de RN-185). */
   async tocarDono(label: string): Promise<void> {
     const t = await this.comanda(label);

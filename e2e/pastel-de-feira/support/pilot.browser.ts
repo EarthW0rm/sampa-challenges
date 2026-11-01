@@ -155,7 +155,7 @@ function plan(cmd: Command): Step[] {
           const list = pf.controls();
           const base = list.findIndex((c) => c.label === 'VASSOURA') + 1;
           const st = pf.sim.state;
-          const ready = st.ready.filter((x) => x.reservedFor === undefined).slice(0, 7);
+          const ready = st.ready.slice(0, 7);
           const i = ref.kind === 'pastel' ? ready.findIndex((x) => x.id === ref.id) : st.cups.slice(0, 5).findIndex((x) => x.id === ref.id);
           if (i < 0) return miss(`item ${ref.kind} ${ref.id} fora do painel`);
           const ctl = list[base + (ref.kind === 'pastel' ? i : ready.length + i)];

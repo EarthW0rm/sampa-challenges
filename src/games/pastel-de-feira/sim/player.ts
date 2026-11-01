@@ -4,7 +4,7 @@ import { unmet } from '../game/sim/production';
 import type { DaySim } from '../game/sim/day';
 import { fryOutcome, fryWindow, isChanging, isDirty, isLocked, nextFreeBasket } from '../game/sim/stations/fryer';
 import type { DayState } from '../game/sim/state';
-import { ticketOf } from '../game/sim/tickets';
+import { openTickets, slotFor, ticketOf } from '../game/sim/tickets';
 import type { Command, StationId } from '../game/types';
 
 /** Jogador automático do Dia de Feira: lê o estado e manda `Command` como o toque faria. Só para testes e calibração. */
@@ -15,6 +15,8 @@ export interface PlayerStyle {
   attentive: boolean;
   /** Aceita toda oferta do app com um toque (de qualquer posição, PA-14). */
   acceptOffers?: boolean;
+  /** Sem funcionário na Expedição, o pasteleiro põe os prontos nas sacolas e caixas e atende a fila (RN-183, RN-191). */
+  attendDispatch?: boolean;
 }
 
 export const DEFAULT_STYLE: PlayerStyle = { reaction: 12, attentive: true };
@@ -98,6 +100,16 @@ export class Player {
     // 3) entregar o que está pronto
     const delivery = this.findDelivery(s);
     if (delivery) return this.go(s, 'balcao', delivery);
+    // 3b) Expedição sem funcionário: sacolas e caixas, e ficar lá enquanto o da frente recebe a sua (RN-191)
+    if (this.style.attendDispatch && !s.workers.some((w) => w.position === 'expedicao')) {
+      const front = s.dispatchQueue[0];
+      const ft = front && s.tickets.find((t) => t.id === front.ticketId);
+      if (ft && ft.slots.every((l) => l.filled !== null)) return s.pasteleiro.at === 'expedicao' ? null : { type: 'tapStation', station: 'expedicao' };
+      for (const t of openTickets(s, 'expedicao')) {
+        const r = s.ready.find((x) => slotFor(s, t, x.item) >= 0);
+        if (r) return this.go(s, 'expedicao', { type: 'fill', item: { kind: 'pastel', id: r.id }, ticketId: t.id });
+      }
+    }
     // 4) cobrar as moedas
     if (s.coins.length > 0) return this.go(s, 'balcao', { type: 'tapSlot', station: 'balcao', slot: { k: 'moedas' } });
     // 5) pagar mesas

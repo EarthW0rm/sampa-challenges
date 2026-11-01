@@ -24,7 +24,7 @@ async function selectReady(game: GamePage, id: number): Promise<void> {
   const idx = await game.hook((pf, rid) => {
     const ctl = pf.controls();
     const base = ctl.findIndex((c) => c.label === 'VASSOURA') + 1;
-    return base + pf.sim.state.ready.filter((x) => x.reservedFor === undefined).slice(0, 7).findIndex((x) => x.id === rid);
+    return base + pf.sim.state.ready.slice(0, 7).findIndex((x) => x.id === rid);
   }, id);
   const ctl = (await game.controls())[idx];
   await game.ev.quiet(async () => {

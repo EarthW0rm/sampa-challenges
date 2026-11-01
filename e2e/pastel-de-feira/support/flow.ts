@@ -99,7 +99,7 @@ async function deliverSteps(game: GamePage, ref: { kind: 'pastel' | 'copo'; id: 
     const st = pf.sim.state;
     const ctl = pf.controls();
     const base = ctl.findIndex((c) => c.label === 'VASSOURA') + 1;
-    const ready = st.ready.filter((x) => x.reservedFor === undefined).slice(0, 7);
+    const ready = st.ready.slice(0, 7);
     if (r.kind === 'pastel') return base + ready.findIndex((x) => x.id === r.id);
     return base + ready.length + st.cups.slice(0, 5).findIndex((x) => x.id === r.id);
   }, ref);
