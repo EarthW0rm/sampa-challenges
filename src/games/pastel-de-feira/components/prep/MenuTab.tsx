@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { setDelivery, setPrice, setPromo, toggleMenuItem } from '../../game/campaign/actions/menu';
+import { fixedDispatcher } from '../../game/campaign/actions/orders';
 import { fatigueFactor } from '../../game/campaign/fatigue';
 import { defaultPrice } from '../../game/campaign/pricing';
 import { REFUSAL_TEXT, type Campaign } from '../../game/campaign/types';
@@ -54,12 +55,12 @@ export function MenuTab({ campaign: c, onChange }: Props) {
             <input
               type="checkbox"
               checked={c.autoAccept}
-              disabled={!c.staff.length}
+              disabled={!fixedDispatcher(c)}
               onChange={(e) => onChange(setDelivery(c, { auto: e.target.checked }))}
             />
             <span className="item-main">
               <strong>Aceite automático</strong>
-              <span>Precisa de um funcionário na Expedição; aceita toda oferta até o teto.</span>
+              <span>{fixedDispatcher(c) ? 'Aceita sozinho as ofertas e encomendas que o estoque cobre, até o teto.' : 'Precisa de alguém fixo na Expedição.'}</span>
             </span>
           </label>
         </div>

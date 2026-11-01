@@ -11,6 +11,7 @@ import { loadAll } from './game/assets';
 import { closeDay } from './game/campaign/closing';
 import { handoverValue, startFromHandover } from './game/campaign/actions/handover';
 import { daySeed, newCampaign, toDayConfig } from './game/campaign/campaign';
+import { autoAcceptOrders } from './game/campaign/actions/orders';
 import { browserStorage, clearSave, load, saveCampaign, type SavePhase } from './game/campaign/save';
 import type { Balance, Campaign, NewCampaignOptions } from './game/campaign/types';
 import { loadRecord, saveCashRecord, saveDayRecord, savePointRecord } from './game/record';
@@ -167,8 +168,10 @@ export default function PastelDeFeira({ onExit }: GameProps) {
             persist(c, 'preparo');
           }}
           onOpen={() => {
-            persist(campaign, 'dia'); // checkpoint do início do dia (JA-06)
-            setDayConfig(withDebug(toDayConfig(campaign)));
+            const c = autoAcceptOrders(campaign); // aceite automático das encomendas cobertas pelo estoque (RN-102)
+            persist(c, 'dia'); // checkpoint do início do dia (JA-06)
+            setCampaign(c);
+            setDayConfig(withDebug(toDayConfig(c)));
             setScreen('dia');
           }}
           onExit={onExit}

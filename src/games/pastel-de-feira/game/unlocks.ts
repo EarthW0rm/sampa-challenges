@@ -13,10 +13,10 @@ export interface Unlock {
 export const UNLOCKS: readonly Unlock[] = [
   { id: 'equipe', day: 2, liberable: true, title: 'Equipe', text: 'Contrate funcionários na aba Equipe. Eles cansam: fique de olho na energia.' },
   { id: 'associacao', day: 3, liberable: true, title: 'Associação', text: 'A aba Associação oferece desafios com prêmio em dinheiro e reputação.' },
-  { id: 'delivery', day: 5, liberable: true, title: 'Delivery', text: 'Ofertas do app aparecem na faixa de avisos durante o dia: toque para aceitar e embale antes do motoboy chegar.' },
+  { id: 'delivery', day: 5, liberable: true, title: 'Delivery', text: 'Ofertas do app aparecem na faixa de avisos: toque para aceitar. Ponha os pastéis na sacola e atenda o motoboy na Expedição antes que ele desista.' },
   { id: 'tema', day: 5, liberable: false, title: 'Tema da barraca', text: 'Escolha um tema para a barraca: ele muda o público e os preços.' },
   { id: 'especial', day: 6, liberable: true, title: 'Especial da Casa', text: 'O Especial da Casa é um pastel grande e caro: ocupa dois cestos e rende mais.' },
-  { id: 'escritorio', day: 10, liberable: true, title: 'Escritório', text: 'O escritório libera cargos que ajudam a barraca: o pasteleiro ganha bônus enquanto estiver nele.' },
+  { id: 'escritorio', day: 10, liberable: true, title: 'Escritório', text: 'O escritório libera cargos que ajudam a barraca: o pasteleiro ganha bônus enquanto estiver nele. Com a área de delivery, aparecem as encomendas.' },
 ];
 
 const KEY = 'pastel-de-feira:visto';

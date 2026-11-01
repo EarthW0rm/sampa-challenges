@@ -1,7 +1,7 @@
 import { STEP } from '../../game/constants';
-import { acceptOrder, orderShortfall, rollOrders } from '../../game/campaign/actions/orders';
+import { acceptOrder, autoAcceptOrders, orderShortfall, rollOrders } from '../../game/campaign/actions/orders';
 import { buyIngredient } from '../../game/campaign/actions/inventory';
-import { buyOffice, buySpace, hireRole } from '../../game/campaign/actions/upgrades';
+import { buyDeliveryArea, buyOffice, buySpace, hireRole } from '../../game/campaign/actions/upgrades';
 import { cloneCampaign, newCampaign, toDayConfig } from '../../game/campaign/campaign';
 import { closeDay } from '../../game/campaign/closing';
 import { isCampaign } from '../../game/campaign/save';
@@ -46,10 +46,12 @@ function boxN(sim: ReturnType<typeof orderSim>, n: number, quality = 90) {
 
 const rich = (patch: Partial<Campaign> = {}): Campaign => {
   let c: Campaign = { ...newCampaign({ profile: 'tradicional', eventsOn: false, tutorial: false, seed: 15 }), cash: 20000, day: 10, ...patch };
-  const r1 = buySpace(c, 4) as ActionResult;
+  const r1 = buySpace(c, 7) as ActionResult;
   if (r1.ok) c = r1.campaign;
   const r2 = buyOffice(c);
   if (r2.ok) c = r2.campaign;
+  const r3 = buyDeliveryArea(c); // encomenda exige escritório e área de delivery (RN-102)
+  if (r3.ok) c = r3.campaign;
   return c;
 };
 
@@ -230,6 +232,48 @@ export const encomendas: Scenario[] = [
       // o dia limpa as encomendas e cobra a multa se falhar
       const out = closeDay(c, runDay(seed, cfg).result()!);
       checkEq(out.campaign.orders.length, 0, 'encomendas valem só para o dia');
+    },
+  },
+  {
+    id: 'rn102-encomenda-exige-escritorio-e-delivery',
+    rules: 'RN-102, CE-22',
+    run() {
+      let found = false;
+      for (let cal = 1; cal <= 40 && !found; cal++) {
+        const com = rich({ calendar: cal });
+        const offers = rollOrders(com);
+        if (offers.length === 0) continue;
+        found = true;
+        const sem = { ...com, owned: { ...com.owned, delivery: false } };
+        checkEq(rollOrders(sem).length, 0, 'com escritório e sem delivery não há ofertas');
+        const r = acceptOrder(sem, offers[0].id);
+        check(!r.ok, 'nem aceite');
+      }
+      check(found, 'houve oferta com escritório e delivery');
+    },
+  },
+  {
+    id: 'rn102-aceite-automatico-ao-abrir-a-feira',
+    rules: 'RN-102, RN-95',
+    run() {
+      let c: Campaign | undefined;
+      for (let cal = 1; cal <= 200 && !c; cal++) {
+        const x = rich({ calendar: cal });
+        if (rollOrders(x).length > 0) c = x;
+      }
+      check(c, 'houve oferta');
+      const fixo = { id: 1, name: 'Zé', kind: 'geral' as const, traits: [], courses: [], mode: 'fixo' as const, position: 'expedicao' as const, trainedToday: false };
+      // estoque farto direto no inventário: o teste é da regra de aceite, não da capacidade de estoque
+      const lots = ['massa', 'carne', 'mucarela', 'oregano', 'tomate', 'presunto', 'frango', 'catupiry', 'palmito', 'calabresa', 'cebola', 'azeitona', 'ovo']
+        .map((ingredient) => ({ ingredient: ingredient as never, qty: 999, unitCost: 1, expires: c!.calendar + 3, inCooler: false }));
+      const stocked: Campaign = { ...c, autoAccept: true, staff: [fixo], inventory: [...c.inventory, ...lots] };
+      const offers = rollOrders(stocked);
+      const auto = autoAcceptOrders(stocked);
+      check(auto.orders.length > 0, 'com estoque, toggle e alguém fixo na Expedição, aceita sozinho');
+      checkEq(auto.orders.length + rollOrders(auto).length, offers.length, 'aceitas saem das ofertas');
+      checkEq(autoAcceptOrders({ ...stocked, autoAccept: false }).orders.length, 0, 'toggle desligado: manual');
+      checkEq(autoAcceptOrders({ ...stocked, staff: [{ ...fixo, mode: 'auto' }] }).orders.length, 0, 'sem ninguém fixo na Expedição: manual');
+      checkEq(autoAcceptOrders({ ...c, autoAccept: true, staff: [fixo] }).orders.length, 0, 'sem estoque que cubra: fica para o aceite manual');
     },
   },
 ];

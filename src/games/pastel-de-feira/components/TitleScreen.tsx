@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import type { LoadWarning, SaveV2 } from '../game/campaign/save';
+import type { LoadWarning, SaveV3 } from '../game/campaign/save';
 
 interface Props {
-  save: SaveV2 | null;
+  save: SaveV3 | null;
   warning?: LoadWarning;
   record: number;
   onContinue: () => void;
@@ -13,6 +13,7 @@ interface Props {
 const WARNING_TEXT: Record<LoadWarning, string> = {
   invalido: 'Progresso salvo inválido — nova campanha.',
   semPersistencia: 'O navegador bloqueou o armazenamento: o progresso não será salvo.',
+  encomendaDescartada: 'A encomenda aceita foi descartada sem multa: agora encomendas exigem a área de delivery.',
 };
 
 export function TitleScreen({ save, warning, record, onContinue, onNew, onExit }: Props) {
