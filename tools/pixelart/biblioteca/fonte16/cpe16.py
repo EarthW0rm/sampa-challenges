@@ -29,6 +29,8 @@ OUTFITS = {
     'pasteleiro':     dict(hat='#f4efe2', hatD='#b9b6ad', apron='#d42a2a', apronD='#9e1c1c', kind='toque'),
     'func_fritador':  dict(hat='#ff8a2a', hatD='#c9601a', apron='#5b5666', apronD='#3b3a48', kind='bone'),
     'func_geral':     dict(hat='#3d7fb5', hatD='#2c5f8c', apron='#3fa65a', apronD='#2a7a40', kind='bone'),
+    # motoboy do app (Pastel de Feira, RN-194): capacete vermelho com viseira, jaqueta verde do app e baú nas costas
+    'motoboy':        dict(hat='#d9503f', hatD='#9a2e1e', apron='#2f7a46', apronD='#1f5a32', kind='capacete', visor='#8fb3e0', bau='#c8432b', bauD='#8e2a1a'),
 }
 
 
@@ -157,6 +159,12 @@ def _hat(p, L, outfit, dy=0):
     if not outfit: return
     o = OUTFITS[outfit]; cx, hw, hh, hy = L['cx'], L['hw'], L['hh'], L['head_cy'] + dy
     top = hy - hh
+    if o['kind'] == 'capacete':
+        p.rect(cx - hw, top - 2, cx + hw - 1, top + hh - 2, o['hat'])
+        p.rect(cx - hw, top - 2, cx + hw - 1, top - 2, o['hatD'])
+        p.rect(cx - hw + 2, top + hh - 4, cx + hw - 3, top + hh - 3, o['visor'])   # viseira
+        p.rect(cx - hw, top + hh - 2, cx + hw - 1, top + hh - 2, o['hatD'])
+        return
     if o['kind'] == 'toque':
         p.rect(cx - hw + 2, top - 3, cx + hw - 3, top, o['hat'])
         p.rect(cx - hw + 1, top - 5, cx + hw - 2, top - 3, o['hat'])
@@ -165,6 +173,14 @@ def _hat(p, L, outfit, dy=0):
         p.rect(cx - hw + 1, top - 1, cx + hw - 2, top + 1, o['hat'])
         p.rect(cx - hw + 1, top + 1, cx + hw - 2, top + 1, o['hatD'])
         p.rect(cx + 1, top + 1, cx + hw + 1, top + 2, o['hatD'])         # aba
+
+
+def _bau(p, L, outfit, top):
+    """Baú do app nas costas: aparece por trás dos ombros (desenhado antes do corpo)."""
+    if not outfit or 'bau' not in OUTFITS[outfit]: return
+    o = OUTFITS[outfit]; cx, bw = L['cx'], L['bw']
+    p.rect(cx - bw // 2 - 2, top - 4, cx + bw // 2 + 1, top + 6, o['bau'])
+    p.rect(cx - bw // 2 - 2, top + 5, cx + bw // 2 + 1, top + 6, o['bauD'])
 
 
 def _arm(p, L, side, top, length, held=None, out=0):
@@ -224,6 +240,7 @@ def dog(size, breed, pose, outfit=None):
     if pose == 'feliz' or pose == 'andando_1': dy = 0
     bob = 1 if pose == 'andando_1' else 0
     _tail(p, L, br, bb - 1, 1 if pose != 'bravo' else 1, up=1 if pose == 'bravo' else 0)
+    _bau(p, L, outfit, bt + bob)
     _legs(p, L, step)
     _body(p, L, br, outfit, bt + bob, bb)
     al = max(5, L['h'] // 6)
