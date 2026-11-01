@@ -2,7 +2,7 @@ import { RAIL_VISIBLE, TICKET_H, TICKET_MIN_W } from '../constants';
 import type { Layout, Rect } from '../layout';
 import type { DayState, Ticket, Track } from '../sim/state';
 import { openTickets, ticketAccepts, ticketLabel } from '../sim/tickets';
-import { textWidth } from '../pixelFont';
+import { drawPixelText, textWidth } from '../pixelFont';
 import type { ItemRef } from '../types';
 import type { UiState } from '../ui';
 import { bar, box, drawArt, drawFlavor, drawNine, drawThree, itemColor, PAL, textCenter } from './draw';
@@ -17,8 +17,12 @@ export function railRect(layout: Layout, track: Track): Rect | null {
   return track === 'balcao' ? { x: z.x + 6, y: z.y + 20, w: z.w - 12, h: TICKET_H + 4 } : { x: z.x + 6, y: z.y + 20, w: z.w - 12, h: TICKET_H + 4 };
 }
 
-/** Largura da comanda: um selo de 14 por item, o rótulo e o mínimo de toque. */
-export const ticketWidth = (t: Ticket): number => Math.max(TICKET_MIN_W, 6 + 14 * t.slots.length, textWidth(ticketLabel(t)) + 6);
+/** Encomenda: um selo só e a contagem "feitos/total", em vez de um selo por unidade (10 a 40). */
+const countText = (t: Ticket): string => `${t.slots.filter((l) => l.filled !== null).length}/${t.slots.length}`;
+
+/** Largura da comanda: um selo de 14 por item (ou selo + contagem na encomenda), o rótulo e o mínimo de toque. */
+export const ticketWidth = (t: Ticket): number =>
+  Math.max(TICKET_MIN_W, t.kind === 'encomenda' ? 20 + textWidth(countText(t)) : 6 + 14 * t.slots.length, textWidth(ticketLabel(t)) + 6);
 
 export interface RailSpot {
   ticket: Ticket;
@@ -80,8 +84,14 @@ export function drawTicket(ctx: CanvasRenderingContext2D, st: DayState, t: Ticke
   if (!drawNine(ctx, 'ui/comanda', r, 3)) box(ctx, r, PAL.paper, PAL.ink);
   if (!drawArt(ctx, 'equip/pregador', Math.round(r.x + r.w / 2 - 2), r.y - 4)) box(ctx, { x: r.x + r.w / 2 - 2, y: r.y - 4, w: 4, h: 6 }, '#b8c1c8', PAL.ink);
   textCenter(ctx, ticketLabel(t), r.x + r.w / 2, r.y + 3, PAL.ink, 1, null);
+  if (t.kind === 'encomenda') {
+    const item = t.slots[0]?.item;
+    const x = Math.round(r.x + (r.w - 16 - textWidth(countText(t))) / 2);
+    if (item && !drawFlavor(ctx, item, x, r.y + 9)) box(ctx, { x: x + 1, y: r.y + 10, w: 10, h: 10 }, itemColor(item), PAL.ink);
+    drawPixelText(ctx, countText(t), x + 15, r.y + 13, PAL.ink, 1, null);
+  }
   const x0 = Math.round(r.x + (r.w - 14 * t.slots.length + 2) / 2);
-  t.slots.forEach((slot, i) => {
+  if (t.kind !== 'encomenda') t.slots.forEach((slot, i) => {
     const sx = x0 + i * 14;
     const sy = r.y + 9;
     if (!drawFlavor(ctx, slot.item, sx, sy)) box(ctx, { x: sx + 1, y: sy + 1, w: 10, h: 10 }, slot.filled ? '#d9b27a' : itemColor(slot.item), PAL.ink);

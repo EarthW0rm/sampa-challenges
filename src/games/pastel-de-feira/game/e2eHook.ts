@@ -1,6 +1,6 @@
 import type { InputEnv } from './input';
 import { panelControls } from './render/panel';
-import { queueSpot, workerSpots } from './render/scene';
+import { dispatchSpot, queueSpot, workerSpots } from './render/scene';
 import { queueOf } from './sim/customers';
 import type { DaySim } from './sim/day';
 import type { DayResult } from './types';
@@ -31,6 +31,8 @@ export interface E2EHook {
     slots: { item: string; filled: boolean; gift: boolean }[];
     rect: { x: number; y: number; w: number; h: number } | null;
   }[];
+  /** Fila da Expedição na ordem (RN-191): quem, a comanda, a paciência e o ponto lógico dos pés. */
+  dispatch: () => { id: number; who: string; ticketId: number; label: string; patience: number; handoff: number | null; x: number; y: number }[];
   /** Ids das comandas que aceitam o pronto selecionado (destaque do destino, RN-184). */
   destinations: () => number[];
   /** `DayResult` entregue ao fim do dia (corte das 14h). */
@@ -60,6 +62,13 @@ export function exposeForE2E(sim: DaySim, env: InputEnv): { finish: (r: DayResul
         }));
       }),
     destinations: () => [...destinations(sim.state, env.ui.selected)],
+    dispatch: () => {
+      const z = env.layout.byId.get('expedicao');
+      return sim.state.dispatchQueue.map((e, i) => {
+        const t = sim.state.tickets.find((x) => x.id === e.ticketId);
+        return { id: e.id, who: e.who, ticketId: e.ticketId, label: t ? ticketLabel(t) : '', patience: e.patience, handoff: e.handoffLeft, ...(z ? dispatchSpot(z, i) : { x: -1, y: -1 }) };
+      });
+    },
     result: null,
   };
   w.__pf = hook;

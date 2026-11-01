@@ -8,7 +8,7 @@ import { hasPower } from '../sim/world';
 import { fryWindow, isChanging, isDirty, isLocked } from '../sim/stations/fryer';
 import { millSeconds } from '../sim/stations/cane';
 import { workerStation } from '../sim/staff';
-import { now, type Customer, type DayState, type OrderLine } from '../sim/state';
+import { now, type Customer, type DayState, type OrderLine, type Ticket } from '../sim/state';
 import { openTickets, ticketOf } from '../sim/tickets';
 import { drawOwnerPlate, drawRail } from './rail';
 import type { UiState } from '../ui';
@@ -29,6 +29,17 @@ export function customerAt(layout: Layout, st: DayState, x: number, y: number): 
   for (let i = 0; i < queue.length; i++) {
     const p = queueSpot(layout, i);
     if (Math.abs(x - p.x) <= 22 && y <= p.y + 4 && y >= p.y - 60) return queue[i];
+  }
+  return null;
+}
+
+/** Dono na fila da Expedição sob o ponto (motoboy ou cliente da encomenda): devolve a comanda dele (RN-185). */
+export function dispatchOwnerAt(layout: Layout, st: DayState, x: number, y: number): Ticket | null {
+  const z = layout.byId.get('expedicao');
+  if (!z) return null;
+  for (let i = 0; i < st.dispatchQueue.length; i++) {
+    const p = dispatchSpot(z, i);
+    if (Math.abs(x - p.x) <= 18 && y <= p.y + 4 && y >= p.y - 60) return st.tickets.find((t) => t.id === st.dispatchQueue[i].ticketId) ?? null;
   }
   return null;
 }

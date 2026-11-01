@@ -2,7 +2,7 @@ import { H, W } from './constants';
 import { ALERT_BAND, hitTest, inside, orderStations, PANEL, type Layout } from './layout';
 import { controlAt, panelControls } from './render/panel';
 import { ticketAt } from './render/rail';
-import { customerAt, workerAt } from './render/scene';
+import { customerAt, dispatchOwnerAt, workerAt } from './render/scene';
 import type { DayState } from './sim/state';
 import { ticketOf } from './sim/tickets';
 import type { Command, StationId } from './types';
@@ -58,7 +58,8 @@ export function pointerDown(env: InputEnv, x: number, y: number): Command[] {
     // Só o fixo descansa por ordem do jogador; o automático descansa sozinho (RN-116)
     return w && w.mode === 'fixo' && !w.resting ? stamp(ui, [{ type: 'sendRest', staffId: w.id }]) : [];
   }
-  const ticket = ticketAt(layout, state, x, y);
+  // a comanda no trilho, ou o dono dela na fila da Expedição (atalho, RN-185)
+  const ticket = ticketAt(layout, state, x, y) ?? dispatchOwnerAt(layout, state, x, y);
   if (ticket) {
     // toque na comanda: com um pronto escolhido, põe nela (RN-182); sem seleção, a placa do dono pisca (RN-185)
     const station: StationId = ticket.track === 'expedicao' ? 'expedicao' : 'balcao';
