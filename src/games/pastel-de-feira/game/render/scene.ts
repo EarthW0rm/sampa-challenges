@@ -237,16 +237,19 @@ function drawBasket(ctx: CanvasRenderingContext2D, x: number, y: number, w: numb
 
 /** Posição do lugar `seat` da mesa `table` na zona das mesas (2×2 mesas de 4 lugares). */
 export function seatSpot(z: Zone, table: number, seat: number): { x: number; y: number } {
-  const tx = z.x + 12 + (table % 2) * 146;
-  const ty = z.y + 26 + Math.floor(table / 2) * 68;
-  return { x: tx + 14 + (seat % 2) * 56, y: ty + (seat < 2 ? 18 : 62) };
+  const { tx, ty } = tableSpot(z, table);
+  return { x: tx + 12 + (seat % 2) * 64, y: ty + (seat < 2 ? 18 : 62) };
+}
+
+/** Canto da mesa `table` na zona das mesas: 2×2 compactas em 200 de largura (RN-196), abaixo da placa. */
+function tableSpot(z: Zone, table: number): { tx: number; ty: number } {
+  return { tx: z.x + 6 + (table % 2) * 96, ty: z.y + 30 + Math.floor(table / 2) * 66 };
 }
 
 function drawTables(ctx: CanvasRenderingContext2D, st: DayState, z: Zone, ui: UiState): void {
   st.tables.forEach((t, i) => {
-    const tx = z.x + 12 + (i % 2) * 146;
-    const ty = z.y + 26 + Math.floor(i / 2) * 68;
-    if (!drawArt(ctx, 'equip/mesa', tx + 14, ty + 22)) box(ctx, { x: tx + 14, y: ty + 22, w: 90, h: 22 }, PAL.wood, PAL.woodDark);
+    const { tx, ty } = tableSpot(z, i);
+    if (!drawArt(ctx, 'equip/mesa', tx, ty + 22)) box(ctx, { x: tx, y: ty + 22, w: 90, h: 22 }, PAL.wood, PAL.woodDark);
     t.seats.forEach((seat, j) => {
       const p = seatSpot(z, i, j);
       if (seat === 'sujo') {

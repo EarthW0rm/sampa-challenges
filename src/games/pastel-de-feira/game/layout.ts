@@ -43,6 +43,9 @@ export const stationLabel = (id: StationId): string => LABELS[id];
 const MID: readonly StationId[] = ['bancada', 'tacho1', 'tacho2', 'tacho3', 'moenda'];
 const LOW: readonly StationId[] = ['mesas', 'expedicao', 'escritorio', 'descanso'];
 
+/** Largura de cada zona da faixa inferior (RN-196): Expedição larga para o balcão próprio e a fila. */
+const LOW_WIDTH: Partial<Record<StationId, number>> = { mesas: 200, expedicao: 200, escritorio: 100, descanso: 100 };
+
 const TOP_Y = 30;
 const MID_Y = 158;
 const LOW_Y = PANEL.y + 6;
@@ -87,7 +90,7 @@ export function buildLayout(stations: readonly StationId[], opts: LayoutOptions 
 
   let x = 8;
   for (const id of LOW.filter((s) => stations.includes(s))) {
-    const w = id === 'mesas' ? 304 : 100;
+    const w = LOW_WIDTH[id] ?? 100;
     add(id, x, LOW_Y, w, PANEL.h - 12, LABELS[id]);
     x += w + GAP;
   }
