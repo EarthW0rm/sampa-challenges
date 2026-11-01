@@ -1,28 +1,24 @@
 import type { Campaign } from '../../src/games/pastel-de-feira/game/campaign/types';
+import { currentQuality } from '../../src/games/pastel-de-feira/game/sim/quality';
 import { expect, test, type GamePage } from './support/game';
-import { assemble, fry, tapBasket } from './support/flow';
+import { assemble, fry, pack, tapBasket } from './support/flow';
 
 // RN-102: quantidade de 10 a 40, retirada entre 9h e 13h30, pagamento ≈ 1,3× a referência, multa de 50%
 const ORDER = { id: 'e2e-1', dayId: 9001, item: 'carne', qty: 10, hour: 9.5, pay: 104, fine: 52 };
+// encomenda exige escritório e área de delivery (RN-102): a Expedição monta a caixa e atende o cliente
 const office = (c: Campaign): Campaign => ({
-  ...c, day: 10, calendar: 10, cash: 3000,
-  owned: { ...c.owned, office: true, extraM2: 4 },
+  ...c, day: 10, calendar: 10, cash: 3000, deliveryOn: false,
+  owned: { ...c.owned, office: true, delivery: true, extraM2: 7 },
   orders: [ORDER],
 });
 const PICKUP = ((ORDER.hour - 7) * 240) / 7;
 
-/** Seleciona o pastel pronto no painel do balcão e toca em CAIXA (guarda na caixa da encomenda). */
+/** Rótulo da comanda E da encomenda (RN-180). */
+const orderLabel = (game: GamePage) => game.hook((pf) => pf.tickets().find((t) => t.kind === 'encomenda')!.label);
+
+/** Põe o pastel pronto na caixa da encomenda pela Expedição (RN-104, RN-183). */
 async function box(game: GamePage, id: number): Promise<void> {
-  await game.goTo('balcao');
-  const ctl = await game.hook((pf, rid) => {
-    const list = pf.controls();
-    const base = list.findIndex((c) => c.label === 'VASSOURA') + 1;
-    const ready = pf.sim.state.ready.filter((x) => x.reservedFor === undefined).slice(0, 7);
-    return list[base + ready.findIndex((r) => r.id === rid)];
-  }, id);
-  await game.tapAt(ctl.x + ctl.w / 2, ctl.y + ctl.h / 2);
-  await game.frames(1);
-  await game.tapControl('CAIXA');
+  await pack(game, id, await orderLabel(game));
 }
 
 /** RN-100–104: escritório, encomendas e caixa de encomenda. */
@@ -47,11 +43,11 @@ test.describe('Escritório e encomendas', () => {
       await game.goTo('tacho1');
       await game.tapControl('CESTO 1');
       await game.tapControl('CESTO 2');
-      const ids = await game.hook((pf) => pf.sim.state.ready.filter((r) => r.reservedFor === undefined).map((r) => r.id));
+      const ids = await game.hook((pf) => pf.sim.state.ready.map((r) => r.id));
       for (const id of ids) await box(game, id);
     }
-    expect(await game.hook((pf) => pf.sim.state.bigOrders[0].boxed.length)).toBe(ORDER.qty);
-    await game.goTo('balcao');
+    expect(await game.hook((pf) => pf.tickets().find((t) => t.kind === 'encomenda')!.slots.filter((x) => x.filled).length)).toBe(ORDER.qty);
+    await game.goTo('expedicao'); // o cliente da encomenda é atendido no balcão da Expedição (RN-191)
     await game.advanceUntil((pf) => pf.sim.state.stats.encDone > 0, PICKUP + 5, undefined, 30);
     expect(await game.hook((pf) => ({ rev: pf.sim.state.stats.orderRevenue, failed: pf.sim.state.stats.encFailed }))).toEqual({ rev: ORDER.pay, failed: 0 });
   });
@@ -64,19 +60,19 @@ test.describe('Escritório e encomendas', () => {
     await expect(page.locator('.pastel-de-feira table.summary tr', { hasText: 'Multas de encomenda' })).toContainText('R$ 52,00');
   });
 
-  test('RN-104: a caixa de encomenda não ocupa a estufa e congela a nota por 60 s', async ({ game }) => {
+  test('RN-104/RN-189: a caixa de encomenda não ocupa a estufa e reduz o decaimento a 1/4', async ({ game }) => {
     await game.startDay({ campaign: { patch: office } });
     await assemble(game, 'carne');
     const p = await fry(game, 6.5);
     await box(game, p.id);
     await game.advance(50);
-    const q = await game.hook((pf, id) => {
-      const r = pf.sim.state.ready.find((x) => x.id === id)!;
-      return { boxed: r.boxed, warmed: !!r.warmed, quality: r.quality, waited: pf.sim.state.tick / 60 - r.readyAt };
-    }, p.id);
-    expect(q.boxed).toBe(true);
-    expect(q.warmed).toBe(false);
-    expect(q.waited).toBeLessThan(60);
-    expect(q.quality).toBe(80);
+    const q = await game.hook((pf) => {
+      const r = pf.sim.state.tickets.find((t) => t.kind === 'encomenda')!.slots.find((x) => x.filled)!.filled as { item: string; id: number; quality: number; readyAt: number; bagged?: boolean; warmed?: boolean };
+      return { r, now: pf.sim.state.tick / 60, warmed: pf.sim.state.ready.filter((x) => x.warmed).length };
+    });
+    expect(q.r.bagged).toBe(true);
+    expect(q.warmed, 'a caixa não usa a estufa').toBe(0);
+    const waited = q.now - q.r.readyAt;
+    expect(currentQuality(q.r, q.now)).toBeCloseTo(q.r.quality - Math.max(0, waited - 20) * 0.25, 5);
   });
 });

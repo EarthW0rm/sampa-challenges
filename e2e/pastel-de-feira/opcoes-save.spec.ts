@@ -51,7 +51,7 @@ test.describe('Opções da campanha, cestos e save', () => {
     expect(await cestos('tacho2')).toBe(3);
   });
 
-  test('Save v1: quem estava fixo como Colocador abre como Montagem, com as opções padrão', async ({ game, page }) => {
+  test('Save v1: quem estava fixo como Colocador abre como Montagem, com as opções padrão, e grava na versão atual', async ({ game, page }) => {
     // save da versão anterior: posição "colocador1" e sem `settings`
     let c = buildCampaign({ patch: (x) => ({ ...x, day: 2, calendar: 2 }) });
     const cand = rollCandidates(c).find((k) => k.kind === 'geral')!;
@@ -70,7 +70,7 @@ test.describe('Opções da campanha, cestos e save', () => {
     await game.openFair();
     expect(await game.hook((pf) => pf.sim.state.workers.map((w) => w.position))).toEqual(['montagem1']);
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('pastel-de-feira:campanha')!));
-    expect(saved.version).toBe(2);
+    expect(saved.version).toBe(3); // versão atual do save (v3: encomenda exige delivery)
     expect(saved.campaign.staff[0].position).toBe('montagem1');
     expect(saved.campaign.settings).toEqual({ staffFatigue: true, unlockAll: false });
   });

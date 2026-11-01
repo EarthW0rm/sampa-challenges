@@ -171,3 +171,24 @@ export function collect(game: GamePage): Promise<void> {
     await game.tapControl('COBRAR');
   });
 }
+
+/**
+ * Na Expedição: escolhe o pronto no painel (os prontos ficam no balcão e na estufa, CE-20) e toca na comanda
+ * do trilho da Expedição pelo controle do painel, que cobre o trilho quando está aberto (RN-182, RN-183).
+ */
+export function pack(game: GamePage, id: number, label: string): Promise<void> {
+  return game.step(`Pôr o pastel #${id} na comanda ${label} pela Expedição`, async () => {
+    await game.goTo('expedicao');
+    const ctl = await game.hook((pf, rid) => {
+      const list = pf.controls();
+      const base = list.findIndex((c) => c.label === 'EMBALAGEM') + 1;
+      return list[base + pf.sim.state.ready.slice(0, 6).findIndex((r) => r.id === rid)];
+    }, id);
+    expect(ctl, `pronto #${id} no painel da Expedição`).toBeTruthy();
+    await game.ev.quiet(async () => {
+      await game.tapAt(ctl.x + ctl.w / 2, ctl.y + ctl.h / 2);
+      await game.frames(1);
+    });
+    await game.tapControl(label);
+  });
+}
