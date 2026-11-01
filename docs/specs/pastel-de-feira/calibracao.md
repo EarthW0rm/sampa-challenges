@@ -124,3 +124,41 @@ Cada fechamento de dia dos robôs também confere que o save continua válido (i
 | 18 | 620 | 481 | 80% | 5.0 | 38 | 4 | 0 | 50 |
 | 19 | 660 | 538 | 90% | 5.0 | 39 | 5 | 0 | 50 |
 | 20 | 647 | 603 | 66% | 5.0 | 40 | 6 | 0 | 50 |
+
+## Comandas e Expedição (US-135 a US-137)
+
+Rodada de `--bots all --seeds 50` depois das regras RN-180 a RN-196 (comanda explícita, lista de produção FIFO, sacola com decaimento a 0,25, fila da Expedição). Nenhum valor (P) precisou mudar: os quatro robôs continuam acima de 80%.
+
+| Robô | `main` (antes) | Comandas e Expedição |
+|---|---|---|
+| `solo` | 50/50 sementes (100%) | 50/50 sementes (100%) |
+| `armadilha` | 50/50 sementes (100%) | 50/50 sementes (100%) |
+| `brinde-max` | 50/50 sementes (100%) | 45/50 sementes (90%) |
+| `equilibrado` | 50/50 sementes (100%) | 50/50 sementes (100%) |
+
+**Efeito observado (`equilibrado`):** a reputação sobe mais devagar no início (dia 3: 4,3 contra 4,9) e o lucro dos dias 4 a 11 fica cerca de 20% menor. Causa provável, não medida isoladamente: o pastel posto na comanda do balcão decai até a comanda completar e só é valorado na entrega (RN-186; a redução da RN-189 vale só para sacola e caixa), então pedidos de 2 ou mais itens chegam com nota menor e podem cair abaixo da exigência do perfil (RN-15). A campanha continua vencível (100% das sementes) e a meta do dia 20 continua não trivial (56%).
+
+### `equilibrado` (Comandas e Expedição)
+
+| Dia | Lucro | Meta | Meta cumprida | Reputação | Atendidos | Perdidos | Queimados | Sementes |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 155 | 70 | 100% | 3.5 | 19 | 2 | 0 | 50 |
+| 2 | 165 | 78 | 100% | 4.0 | 19 | 2 | 0 | 50 |
+| 3 | 183 | 88 | 100% | 4.3 | 19 | 3 | 0 | 50 |
+| 4 | 198 | 98 | 100% | 4.5 | 20 | 3 | 0 | 50 |
+| 5 | 216 | 110 | 100% | 4.6 | 20 | 3 | 0 | 50 |
+| 6 | 223 | 123 | 96% | 4.7 | 21 | 3 | 0 | 50 |
+| 7 | 260 | 138 | 96% | 4.8 | 22 | 4 | 0 | 50 |
+| 8 | 274 | 155 | 92% | 4.8 | 22 | 4 | 0 | 50 |
+| 9 | 281 | 173 | 96% | 4.9 | 23 | 4 | 0 | 50 |
+| 10 | 275 | 194 | 88% | 4.8 | 23 | 6 | 0 | 50 |
+| 11 | 268 | 217 | 82% | 4.9 | 26 | 4 | 0 | 50 |
+| 12 | 293 | 244 | 80% | 5.0 | 27 | 6 | 0 | 50 |
+| 13 | 291 | 273 | 60% | 5.0 | 28 | 6 | 0 | 50 |
+| 14 | 290 | 305 | 44% | 5.0 | 30 | 5 | 0 | 50 |
+| 15 | 329 | 342 | 36% | 5.0 | 33 | 4 | 0 | 50 |
+| 16 | 386 | 383 | 38% | 5.0 | 34 | 4 | 0 | 50 |
+| 17 | 544 | 429 | 72% | 5.0 | 38 | 4 | 0 | 50 |
+| 18 | 624 | 481 | 84% | 5.0 | 37 | 4 | 0 | 50 |
+| 19 | 678 | 538 | 90% | 5.0 | 39 | 5 | 0 | 50 |
+| 20 | 643 | 603 | 56% | 5.0 | 41 | 5 | 0 | 50 |
