@@ -1,6 +1,6 @@
 # Backlog de Execução: Comandas e Expedição com balcão próprio (Pastel de Feira)
 
-> Fase 3 do SDD. Status: **aprovado (revisão 1)**.
+> Fase 3 do SDD. Status: **aprovado (revisão 1), implementado; resumo na seção 9 do [plan principal](../plan.md)**.
 > Pré-requisitos: [`spec.md`](spec.md) e [`plan.md`](plan.md) deste delta, aprovados (revisão 1).
 > Entrega única (um PR), sequenciada pelas TF abaixo. Toda TF de simulação fecha com
 > `node /tmp/pf-sim.mjs --scenario all` verde e `npm run typecheck` sem erros.

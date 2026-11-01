@@ -1,6 +1,6 @@
 # Especificação Funcional: Pastel de Feira
 
-> Fase 1 do SDD — O Que e Porque. Status: **rascunho para aprovação (revisão 4)**.
+> Fase 1 do SDD — O Que e Porque. Status: **aprovada (revisão 5: comandas e Expedição, ver `comandas-expedicao/`)**.
 > Valores numéricos marcados com **(P)** estão aprovados como base e serão **calibrados por
 > simulação sem tela** na implementação, até os critérios de sucesso da seção 5 passarem. Depois
 > ficam concentrados num único ponto de equilíbrio do jogo.
@@ -34,8 +34,19 @@
 | **Cargo de gestão** | Contador, Comprador, Gerente ou Despachante. Trabalha no escritório e nunca opera estações |
 | **Cliente de balcão** | Chega, entra na fila, faz o pedido, espera, paga e vai embora |
 | **Cliente de mesa** | Escolhe comer no local quando há lugar limpo e livre. Espera mais, paga mais, ocupa o lugar até terminar, paga no balcão ao sair e deixa sujeira |
-| **Motoboy do app** | Retira pedidos de delivery (um ou mais) num horário. Cancela se atrasar |
-| **Encomenda** | Pedido grande com prazo e multa, aceito no escritório |
+| **Motoboy do app** | Chega à **fila do balcão da Expedição** 35 s depois do aceite, para retirar **uma** sacola. Tem paciência e vai embora quando ela acaba (sacola cancelada). Tem visual próprio (capacete, jaqueta e baú do app) e uma placa com o número da comanda |
+| **Encomenda** | Pedido grande aceito no Preparo (escritório e área de delivery), com prazo e multa; no dia vira a comanda E |
+| **Comanda** | Registro de um pedido, com número, dono e um item por unidade pedida. Fica num trilho até ser entregue ou cancelada |
+| **Trilho** | Faixa onde as comandas ficam penduradas: o do balcão (balcão e mesa) e o da Expedição (app e encomenda) |
+| **Item da comanda** | Uma unidade pedida (pastel, caldo ou brinde), livre ou preenchida |
+| **Pôr na comanda** | Ação que move um pronto do balcão ou da estufa para um item livre da comanda |
+| **Dono** | Quem recebe a comanda: cliente, grupo de mesa, motoboy ou cliente da encomenda |
+| **Sacola** | Embalagem da comanda do app no balcão da Expedição, onde o decaimento é reduzido |
+| **Caixa da encomenda** | Embalagem da comanda E no balcão da Expedição, com o mesmo decaimento da sacola |
+| **Lista de produção** | Ordem interna dos itens a produzir, pela entrada dos pedidos, que a equipe segue |
+| **Fila da Expedição** | Fila de motoboys e de clientes de encomenda diante do balcão da Expedição |
+| **Atendente da Expedição** | O funcionário na posição Expedição ou o pasteleiro no balcão da Expedição |
+| **Atendente da Expedição** | O funcionário na posição Expedição ou o pasteleiro no balcão da Expedição. Preenche as comandas do trilho da Expedição e entrega as completas a quem está na fila |
 | **Associação da Feira** | Vende espaço, cobra a taxa diária e propõe **desafios** com prêmio |
 | **Cidade** | Fonte de **estações** e **eventos** (clima, fiscalização, energia, subprefeitura) |
 
@@ -61,9 +72,11 @@
    2. O jogador clica numa estação. O pasteleiro **se desloca** até ela e passa a agir ali. Uma estação sem
       ninguém fica parada.
    3. Fluxo de um pedido de balcão:
-      **anotar** (balcão) → **montar** (massa + recheio; 1 etapa por ingrediente; o Especial da Casa tem 4) →
+      **anotar** (balcão; o pedido vira a **comanda #N** no trilho do balcão e entra na lista de produção) →
+      **montar** (massa + recheio; 1 etapa por ingrediente; o Especial da Casa tem 4) →
       **colocar no óleo** (tacho) → **tirar no ponto** (tacho; com estufa, o pastel vai direto para ela) →
-      **caldo** (moenda, se pedido) → **entregar** (com o brinde, se houver) → **cobrar** (balcão).
+      **caldo** (moenda, se pedido) → **pôr na comanda** (toque no pronto e na comanda; com um item escolhido,
+      as comandas que o aceitam ficam destacadas) → a comanda completa é **entregue sozinha** → **cobrar** (balcão).
    4. O óleo **suja** a cada pastel frito e precisa ser **trocado**. Durante a troca o tacho fica parado.
    5. A barraca e as mesas **sujam** e alguém precisa limpar.
    6. Os funcionários **cansam**, perdem rendimento e precisam descansar.
@@ -85,15 +98,21 @@
   (ex.: troca de óleo de um tacho). O pasteleiro entra na posição e o funcionário dali sai e vai para
   outra posição vaga (se estiver em automático) ou fica parado ao lado (se estiver fixo) até a
   posição liberar.
-- **JA-02 Cliente de mesa:** havendo lugar limpo e livre, parte dos clientes escolhe a mesa. Com
-  garçom, o pedido é anotado e entregue na mesa. Sem garçom, o cliente da mesa entra na fila do
-  balcão para pedir e retirar e depois volta à mesa. Ao terminar, o grupo vai para a fila de
-  pagamento do balcão (RN-87). Quando ele sai da mesa, o lugar fica sujo.
-- **JA-03 Delivery:** com a área de delivery, comandas do app aparecem com horário de retirada. O
-  motoboy chega, espera e leva uma ou mais comandas. Uma comanda atrasada é cancelada.
-- **JA-04 Encomenda:** no Preparo (com escritório) o jogador aceita uma encomenda com quantidade,
-  receita, horário de entrega, pagamento e multa. Durante o dia ela é produzida junto com os
-  pedidos normais.
+- **JA-02 Cliente de mesa:** havendo lugar limpo e livre, parte dos clientes escolhe a mesa. O pedido
+  do grupo vira a comanda **M** no trilho do balcão. Com garçom, ele anota na mesa e preenche a comanda
+  com os prontos do balcão; completa, ela é entregue na mesa. Sem garçom, o grupo pede na fila do
+  balcão; completa, a comanda é entregue e o grupo volta à mesa. Ao terminar, o grupo vai para a fila
+  de pagamento do balcão (RN-87). Quando ele sai da mesa, o lugar fica sujo.
+- **JA-03 Delivery:** com a área de delivery, a faixa de oferta mostra os selos dos sabores pedidos. O
+  aceite (com um toque, ou automático com insumo, RN-95) cria a comanda **APP N** no trilho da
+  Expedição e uma sacola no balcão da Expedição. O atendente da Expedição põe os prontos do balcão e da
+  estufa na sacola. O motoboy chega 35 s depois e entra na fila; com a sacola completa e um atendente,
+  recebe a sacola (1,5 s) e sai. Se a paciência dele acaba, a sacola é cancelada.
+- **JA-04 Encomenda:** no Preparo (com escritório e área de delivery) o jogador aceita uma encomenda com
+  quantidade, receita, horário de retirada, pagamento e multa (ou ela é aceita sozinha ao abrir a feira,
+  com o aceite automático e estoque). Às 07h ela vira a comanda **E N** no trilho da Expedição, com a
+  caixa no balcão da Expedição, e as unidades entram na lista de produção. O cliente chega no horário e
+  entra na fila da Expedição.
 - **JA-05 Gestão pelo escritório:** o pasteleiro vai para o escritório e deixa de operar estações. Enquanto
   ele estiver lá os funcionários ganham bônus de velocidade.
 - **JA-06 Pausa e saída:** o jogador pausa (botão, tecla ou perda de foco da aba). O menu de pausa
@@ -124,7 +143,7 @@
 | RN-05 | Cada cliente pede de 1 a 2 pastéis e de 0 a 1 caldo **(P)**, só entre os itens ativos do cardápio com insumo disponível. Estação (RN-140) e promoção do brinde (RN-121) modificam essas quantidades | Obrigatória |
 | RN-06 | Paciência base (contada **a partir do pedido anotado** até o recebimento do pedido completo; antes de anotado o cliente não perde paciência): Econômico 90 s, Padrão 80 s, Exigente 70 s **(P)**. Esgotada a paciência, o cliente vai embora sem pagar (falha) | Obrigatória |
 | RN-06b | **Calma por posição na fila:** a paciência de quem espera na fila do balcão gasta mais devagar a cada posição atrás do primeiro: ritmo = máx(0,3; 1 − 0,2 × posição), ou seja 1,0; 0,8; 0,6; 0,4; 0,3… **(P)**. Quem avança na fila passa a gastar no ritmo da nova posição. Vale só para a fila do balcão (mesa e fila de pagamento seguem o ritmo normal) | Obrigatória |
-| RN-07 | **Corte seco às 14h:** nenhum cliente novo chega. Quem está na fila, nas mesas ou na fila de pagamento vai embora sem pagar e **sem falha**. Pedidos em produção, pastéis prontos não entregues e comandas não retiradas são perdidos **sem falha**. Os pastéis prontos e montados contam como desperdício | Obrigatória |
+| RN-07 | **Corte seco às 14h:** nenhum cliente novo chega. Quem está na fila do balcão, na fila da Expedição, nas mesas ou na fila de pagamento vai embora sem pagar e **sem falha**. Comandas abertas, pedidos em produção e pastéis prontos não entregues são perdidos **sem falha**. Os pastéis prontos, montados e os que estão nas comandas contam como desperdício | Obrigatória |
 
 ### 3.2 Perfis de cliente e preço
 
@@ -150,9 +169,9 @@
 | RN-22 | Prêmio de reputação: 1,0 abaixo de 4 estrelas, 1,10 com 4 e 1,20 com 5 **(P)** | Condicional |
 | RN-23 | Nota na saída do óleo: **cru** (antes da janela) 40; **no ponto** 80; **passado** (depois da janela, antes de queimar) 55; **queimado** não pode ser vendido e os insumos são perdidos **(P)** | Obrigatória |
 | RN-24 | Modificadores na fritura: Óleo de Algodão +10, Escorredor Profissional +10, óleo sujo (≥ 70% de sujeira) −15, traço Caprichoso +5, curso de Fritura +5. Nota limitada a 0–100 **(P)** | Obrigatória |
-| RN-25 | Decaimento: um pastel pronto fora da estufa perde 1 ponto/s depois de 20 s de espera **(P)**. Pedido de app perde 20 pontos no transporte, perda anulada pela Embalagem Térmica **(P)** | Obrigatória |
+| RN-25 | Decaimento: um pastel pronto fora da estufa perde 1 ponto/s depois de 20 s de espera **(P)**. Na sacola do app e na caixa da encomenda vale a RN-189. O pedido de app perde 20 pontos no transporte, perda anulada pela Embalagem Térmica **(P)** | Obrigatória |
 | RN-26 | Caldo de cana não tem nota de qualidade. É pago pelo preço de venda × prêmio de reputação | Obrigatória |
-| RN-27 | **Estufa de vidro:** melhoria do **balcão**: uma vitrine em cima do balcão, e não uma estação. O pastel tirado do óleo (pelo pasteleiro, pelo Fritador ou pelo timer) vai **direto** para ela enquanto houver vaga; cheia ou sem energia, fica no balcão. Guarda até 6 pastéis prontos **(P)**, ou 12 com a Estufa grande. Lá dentro a nota fica congelada por 60 s e depois cai 1 ponto/s **(P)**. Sem energia (evento) vale o decaimento normal. A estufa é **compartilhada** entre balcão, mesa e app (RN-96) | Condicional |
+| RN-27 | **Estufa de vidro:** melhoria do **balcão**, uma vitrine em cima dele, e não uma estação. O pastel tirado do óleo (pelo pasteleiro, pelo Fritador ou pelo timer) vai **direto** para ela enquanto houver vaga; cheia ou sem energia, fica no balcão. Guarda até 6 pastéis prontos **(P)**, ou 12 com a Estufa grande. Lá dentro a nota fica congelada por 60 s e depois cai 1 ponto/s **(P)**. Sem energia (evento) vale o decaimento normal. A estufa guarda prontos ainda **sem comanda**: ao entrar numa comanda, o pastel sai da estufa | Condicional |
 | RN-28 | Pastel entregue sem saquinho de papel (consumível esgotado) perde 10 pontos de nota na entrega **(P)** | Condicional |
 
 ### 3.4 Receitas, bebidas, insumos e estoque
@@ -217,10 +236,10 @@
 
 | # | Regra | Tipo |
 |---|---|---|
-| RN-40 | Posições da barraca (cada uma comporta **uma** pessoa): **Balcão** (anotar, entregar, cobrar), **Montagem** N (monta na bancada e coloca o pastel montado em qualquer tacho com cesto livre, do primeiro para o último), **Fritador** N (cuida de tudo no tacho dele: coloca os pastéis já montados, tira no ponto e troca o óleo; não monta; os Fritadores assumem, em ordem de posição, os tachos livres — sem o pasteleiro e sem fogo — em ordem; Fritador sem tacho livre fica parado), **Troca de óleo** (volante, troca o óleo de qualquer tacho), **Moenda** (caldo), **Garçom** (só com mesas), **Ajudante** (limpa mesas e barraca), **Expedição** (só com delivery: embalar e entregar ao motoboy), **Escritório** (só o pasteleiro e os cargos de gestão) | Obrigatória |
+| RN-40 | Posições da barraca (cada uma comporta **uma** pessoa): **Balcão** (anotar, pôr na comanda do trilho do balcão, cobrar), **Montagem** N (monta na bancada e coloca o pastel montado em qualquer tacho com cesto livre, do primeiro para o último), **Fritador** N (cuida de tudo no tacho dele: coloca os pastéis já montados, tira no ponto e troca o óleo; não monta; os Fritadores assumem, em ordem de posição, os tachos livres — sem o pasteleiro e sem fogo — em ordem; Fritador sem tacho livre fica parado), **Troca de óleo** (volante, troca o óleo de qualquer tacho), **Moenda** (caldo), **Garçom** (só com mesas: anota na mesa e preenche as comandas M), **Ajudante** (limpa mesas e barraca), **Expedição** (só com a área de delivery: preenche as comandas do trilho da Expedição e entrega na fila da Expedição, RN-190/RN-191), **Escritório** (só o pasteleiro e os cargos de gestão) | Obrigatória |
 | RN-41 | O pasteleiro ocupa uma posição por vez. Clicar numa estação o desloca até ela: 0,4 s entre estações vizinhas e 0,2 s por estação a mais no caminho **(P)**. Ele só age onde está | Obrigatória |
-| RN-42 | Ações manuais do pasteleiro: anotar = clicar no cliente da frente; montar = clicar em cada ingrediente e depois em "fechar"; colocar = clicar num cesto livre; tirar = clicar no cesto (com estufa, o pastel vai direto para ela); caldo = segurar a moenda (6 s manual, 2,5 s motorizada **(P)**); entregar = clicar no item pronto e depois no cliente; cobrar = clicar nas moedas; trocar óleo = segurar o tacho por 8 s **(P)**; limpar = segurar a mesa (3 s) ou a vassoura (4 s, −25 de sujeira) **(P)** | Obrigatória |
-| RN-43 | Tempos dos funcionários, com energia ≥ 40 e sem traços **(P)**: anotar 1,5 s; montar 0,5 s + 1,5 s por etapa (1 etapa = 2 s; 4 etapas = 6,5 s); colocar 0,8 s; tirar no meio da janela do ponto (nunca queima); caldo pelo tempo da moenda + 0,5 s; entregar e cobrar 1,5 s; troca de óleo 10 s; limpar mesa 3 s | Obrigatória |
+| RN-42 | Ações manuais do pasteleiro: anotar = clicar no cliente da frente; montar = clicar em cada ingrediente e depois em "fechar"; colocar = clicar num cesto livre; tirar = clicar no cesto (com estufa, o pastel vai direto para ela); caldo = segurar a moenda (6 s manual, 2,5 s motorizada **(P)**); pôr na comanda = clicar no item pronto e depois na comanda (ou no dono); a comanda completa é entregue sozinha (RN-186); cobrar = clicar nas moedas; trocar óleo = segurar o tacho por 8 s **(P)**; limpar = segurar a mesa (3 s) ou a vassoura (4 s, −25 de sujeira) **(P)** | Obrigatória |
+| RN-43 | Tempos dos funcionários, com energia ≥ 40 e sem traços **(P)**: anotar 1,5 s; montar 0,5 s + 1,5 s por etapa (1 etapa = 2 s; 4 etapas = 6,5 s); colocar 0,8 s; tirar no meio da janela do ponto (nunca queima); caldo pelo tempo da moenda + 0,5 s; pôr na comanda, entregar na fila da Expedição e cobrar 1,5 s; troca de óleo 10 s; limpar mesa 3 s | Obrigatória |
 | RN-44 | **O Fritador não monta pastel**: frita pastéis já montados (pela Montagem ou pelo pasteleiro). No tacho dele, coloca, tira no ponto e troca o óleo quando passa de 70%. Sem ninguém na Montagem, a montagem fica com o pasteleiro | Condicional |
 | RN-45 | Funcionário **fixo** fica só na posição escolhida. Funcionário em **automático** ocupa a posição vaga de maior prioridade **que o tipo dele permite** (RN-49): Fritador > Balcão > Montagem > Troca de óleo > Moenda > Expedição > Garçom > Ajudante. O óleo é trocado pelo Fritador do tacho ou pela Troca de óleo (volante); as outras posições não trocam | Obrigatória |
 | RN-46 | Óleo: +4% de sujeira por pastel frito (+3% com Óleo de Algodão) **(P)**. A partir de 70% conta como sujo (RN-24). Em 100% o tacho trava até a troca. A troca custa R$ 25 (comum) ou R$ 45 (algodão) **(P)** e deixa o tacho parado durante a operação | Obrigatória |
@@ -249,7 +268,7 @@
 | RN-60 | Reputação de 1,0 a 5,0, mostrada em estrelas de meia em meia. Persiste entre dias | Obrigatória |
 | RN-61 | Cada pedido termina como **sucesso** (correto, no prazo, qualidade ≥ exigência) ou **falha**. Pesos da falha **(P)**: balcão/mesa 1,0; fila cheia ou sem insumo 0,5; **app atrasado ou cancelado 3,0**; app com qualidade abaixo de 40 1,0; encomenda atrasada 3,0; pedido entregue com sujeira ≥ 80 +0,25 | Obrigatória |
 | RN-62 | **Pontos de encanto (B):** brinde entregue +1,5; caldo com chorinho +0,1 por nível; fiscal aprovado +2,0 **(P)**. Taxa do dia = (sucessos + B) ÷ (sucessos + B + soma dos pesos das falhas). Variação no fechamento = (taxa − 0,75) × 4 quando a taxa passa de 0,75 e × 2 quando fica abaixo, limitada a ±1,0 estrela por dia **(P)** | Obrigatória |
-| RN-63 | Entregar o item errado (fora do que o perfil aceita, RN-18): o cliente recusa, o item volta para a bancada e o pedido fica marcado como falha (uma vez só por pedido), mesmo que depois seja entregue certo | Obrigatória |
+| RN-63 | **Item errado:** o sabor errado é recusado na comanda, sem custo (RN-182). A versão errada para o Exigente entra na comanda; na entrega, o pedido conta como **falha** de peso 1,0 (uma vez por pedido) e é pago normalmente | Obrigatória |
 | RN-64 | Dia sem nenhum pedido não altera a reputação | Condicional |
 
 ### 3.8 Equipamentos e espaço
@@ -260,8 +279,8 @@
 | RN-71 | Metro quadrado extra: R$ 120 por m² na compra + R$ 8 por m² de taxa diária à associação, debitada no fechamento. Máximo 24 m² **(P)** | Obrigatória |
 | RN-72 | Espaço exigido **(P)**: tacho extra 2 m²; mesa com 4 cadeiras 2 m²; área de delivery 3 m²; escritório 4 m²; caixa térmica 1 m²; área de descanso 1 m². Estufa, escorredor e moenda motorizada não ocupam espaço extra | Restritiva |
 | RN-73 | Equipamentos **(P)**: tacho extra R$ 350 (máximo 3 tachos; nasce com 2 cestos); **cesto extra** R$ 200 cada (+1 cesto no primeiro tacho, em ordem, com menos de 4; enche um tacho até 4 antes de passar ao próximo); moenda motorizada R$ 500; Óleo de Algodão R$ 300; Escorredor Profissional R$ 250; Embalagem Térmica R$ 250; Estufa de vidro R$ 300; Estufa grande (6 → 12 vagas, requer a estufa) R$ 350; Alarme do ponto R$ 60 por tacho (aviso visual e sonoro quando um pastel entra no ponto e 1 s antes de queimar); Termostato R$ 350 por tacho (janela do ponto +50% e "queima após" +3 s). Automação por equipamento na seção 3.19 | Obrigatória |
-| RN-74 | **Área de jogo de 640×480 unidades lógicas (4:3)**, com layout fixo e sem câmera móvel. A **visão geral** ocupa a área inteira e mostra cada espaço comprado como zona nova (tacho, mesas, delivery, escritório, estoque, descanso). **Painel retrátil da estação:** quando o pasteleiro chega à estação tocada (RN-41), um painel de ≈ 640×180 **(P)** sobe por cima da faixa inferior com os controles detalhados (cestos e barras de fritura, ingredientes, moenda, comandas). Ele recolhe ao tocar fora dele ou depois de 4 s sem interação **(P)** | Obrigatória |
-| RN-75 | A visão geral mostra o estado de todas as estações ao mesmo tempo (barra de fritura resumida por cesto, sujeira do óleo, fila, paciência, comandas do app, estufa), para o jogador acompanhar o que não está no painel. As zonas de uso mais frequente (fila, balcão, tachos, estufa) ficam acima da faixa que o painel cobre, e os avisos (oferta de comanda, eventos, alarme do ponto) ficam sempre visíveis, também com o painel aberto | Obrigatória |
+| RN-74 | **Área de jogo de 640×480 unidades lógicas (4:3)**, com layout fixo e sem câmera móvel. A **visão geral** ocupa a área inteira e mostra cada espaço comprado como zona nova (tacho, mesas, delivery, escritório, estoque, descanso). **Painel retrátil da estação:** quando o pasteleiro chega à estação tocada (RN-41), um painel de ≈ 640×180 **(P)** sobe por cima da faixa inferior com os controles detalhados (cestos e barras de fritura, ingredientes, moenda, comandas). Ele recolhe ao tocar fora dele ou depois de 4 s sem interação **(P)** A faixa inferior segue a RN-196 | Obrigatória |
+| RN-75 | A visão geral mostra o estado de todas as estações ao mesmo tempo (barra de fritura resumida por cesto, sujeira do óleo, fila, paciência, comandas do app, estufa), para o jogador acompanhar o que não está no painel. As zonas de uso mais frequente (fila, balcão, tachos, estufa) ficam acima da faixa que o painel cobre, e os avisos (oferta de comanda, eventos, alarme do ponto) ficam sempre visíveis, também com o painel aberto A visão geral mostra também os dois trilhos de comandas (RN-181), a fila da Expedição e as placas de número (RN-185); com o painel da Expedição aberto, as comandas da Expedição aparecem também como controles do painel | Obrigatória |
 
 ### 3.9 Mesas
 
@@ -270,7 +289,7 @@
 | RN-80 | Mesa R$ 150 com 4 lugares, máximo 4 mesas **(P)** | Obrigatória |
 | RN-81 | Com lugar livre e limpo, 30% dos clientes Padrão e Exigentes escolhem a mesa **(P)** | Condicional |
 | RN-82 | Cliente de mesa: paciência ×1,5, paga +15% (prêmio de mesa) e ocupa o lugar por 25 s depois de receber o pedido **(P)** | Obrigatória |
-| RN-83 | Sem garçom, o cliente de mesa entra na fila do balcão para pedir e retirar (JA-02). Com garçom, o pedido é anotado e entregue na mesa. Nos dois casos o pagamento é no balcão (RN-87) | Condicional |
+| RN-83 | Sem garçom, o cliente de mesa entra na fila do balcão para pedir. A comanda **M** fica no trilho do balcão e, completa, é entregue a ele, que volta à mesa para comer. Com garçom, o pedido é anotado na mesa, o garçom preenche a comanda M e, completa, ela é entregue na mesa. Nos dois casos o pagamento é no balcão (RN-87) | Condicional |
 | RN-84 | **Lugar sujo:** quando o cliente sai, o lugar fica sujo e ninguém senta ali até a mesa ser limpa (Ajudante, ou pasteleiro em 3 s por mesa). Limpar uma mesa limpa todos os lugares dela | Obrigatória |
 | RN-85 | **Grupos:** clientes de mesa chegam em grupos de 1 a 4 (40% / 30% / 20% / 10% **(P)**). O grupo só senta numa mesa com lugares livres e limpos para todos. Sem mesa assim, o grupo vai para a fila do balcão como clientes individuais | Obrigatória |
 | RN-86 | O grupo faz **um** pedido conjunto, entregue de uma vez. A paciência do grupo é a do integrante com menor paciência, e todos saem juntos | Obrigatória |
@@ -281,10 +300,10 @@
 | # | Regra | Tipo |
 |---|---|---|
 | RN-90 | Área de delivery: R$ 600 + 3 m², a partir do dia 5 **(P)**. Pode ser **desligada** no Preparo para não receber pedidos do app naquele dia | Obrigatória |
-| RN-91 | **Oferta de comanda:** o app oferece uma comanda a cada 25 s em média **(P)** (a chuva aumenta a frequência, RN-151), com 2 a 4 pastéis e retirada 35 s **depois do aceite** **(P)**. A oferta fica visível por 10 s **(P)**. O jogador aceita com um toque, de qualquer posição. Oferta ignorada expira sem penalidade | Obrigatória |
-| RN-95 | **Teto diário de comandas aceitas (P):** 3 até reputação 3,5; 6 com reputação ≥ 3,5; 10 com reputação ≥ 4,5. +4 com o upgrade **Conta Parceira** do app (R$ 400). Atingido o teto, o app para de oferecer no dia. Com Expedição contratada, o Preparo permite ligar o **aceite automático** (aceita toda oferta até o teto) | Obrigatória |
-| RN-96 | **Comanda pronta espera na estufa:** cada pastel de uma comanda pronta ocupa 1 vaga da estufa até o motoboy retirar. Sem vaga, a comanda fica na bancada da Expedição com o decaimento normal (RN-25). Pastel de balcão e de comanda disputam as mesmas vagas | Obrigatória |
-| RN-92 | O motoboy chega no horário da retirada e espera até 25 s **(P)**, ou 60% disso com reputação abaixo de 2. Leva todas as comandas prontas que forem dele (até 2 por motoboy **(P)**). Comanda não pronta quando ele sai = cancelada | Obrigatória |
+| RN-91 | **Oferta de comanda:** o app oferece uma comanda a cada 25 s em média **(P)** (a chuva aumenta a frequência, RN-151), com 2 a 4 pastéis. A oferta fica visível por 10 s **(P)** e mostra os sabores (RN-195). O jogador aceita com um toque, de qualquer posição. O aceite cria a comanda APP e a sacola (RN-180), e o motoboy chega 35 s depois (RN-193). Oferta ignorada expira sem penalidade | Obrigatória |
+| RN-95 | **Teto diário de comandas aceitas (P):** 3 até reputação 3,5; 6 com reputação ≥ 3,5; 10 com reputação ≥ 4,5. +4 com o upgrade **Conta Parceira** do app (R$ 400). Atingido o teto, o app para de oferecer no dia. **Aceite automático** (opção do Preparo, que só pode ser ligada com um funcionário na posição Expedição): aceita a oferta sozinho quando há embalagem, o teto não foi atingido e há **insumo para todos os itens**, descontando o que a lista de produção já reservou. Sem insumo, a oferta expira sem penalidade | Obrigatória |
+| RN-96 | ~~Comanda pronta espera na estufa~~ — **removida na revisão 5**: os itens do app ficam na sacola (RN-189) e a estufa guarda só pronto sem comanda (RN-27) | — |
+| RN-92 | O motoboy chega e entra na fila da Expedição (RN-191), com a paciência da RN-192. Leva só a sacola dele (RN-193). Sacola não completa quando a paciência acaba = cancelada | Obrigatória |
 | RN-93 | O app paga o preço de venda menos 20% de taxa **(P)**, já com os fatores de qualidade e de reputação. O preço do app não passa pelo teto de perfil (RN-13). O brinde vale no app (RN-120). A xepa não vale no app | Obrigatória |
 | RN-94 | Comanda cancelada: não é paga, os insumos já usados são perdidos e conta como falha de peso 3,0 (RN-61) | Restritiva |
 
@@ -294,8 +313,8 @@
 |---|---|---|
 | RN-100 | Escritório: R$ 1.500 + 4 m², a partir do dia 10 **(P)**. Tem 1 lugar para o pasteleiro e 3 vagas de cargo **(P)** | Obrigatória |
 | RN-101 | **Bônus de gestão:** com o pasteleiro no escritório, os funcionários ficam 15% mais rápidos **(P)**. Lá ele não opera nenhuma estação | Condicional |
-| RN-102 | **Encomendas:** só o escritório é exigido. Com ele, aparecem no Preparo 0 a 2 ofertas **(P)** (receita, quantidade 10–40, horário de retirada entre 09h e 13h30, pagamento ≈ 1,3× a referência por unidade e multa de 50% do pagamento **(P)**). Brinde e xepa não valem em encomenda | Condicional |
-| RN-104 | **Caixa de encomenda:** os pastéis prontos da encomenda vão para uma caixa própria, que não ocupa a estufa e comporta a encomenda inteira. Lá a nota fica congelada por 60 s e depois cai 1 ponto/s **(P)**. O cliente da encomenda chega no horário e espera 30 s **(P)**. A entrega é feita por quem estiver no Balcão ou na Expedição. Encomenda incompleta quando ele vai embora = multa e falha de peso 3,0 | Condicional |
+| RN-102 | **Encomendas exigem o escritório e a área de delivery** (a Expedição é onde a encomenda é montada e retirada, RN-104). Com os dois, aparecem no Preparo 0 a 2 ofertas **(P)**, com as mesmas condições de hoje. Desligar o delivery no Preparo (RN-90) desliga só as ofertas do app: a Expedição continua atendendo as encomendas do dia. Com o aceite automático ligado e um funcionário na Expedição, a encomenda oferecida no Preparo é aceita sozinha quando o estoque comprado cobre as unidades, somadas às das outras encomendas aceitas. Sem estoque, fica para o aceite manual | Condicional |
+| RN-104 | **Caixa de encomenda:** a encomenda é a comanda **E** do trilho da Expedição (RN-180), com a caixa no balcão da Expedição, que comporta a encomenda inteira e não ocupa a estufa. Lá o decaimento segue a RN-189, e o pagamento continua o da RN-102. O cliente da encomenda chega no horário e entra na fila da Expedição (RN-191, RN-192). Encomenda incompleta quando ele vai embora = multa e falha de peso 3,0 | Condicional |
 | RN-103 | **Cargos (P):** contratados no Preparo, só ocupam vagas do escritório, não cansam e não operam estações | Obrigatória |
 
 | Cargo | Salário/dia **(P)** | Efeito |
@@ -401,7 +420,7 @@ parada em queda de energia.
 | Equipamento | Custo **(P)** | Substitui | Faz | Não faz |
 |---|---|---|---|---|
 | Cesto com timer | R$ 600 por tacho | Fritador | Tira sozinho cada pastel do seu tacho no meio da janela do ponto | Montar, colocar, trocar óleo (o pastel tirado vai para a estufa, se houver vaga, ou fica no escorredor) |
-| Moenda automática | R$ 900 (requer moenda motorizada) | Moenda | Extrai sozinha um caldo por pedido anotado, com o chorinho configurado | Entregar o copo |
+| Moenda automática | R$ 900 (requer moenda motorizada) | Moenda | Extrai sozinha os caldos da lista de produção (RN-187), na ordem, com o chorinho configurado | Entregar o copo |
 | Maquininha de cartão | R$ 300 | Parte do Balcão | Cobra sozinha cada pedido entregue no balcão | Anotar e entregar |
 
 | # | Regra | Tipo |
@@ -413,12 +432,39 @@ parada em queda de energia.
 
 | # | Regra | Tipo |
 |---|---|---|
-| RN-165 | **Personagens são cachorros:** pasteleiro, funcionários, cargos, clientes e motoboys. Os clientes são sorteados com **raças, cores e portes variados** **(P)**. Os motoboys do app usam os cachorros da biblioteca de sprites do hub. O perfil de cliente (Econômico, Padrão, Exigente) e o tipo de funcionário (Fritador, Geral) têm um indicador visual fixo **(P)** | Obrigatória |
-| RN-170 | **Tutorial guiado** no dia 1 (opcional ao criar a campanha): conduz o primeiro pedido passo a passo (anotar → montar → colocar → tirar → caldo → entregar → cobrar). Durante cada passo guiado o relógio pausa, mas os comandos, o deslocamento do pasteleiro, a moenda e a limpeza continuam funcionando (o jogador consegue concluir o passo, inclusive moer a cana). Com equipe no dia (dia 1 com as melhorias liberadas, RN-55a) o relógio não pausa: as dicas continuam e a equipe trabalha normalmente. O dia 1 conta normalmente para a meta | Condicional |
+| RN-165 | **Personagens são cachorros:** pasteleiro, funcionários, cargos, clientes e motoboys. Os clientes são sorteados com **raças, cores e portes variados** **(P)**. Os motoboys do app têm sprite próprio (RN-194). O perfil de cliente (Econômico, Padrão, Exigente) e o tipo de funcionário (Fritador, Geral) têm um indicador visual fixo **(P)** | Obrigatória |
+| RN-170 | **Tutorial guiado** no dia 1 (opcional ao criar a campanha): conduz o primeiro pedido passo a passo (anotar → montar → colocar → tirar → caldo → pôr na comanda #N → cobrar). Durante cada passo guiado o relógio pausa, mas os comandos, o deslocamento do pasteleiro, a moenda e a limpeza continuam funcionando (o jogador consegue concluir o passo, inclusive moer a cana). Com equipe no dia (dia 1 com as melhorias liberadas, RN-55a) o relógio não pausa: as dicas continuam e a equipe trabalha normalmente. O dia 1 conta normalmente para a meta | Condicional |
 | RN-171 | **Desbloqueio progressivo:** abas, upgrades e sistemas só aparecem no Preparo quando ficam disponíveis (ex.: delivery no dia 5, tema no dia 5, Especial da Casa no dia 6, escritório no dia 10). Na primeira vez, cada um é apresentado com um balão curto | Obrigatória |
 | RN-172 | **Som e música:** efeitos (fritura, alarme do ponto, moedas, avisos) e música de feira, com controle de mudo separado para efeitos e música, guardado entre sessões | Obrigatória |
 | RN-173 | **Acelerar 2×:** botão (e tecla) que dobra a velocidade do Dia de Feira. Fica indisponível durante os passos guiados do tutorial. A pausa por perda de foco continua valendo | Obrigatória |
 | RN-174 | **Atalhos de teclado (desktop) (P):** números para ir às estações, Espaço/Enter para a ação principal da estação, Esc para recolher o painel, P para pausa, M para mudo, F para acelerar. O toque/clique continua sendo o controle completo | Obrigatória |
+
+### 3.21 Comandas e trilhos
+
+| # | Regra | Tipo |
+|---|---|---|
+| RN-180 | **Comanda:** todo pedido gera uma comanda no momento em que **entra**. Pedido de balcão e de mesa entra ao ser anotado; comanda do app, ao ser aceita; encomenda, às 07h do dia em que vence. A comanda tem um **número** visível, sequencial no dia a partir de 1 (prefixos: nenhum no balcão, **M** na mesa, **APP** no app, **E** na encomenda), um **dono** (cliente, grupo, motoboy ou cliente da encomenda) e um **item** por unidade pedida, brinde incluído (RN-120) | Obrigatória |
+| RN-181 | **Dois trilhos:** as comandas de balcão e de mesa ficam no **trilho do balcão**, acima do balcão, sempre visível. As do app e das encomendas ficam no **trilho da Expedição**. Cada comanda mostra o número, um **selo de sabor** por item (os mesmos selos do jogo, com os pontinhos de versão), um visto em cada item preenchido e a estrela nos brindes. O trilho do balcão mostra as 6 comandas mais antigas **(P)** e as demais como "+N" | Obrigatória |
+| RN-182 | **Pôr na comanda:** um pastel ou caldo pronto entra na comanda escolhida se ela tiver um item livre do **mesmo sabor** (RN-18). Sabor sem item livre é **recusado sem custo**: o item continua onde estava, a comanda treme e toca um aviso. Para o Exigente, sabor certo com versão diferente **entra**, mas marca o pedido como item errado (RN-63) | Obrigatória |
+| RN-183 | **Quem preenche cada trilho:** o trilho do balcão pelo pasteleiro no balcão (ou nas mesas, para as comandas M), pelo funcionário do Balcão e pelo Garçom (comandas M). O trilho da Expedição pelo pasteleiro no balcão da Expedição e pelo funcionário da Expedição. Os prontos vêm sempre do balcão e da estufa: não existem prontos na Expedição | Obrigatória |
+| RN-184 | **Destaque do destino:** com um item pronto selecionado, as comandas que têm item livre para aquele sabor ganham contorno dourado e as demais ficam esmaecidas, nos dois trilhos e no painel | Obrigatória |
+| RN-185 | **Placa de número:** o dono de cada comanda leva uma placa com o mesmo número (sobre o cliente na fila, o grupo na mesa, o motoboy e o cliente da encomenda). Tocar numa comanda sem item selecionado faz a placa do dono piscar. O balão do cliente mostra os selos, o visto dos itens preenchidos e a placa | Obrigatória |
+| RN-186 | **Entrega automática:** quando o último item entra, a comanda é entregue. Cliente de balcão: paga (moedas no balcão) e sai. Grupo de mesa: come (RN-82) e depois paga (RN-87). Sacola do app e caixa da encomenda: são entregues pelo atendente da Expedição quando o dono está na frente da fila (RN-191). Não há entrega parcial | Obrigatória |
+| RN-187 | **Lista de produção:** os itens de todas as comandas abertas formam uma lista única, ordenada pela **entrada** do pedido (RN-180) e, dentro da comanda, pela ordem dos itens. O que já existe pronto, montado, no óleo ou na moenda é descontado. A Montagem, o Fritador, a Moenda e a moenda automática seguem essa ordem. A encomenda entra às 07h, sem prioridade especial | Obrigatória |
+| RN-188 | **Equipe preenche a mais antiga:** os funcionários do Balcão, do Garçom e da Expedição põem cada pronto na comanda **mais antiga** do seu trilho que aceita o sabor, em 1,5 s (RN-43; −20% com o curso de Atendimento). O jogador pode escolher outra comanda a qualquer momento | Obrigatória |
+| RN-189 | **Decaimento na comanda:** o pastel na comanda do balcão decai como pastel pronto fora da estufa (RN-25). Na **sacola do app** e na **caixa da encomenda**, o decaimento é multiplicado por 0,25 **(P)** desde a entrada do primeiro pastel até a retirada. A nota usada para pagar é a da retirada | Obrigatória |
+
+### 3.22 Expedição com balcão próprio
+
+| # | Regra | Tipo |
+|---|---|---|
+| RN-190 | **Balcão da Expedição:** a zona Expedição tem um balcão próprio, onde ficam as sacolas e as caixas de encomenda (com o número e a barra de progresso), o atendente (funcionário ou pasteleiro) e, à frente, a **fila da Expedição**. É ali que o jogador toca para agir | Obrigatória |
+| RN-191 | **Fila da Expedição:** motoboys e clientes de encomenda entram na fila por ordem de chegada. Quem está na frente recebe a sua sacola ou caixa quando ela está completa **e** há atendente no balcão da Expedição. A entrega leva 1,5 s **(P)** e o dono sai. Sem atendente, a fila cresce. A fila não tem limite: o teto diário (RN-95) e as encomendas aceitas já a limitam | Obrigatória |
+| RN-192 | **Paciência na fila da Expedição:** conta desde a chegada. Motoboy 25 s **(P)** (60% com reputação abaixo de 2); cliente de encomenda 30 s **(P)**. Esgotada, o dono vai embora e a comanda é **cancelada**: os itens já preenchidos se perdem e valem a RN-94 (app, falha 3,0) ou a RN-104 (encomenda, multa e falha 3,0) | Obrigatória |
+| RN-193 | **Motoboy leva uma sacola:** cada comanda do app tem o seu motoboy, que chega 35 s **(P)** depois do aceite (RN-91) | Obrigatória |
+| RN-194 | **Visual do motoboy:** sprite próprio na biblioteca compartilhada do hub (cachorro com capacete, jaqueta e baú do app), diferente do sprite de cliente e do uniforme de funcionário. Não usa fita de perfil | Obrigatória |
+| RN-195 | **Oferta com sabores:** a faixa da oferta do app mostra os selos dos sabores pedidos e o tempo que falta | Obrigatória |
+| RN-196 | **Layout da faixa inferior:** Mesas 200, Expedição 200, Escritório 100 e Descanso 100 de largura lógica, nessa ordem e com 6 de espaço entre as zonas. As mesas ficam em 2×2, mais próximas | Obrigatória |
 
 ## 4. Casos de Borda e Fluxos de Exceção
 
@@ -433,13 +479,13 @@ parada em queda de energia.
 | Fogo no tacho com o pasteleiro ou um funcionário na posição | Ele sai da posição e espera o fim do bloqueio. Não há dano a pessoas | Média |
 | Pasteleiro clica na estação enquanto se desloca | O destino é substituído pelo último clique, sem enfileirar ações | Média |
 | Clique duplo ou toque repetido na mesma ação | Cada ação vale uma vez por gesto, sem cobrar ou entregar em dobro | Alta |
-| Entrega do item certo para outro cliente | Aceita só se o item casar com um pedido pendente daquele cliente, pelas regras do perfil dele (RN-18). Senão é recusado (RN-63) | Média |
+| Pôr na comanda um pronto que não casa com nenhum item livre dela | Recusa sem custo (RN-182). O item continua selecionado. Para o Exigente, a versão errada entra e conta falha na entrega (RN-63) | Média |
 | Sabor esgota depois que o pastel trocado já está em produção | A troca vale para o pedido daquele momento. Se o sabor original não volta (não há reposição no dia, RN-33), não acontece nova troca | Baixa |
 | Pedido de grupo com perfis diferentes | Cada item do pedido segue o perfil do integrante que o pediu. A paciência do grupo segue a RN-86 | Média |
 | Insumo esgota no meio do dia | RN-35 | Média |
 | Brinde sem insumo do mesmo sabor | O brinde sai de qualquer receita Tradicional de 1 etapa disponível. Se nenhuma estiver disponível, o brinde é dispensado sem falha | Média |
-| Estufa cheia | O pastel pronto fica no balcão (ou na bancada da Expedição, se for de comanda) com decaimento normal | Baixa |
-| Oferta de comanda aceita sem insumo suficiente | Aceite permitido. Os pastéis sem insumo fazem a comanda ser cancelada na retirada (RN-94) | Média |
+| Estufa cheia | O pastel pronto fica no balcão com decaimento normal; os pastéis de comanda ficam na comanda (balcão) ou na sacola/caixa (Expedição) | Baixa |
+| Oferta de comanda aceita manualmente sem insumo suficiente | Aceite permitido. A lista de produção não consegue produzir o item e a sacola é cancelada quando a paciência do motoboy acaba (RN-94). O aceite automático não aceita oferta sem insumo para todos os itens (RN-95) | Média |
 | Oferta de comanda durante pausa | O tempo de exibição da oferta também pausa | Baixa |
 | Cesto com timer com o pastel queimado por óleo em 100% | O timer tira o pastel no ponto mesmo com o tacho travado. Se faltar energia, vale a queima normal | Média |
 | Compra que passa da capacidade de estoque | O controle limita a quantidade à capacidade livre | Média |
@@ -459,6 +505,21 @@ parada em queda de energia.
 | Acelerar 2× ligado ao abrir um evento surpresa | A velocidade continua 2×, e o aviso do evento aparece normalmente | Baixa |
 | Passar o ponto com save atual | Pede confirmação. A campanha atual é substituída de forma definitiva | Alta |
 | Tela estreita (≈ 390 px) ou toque | Todas as ações por toque. Os alvos de toque do painel da estação têm pelo menos 72×72 unidades lógicas (≈ 44 px CSS a 390 px de largura) **(P)**. Na visão geral, o toque numa zona seleciona a estação inteira. O Preparo é organizado em abas (Insumos, Cardápio, Melhorias, Equipe, Escritório, Associação) | Alta |
+| Item selecionado some antes do toque na comanda (entrou noutra comanda pela equipe, queimou ou o dia acabou) | A seleção é limpa e o toque na comanda só faz a placa do dono piscar | Média |
+| Toque duplo ou repetido no mesmo gesto | O item entra uma vez só (gesto com id único, regra atual) | Alta |
+| Comanda cancelada (paciência esgotada) com itens dentro | Os itens se perdem e contam como desperdício. Valem as falhas da RN-06 (balcão/mesa), RN-94 (app) ou RN-104 (encomenda) | Alta |
+| Sabor esgota com a comanda aberta (RN-35) | O item ainda livre troca de sabor pelo perfil do dono (RN-18), e o selo na comanda e no balão muda. O Exigente vai embora e a comanda é cancelada (falha 0,5) | Média |
+| Distraído monta o sabor errado (RN-114) | O pastel errado fica pronto sem dono e só entra numa comanda que tenha item livre daquele sabor. A lista de produção volta a pedir o sabor que faltou | Média |
+| Mais comandas que o trilho do balcão mostra | As 6 mais antigas aparecem e as demais ficam em "+N". O atalho de tocar no dono preenche qualquer comanda | Baixa |
+| Fila da Expedição sem atendente | A fila cresce e cada dono gasta a sua paciência. Não há aviso que impeça (a armadilha do delivery continua) | Média |
+| Sacola completa e motoboy ainda não chegou | A sacola espera no balcão da Expedição com o decaimento da RN-189 | Baixa |
+| Motoboy chega e a sacola já está completa, mas não há atendente | Ele espera na fila gastando paciência até alguém atender | Média |
+| Aceite automático com insumo só para parte da oferta | Não aceita. A oferta expira sem penalidade | Média |
+| Queda de energia (RN-152) | A estufa para (RN-27). Sacolas e caixas não dependem de energia | Baixa |
+| Encomenda grande às 07h | Entra na lista de produção às 07h, sem prioridade (RN-187). A equipe a produz antes dos clientes que chegarem depois | Média |
+| Delivery desligado no Preparo com encomenda aceita para o dia | A Expedição funciona só para a encomenda: sem ofertas do app, com a fila da Expedição e o aceite automático de encomenda valendo | Média |
+| Save com escritório, sem área de delivery e com encomenda aceita (campanha anterior à mudança) | Ao carregar, a encomenda é descartada sem multa e sem falha, e o Preparo avisa uma vez | Alta |
+| Tela estreita (≈ 390 px) | Cada comanda tem alvo de toque de pelo menos 28×24 unidades lógicas **(P)**. Se não couber, o trilho do balcão mostra 4 comandas e "+N" | Alta |
 
 ## 5. Critérios de Sucesso e SLAs
 
@@ -466,7 +527,7 @@ parada em queda de energia.
 
 - [ ] Jornada principal completa (Preparo → Dia → Fechamento) jogável do dia 1 ao dia 20 e no modo livre.
 - [ ] Jornadas alternativas JA-01 a JA-11 executáveis.
-- [ ] Todas as RN (RN-01 a RN-174) verificáveis por uma simulação do dia sem tela, com semente fixa
+- [ ] Todas as RN (RN-01 a RN-196) verificáveis por uma simulação do dia sem tela, com semente fixa
       e resultado determinístico (inclusive candidatos, eventos e clima).
 - [ ] Partida "só o pasteleiro, sem melhorias, eventos desligados" consegue cumprir as metas dos dias 1
       a 3 jogando bem (piso de equilíbrio).
@@ -564,7 +625,7 @@ Premissas da revisão 3, validadas pelo utilizador. Nenhuma premissa está pende
 | PA-09 | O brinde vale no balcão, na mesa e no app. Não vale na encomenda | RN-120, RN-93 |
 | PA-10 | O chorinho consome fração de dose de cana (+0,1 por nível) | RN-123 |
 | PA-11 | Desafios pagam só na conclusão | RN-135 |
-| PA-12 | Encomendas exigem só o escritório | RN-102 |
+| PA-12 | ~~Encomendas exigem só o escritório~~ — substituída na revisão 5 por CE-22: encomendas exigem escritório **e** área de delivery | RN-102 |
 | PA-13 | Sair e voltar no meio do dia faz um novo sorteio de clientes, ofertas e eventos surpresa | JA-06 |
 | PA-14 | Comanda é aceita de qualquer posição | RN-91 |
 | PA-15 | O jogo é exceção de resolução (640×480): a regra 7 do `CLAUDE.md` raiz e o `CLAUDE.md` do jogo serão atualizados (tarefa no backlog) | RN-74 |
@@ -605,3 +666,45 @@ Premissas da revisão 3, validadas pelo utilizador. Nenhuma premissa está pende
 | D-12 | A mesma regra de troca vale para o caldo (sabores com complemento). "Mais disponível" = complemento com mais unidades no estoque | RN-18 |
 | D-14 | Curva dos Exigentes: base até 10h e rampa até o máximo às 12h. A diferença sai dos Econômicos | RN-19 |
 | D-11 | Melhoria que troca ingrediente (queijo minas, cream cheese, catupiry na carne seca, chocolate branco, creme de avelã) não soma etapa | RN-30a |
+
+### Decisões da revisão 5 (comandas e Expedição)
+
+Decisões do utilizador no brainstorming e no discovery do delta `comandas-expedicao/spec.md`:
+
+| # | Decisão | Regras |
+|---|---|---|
+| CE-01 | Comanda explícita em trilho (e não só ajustes visuais da entrega direta) | RN-180, RN-182 |
+| CE-02 | A comanda completa é entregue sozinha | RN-186 |
+| CE-03 | Dois trilhos: balcão (balcão e mesa) e Expedição (app e encomenda) | RN-181 |
+| CE-04 | A equipe preenche a comanda mais antiga, e o jogador pode escolher outra | RN-188 |
+| CE-05 | Trilho da Expedição atendido pelo funcionário da Expedição ou pelo pasteleiro | RN-183 |
+| CE-06 | Motoboy com sprite próprio, número que liga a comanda ao dono e destaque do destino. O registro de saída fica de fora | RN-184, RN-185, RN-194 |
+| CE-07 | Mesas e encomendas também entram no modelo de comanda | RN-83, RN-104 |
+| CE-08 | Sabor errado bloqueado sem custo; só a versão errada do Exigente passa e conta falha | RN-63, RN-182 |
+| CE-09 | Os sabores continuam no balão do cliente, além da placa | RN-185 |
+| CE-10 | Sacola do app como "estufa": decaimento reduzido até a retirada, com o valor calculado na retirada | RN-189 |
+| CE-11 | Lista única de produção para balcão e Expedição, com o mesmo mecanismo de entrada | RN-187 |
+| CE-12 | Balcão próprio da Expedição, com fila de motoboys como a fila de clientes. A comanda completa dispara a saída | RN-190, RN-191 |
+| CE-13 | O aceite do app continua na faixa, e o motoboy chega depois | RN-91 |
+| CE-14 | Paciência do motoboy como a do cliente, uma sacola por motoboy | RN-192, RN-193 |
+| CE-15 | Encomenda igual à sacola do app | RN-104 |
+| CE-16 | Aceite automático com toggle mantido; ligado, exige insumo (app e encomenda) | RN-95, RN-102 |
+| CE-17 | Os mesmos ícones de sabor do jogo em comandas, balão, oferta e painel | RN-181, RN-195 |
+| CE-18 | Delta em pasta própria, incorporado à spec principal na implementação | Cabeçalho |
+| CE-19 | Layout da faixa inferior: Mesas 200, Expedição 200, Escritório 100, Descanso 100 | RN-196 |
+| CE-20 | Todos os prontos ficam no balcão e na estufa; o atendente da Expedição os põe direto na sacola | RN-183 |
+| CE-21 | Encomenda entra na lista às 07h (FIFO puro) | RN-187 |
+| CE-22 | Encomenda exige escritório **e** área de delivery (substitui a PA-12 da spec principal) | RN-102 |
+
+**Derivações do agente (conferir na revisão):**
+
+| # | Derivação | Regra |
+|---|---|---|
+| DCE-01 | Fator de decaimento da sacola e da caixa 0,25 **(P)** | RN-189 |
+| DCE-02 | Número da comanda sequencial no dia, com prefixos M, APP e E | RN-180 |
+| DCE-03 | A calma por posição (RN-06b) vale só para a fila do balcão. Na fila da Expedição a paciência corre em ritmo normal para todos | RN-192 |
+| DCE-04 | A fila da Expedição não tem limite próprio | RN-191 |
+| DCE-05 | O trilho do balcão mostra 6 comandas (4 a ≈ 390 px), e o atalho de tocar no dono cobre as escondidas | RN-181 |
+| DCE-06 | Na comanda do balcão o pastel decai como pronto fora da estufa e sai da estufa ao entrar na comanda | RN-27, RN-189 |
+| DCE-07 | O aceite automático desconta do estoque o que a lista de produção já reservou | RN-95 |
+| DCE-08 | A entrega na fila da Expedição leva 1,5 s, igual ao antigo "entregar" | RN-191 |

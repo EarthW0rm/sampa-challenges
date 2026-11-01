@@ -1,6 +1,6 @@
 # Planejamento Técnico: Comandas e Expedição com balcão próprio (Pastel de Feira)
 
-> Fase 2 do SDD — O Como. Status: **aprovado (revisão 1)**.
+> Fase 2 do SDD — O Como. Status: **aprovado (revisão 1), implementado; resumo na seção 9 do [plan principal](../plan.md)**.
 > Pré-requisito: [`spec.md`](spec.md) deste delta, aprovada (revisão 1). Arquitetura base: o
 > [`plan.md` principal](../plan.md). Aqui só entra o que muda.
 

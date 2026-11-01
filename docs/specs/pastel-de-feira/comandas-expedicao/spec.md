@@ -1,6 +1,6 @@
 # Especificação Funcional: Comandas e Expedição com balcão próprio (Pastel de Feira)
 
-> Fase 1 do SDD — O Que e Porque. Status: **aprovada (revisão 1)**.
+> Fase 1 do SDD — O Que e Porque. Status: **aprovada (revisão 1), incorporada na revisão 5 da [spec principal](../spec.md)**.
 > Documento **delta** sobre a [spec principal](../spec.md) (revisão 4). Ele lista as regras **novas**
 > (RN-180 a RN-196), as **alteradas** (texto novo completo) e as **removidas**. A implementação
 > incorpora este delta na `spec.md` principal (revisão 5) e no `README.md` do jogo, no mesmo PR.

@@ -119,7 +119,7 @@ test.describe('Expedição', () => {
     await game.ev.action('Motoboy na fila da Expedição');
   });
 
-  test('RN-191: sem atendente a fila cresce; com o pasteleiro na Expedição, o da frente leva a sacola completa', async ({ game }) => {
+  test('RN-190/RN-191: sem atendente a fila cresce; com o pasteleiro no balcão da Expedição, o da frente leva a sacola completa', async ({ game }) => {
     test.setTimeout(240_000);
     await game.startDay({ campaign: { patch: withDelivery } });
     const t = await acceptNext(game);

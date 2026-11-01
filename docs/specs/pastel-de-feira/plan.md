@@ -86,6 +86,9 @@ Container_Boundary(game, "src/games/pastel-de-feira") {
   Component(layout, "layout.ts", "TS puro", "Zonas e hitboxes a partir do que foi comprado")
   Component(sim, "sim/day.ts (DaySim)", "TS puro", "step(dt fixo), dispatch(Command), snapshot()")
   Component(rules, "sim/* (regras)", "TS puro", "clientes, pedidos, tacho, moenda, estufa, mesas, delivery, equipe, sujeira, eventos")
+  Component(tickets, "sim/tickets.ts", "TS puro", "Comandas (Ticket): criar, fill, casamento sabor/versao, entrega automatica (rev. 5)")
+  Component(production, "sim/production.ts", "TS puro", "Lista de producao FIFO e reserva de insumo (rev. 5)")
+  Component(dispatch, "sim/dispatch.ts", "TS puro", "Fila da Expedicao: motoboy e cliente da encomenda (rev. 5)")
   Component(rng, "rng.ts", "TS puro", "PRNG com semente (mulberry32)")
   Component(campaign, "campaign/*", "TS puro", "Preparo, compras, cardapio, metas, fechamento, estacoes, passar o ponto")
   Component(data, "data/* + constants.ts", "TS puro", "Catalogos (receitas, equipamentos, eventos, desafios) e valores (P)")
@@ -105,6 +108,10 @@ Rel(input, layout, "Hit test")
 Rel(input, sim, "dispatch(Command)")
 Rel(dayview, sim, "step(1/60 s) x N")
 Rel(sim, rules, "Aplica regras")
+Rel(rules, tickets, "Anotar, aceite e encomenda criam comandas")
+Rel(rules, production, "Equipe produz pela lista")
+Rel(sim, dispatch, "Atualiza a fila da Expedicao")
+Rel(dispatch, tickets, "Entrega ou cancela a comanda")
 Rel(sim, rng, "Sorteios")
 Rel(rules, data, "Le parametros")
 Rel(campaign, data, "Le catalogos e precos")
@@ -522,3 +529,19 @@ Comando previsto (sem script novo no `package.json`, como nos outros jogos):
 | Volume de arte (cenário 640×480 + 7 raças × 3 portes) | Alta | Desenho 1× com cores-chave e troca em tempo de execução. Placeholders geométricos até a arte ficar pronta (o jogo nunca bloqueia por falta de sprite) |
 | Preparo denso a 390 px | Média | Abas, lista com rolagem, compra sugerida e cartões compactos. Teste a 390 px por aba |
 | Escopo grande numa entrega só | Alta | Backlog fatiado em User Stories que se integram por trás de uma flag de desenvolvimento até a US final, mantendo `main` sempre buildável |
+
+## 9. Revisão 5: comandas e Expedição com balcão próprio
+
+O plano detalhado está em [`comandas-expedicao/plan.md`](comandas-expedicao/plan.md) (diagramas C4 N2 e
+N3 do delta, sequências de pôr na comanda, da Expedição e da lista de produção, modelos e save v3). Em
+resumo, sobre este plano:
+
+| Ponto | Mudança |
+|---|---|
+| Modelo do dia | `Ticket` (comanda) em `sim/tickets.ts` substitui `Comanda`, `Motoboy`, `BigOrder` e a entrega de `Customer.lines`; o pronto sai de `ready`/`cups` e fica no item da comanda |
+| Comando | `fill { ticketId, item, g }` substitui `deliver` e os slots `pronto`/`encomenda`; a entrega é derivada do estado (comanda completa) |
+| Produção | `sim/production.ts` (lista FIFO pela entrada do pedido) substitui `demand.ts` |
+| Expedição | `sim/dispatch.ts`: fila com paciência, entrega de 1,5 s com atendente e cancelamento |
+| Apresentação | `render/rail.ts` (trilhos, comandas, placas, destaque do destino); faixa inferior Mesas 200, Expedição 200, Escritório 100, Descanso 100 |
+| Biblioteca | `caes_pe/motoboy_<pose>` |
+| Save | versão 3; a migração 2→3 descarta encomenda aceita sem área de delivery |

@@ -42,8 +42,8 @@ madeira é a classe `.moldura` (`border-image` com `--pf-moldura`, definida na r
 | Sem tela | `sim/` | cenários, replay, jogador automático, robôs e relatório (não entram no bundle) |
 
 Fluxo: `Campaign` → `toDayConfig` → `DaySim(config, seed)` → `DayResult` → `closeDay` → `Campaign`.
-`DaySim.step()` roda: comandos, pasteleiro, equipe, fritura, moenda, limpeza, clientes, mesas, delivery,
-encomendas, mundo (eventos) e automação. O tutorial (`game/tutorial.ts`) só observa o estado e liga
+`DaySim.step()` roda: comandos, pasteleiro, equipe, fritura, moenda, limpeza, clientes, mesas, ofertas do app,
+fila da Expedição, mundo (eventos) e automação. As encomendas viram comandas no construtor do `DaySim` (07h). O tutorial (`game/tutorial.ts`) só observa o estado e liga
 `DaySim.setHold` (relógio parado, interação livre).
 
 ## Mapa dos arquivos
@@ -56,6 +56,11 @@ encomendas, mundo (eventos) e automação. O tutorial (`game/tutorial.ts`) só o
 | `game/sim/day.ts` | `DaySim`: `step`, `dispatch`, `setHold`, `startLog`, `result` |
 | `game/sim/state.ts` | `DayState` e `createState` |
 | `game/sim/customers.ts` | chegadas, perfis, pedidos, paciência, trocas de sabor |
+| `game/sim/tickets.ts` | comandas (`Ticket`): criar, `fill` (pôr na comanda), casamento por sabor e versão, entrega automática (RN-180 a RN-186) |
+| `game/sim/production.ts` | lista de produção FIFO (`unmet`) e reserva de insumo do aceite automático (`canCover`) (RN-187, RN-95) |
+| `game/sim/dispatch.ts` | fila da Expedição: chegada do motoboy e do cliente da encomenda, paciência, entrega de 1,5 s, cancelamento (RN-191 a RN-193) |
+| `game/sim/delivery.ts`, `game/sim/orders.ts` | ofertas e aceite do app (comanda APP); encomendas do dia viram comandas E às 07h |
+| `game/render/rail.ts` | trilhos de comandas, comanda, placa de número, destaque do destino e hit test (RN-181, RN-184, RN-185) |
 | `game/sim/stations/*` | bancada, tacho, moenda, balcão, mesas, estufa |
 | `game/sim/staff.ts` | equipe: posições, prioridades, energia, descanso |
 | `game/campaign/closing.ts` | balanço do dia, meta, falência, modo livre |
@@ -64,7 +69,7 @@ encomendas, mundo (eventos) e automação. O tutorial (`game/tutorial.ts`) só o
 | `game/unlocks.ts` | balões de desbloqueio (`pastel-de-feira:visto`) |
 | `game/e2eHook.ts` | gancho dos testes E2E (`window.__pf`), só existe com `window.__PF_E2E__` definido pela página de teste |
 | `sim/run.ts` | `--scenario`, `--replay`, `--bots`, `--list` |
-| `sim/scenarios/*` | um grupo por conjunto de RN (290 cenários; `combinacoes` cruza as regras novas entre si e com as antigas) |
+| `sim/scenarios/*` | um grupo por conjunto de RN (312 cenários; `comandas` cobre RN-180 a RN-188; `combinacoes` cruza as regras novas entre si e com as antigas) |
 | `sim/player.ts`, `sim/bots.ts`, `sim/report.ts` | jogador automático e robôs de calibração |
 
 Arte: `tools/pixelart/pastel_de_feira.py`, script único (cenário, móveis 3-slice, equipamentos, enfeites,
@@ -75,6 +80,9 @@ pastéis, insumos, ícones do painel/evento/perfil, interface 9-slice, HUD, capa
 
 - A simulação não pode usar `Math.random`, `Date` nem o relógio do navegador: só o `Rng` semeado. Aparência e som ficam fora.
 - Todo comando de gesto leva `g` (id): o mesmo id é processado uma vez (toque duplo).
+- O `fill` é o **único** caminho de um pronto até um pedido (balcão, mesa, app e encomenda). O pronto sai de `ready`/`cups` e fica no item da comanda; não existe mais `deliver` nem `reservedFor`. A entrega é consequência da comanda completa (`tickets.ts`) ou da fila da Expedição (`dispatch.ts`).
+- Comanda de cliente e de mesa usa o próprio `Customer.lines` como itens (mesmos objetos): a troca por esgotamento (RN-35) e o balão enxergam a mesma coisa. Cenário que marca cliente como anotado precisa chamar `noteOrder` (cria a comanda), não só `c.state = 'anotado'`.
+- Save na versão 3: a migração 2→3 descarta encomenda aceita sem área de delivery (RN-102).
 - `game/assets.ts` importa `shared/sprites` e `game/art.ts` de forma dinâmica: `import.meta.glob` quebra a simulação em node.
 - Mudou o formato do save? Aumente a versão em `save.ts` e escreva a migração.
 - Mudou um valor (P)? Rode `--bots all --seeds 50` e atualize `docs/specs/pastel-de-feira/calibracao.md` e a tabela do `README.md`.
