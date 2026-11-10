@@ -1,6 +1,6 @@
 import { H, STEP, W } from '../constants';
 import { ITEMS } from '../data/recipes';
-import { center, coveredByPanel, type Layout, type Zone } from '../layout';
+import { center, coveredByPanel, type Layout, type Rect, type Zone } from '../layout';
 import { drawPixelText } from '../pixelFont';
 import { currentQuality } from '../sim/quality';
 import { queueOf, xepaActive } from '../sim/customers';
@@ -8,12 +8,14 @@ import { hasPower } from '../sim/world';
 import { fryWindow, isChanging, isDirty, isLocked } from '../sim/stations/fryer';
 import { millSeconds } from '../sim/stations/cane';
 import { workerStation } from '../sim/staff';
-import { now, type Customer, type DayState } from '../sim/state';
+import { now, type Customer, type DayState, type OrderLine, type Ticket } from '../sim/state';
+import { openTickets, ticketOf } from '../sim/tickets';
+import { drawOwnerPlate, drawRail } from './rail';
 import type { UiState } from '../ui';
 import { SCALE } from '../hires';
 import { aparenciaDe, type Pose } from '../assets';
 import { drawTachoFx } from './fx';
-import { bar, box, drawArt, drawCliente, drawEquipe, drawFlavor, drawNine, drawPastel, drawPastelFlavor, drawPlaque, drawThree, itemColor, PAL, PROFILE_COLOR, textCenter } from './draw';
+import { bar, box, drawArt, drawCliente, drawEquipe, drawMotoboy, drawFlavor, drawNine, drawPastel, drawPastelFlavor, drawPlaque, drawThree, itemColor, PAL, PROFILE_COLOR, textCenter } from './draw';
 
 /** Posição do cliente `i` da fila (frente à direita, perto do balcão). */
 export function queueSpot(layout: Layout, i: number): { x: number; y: number } {
@@ -27,6 +29,17 @@ export function customerAt(layout: Layout, st: DayState, x: number, y: number): 
   for (let i = 0; i < queue.length; i++) {
     const p = queueSpot(layout, i);
     if (Math.abs(x - p.x) <= 22 && y <= p.y + 4 && y >= p.y - 60) return queue[i];
+  }
+  return null;
+}
+
+/** Dono na fila da Expedição sob o ponto (motoboy ou cliente da encomenda): devolve a comanda dele (RN-185). */
+export function dispatchOwnerAt(layout: Layout, st: DayState, x: number, y: number): Ticket | null {
+  const z = layout.byId.get('expedicao');
+  if (!z) return null;
+  for (let i = 0; i < st.dispatchQueue.length; i++) {
+    const p = dispatchSpot(z, i);
+    if (Math.abs(x - p.x) <= 18 && y <= p.y + 4 && y >= p.y - 60) return st.tickets.find((t) => t.id === st.dispatchQueue[i].ticketId) ?? null;
   }
   return null;
 }
@@ -143,19 +156,20 @@ const CRUMBS: readonly (readonly [number, number])[] = [
 /** Visto (✓) em pixels de 2×2 sobre o selo da linha entregue. */
 const CHECK: readonly (readonly [number, number])[] = [[1, 6], [3, 8], [5, 6], [7, 4], [9, 2]];
 
-function drawBalloon(ctx: CanvasRenderingContext2D, c: Customer, x: number, y: number): void {
-  const w = 14 * c.lines.length + 6;
+/** Balão com os selos dos itens (visto nos preenchidos, estrela no brinde) e a barra de paciência por cima. */
+function drawSealsBalloon(ctx: CanvasRenderingContext2D, lines: readonly OrderLine[], waiting: boolean, patience: number, x: number, y: number): void {
+  const w = 14 * lines.length + 6;
   const bx = Math.round(x - w / 2);
   if (drawNine(ctx, 'ui/balao', { x: bx, y: y - 22, w, h: 20 }, 3)) drawArt(ctx, 'ui/balao_rabo', Math.round(x) - 3, y - 3);
   else box(ctx, { x: bx, y: y - 22, w, h: 20 }, PAL.paper, PAL.ink);
-  if (c.state === 'aguardando') {
+  if (waiting) {
     textCenter(ctx, '?', x, y - 18, PAL.ink, 2, null);
   } else {
-    c.lines.forEach((l, i) => {
+    lines.forEach((l, i) => {
       const sx = bx + 4 + i * 14;
       // o selo mostra o sabor pela forma; sem arte, o quadrado de cor
-      if (!drawFlavor(ctx, l.item, sx, y - 18)) box(ctx, { x: sx, y: y - 17, w: 10, h: 10 }, l.delivered ? '#d9b27a' : itemColor(l.item), PAL.ink);
-      else if (l.delivered) {
+      if (!drawFlavor(ctx, l.item, sx, y - 18)) box(ctx, { x: sx, y: y - 17, w: 10, h: 10 }, l.filled ? '#d9b27a' : itemColor(l.item), PAL.ink);
+      else if (l.filled) {
         ctx.fillStyle = 'rgba(251,246,232,0.6)'; // entregue: véu claro e um visto
         ctx.fillRect(sx, y - 18, 12, 12);
         ctx.fillStyle = PAL.green;
@@ -167,7 +181,13 @@ function drawBalloon(ctx: CanvasRenderingContext2D, c: Customer, x: number, y: n
       }
     });
   }
-  bar(ctx, bx, y - 26, w, 4, c.patience / c.patienceMax, c.patience / c.patienceMax > 0.4 ? PAL.green : PAL.red);
+  bar(ctx, bx, y - 26, w, 4, patience, patience > 0.4 ? PAL.green : PAL.red);
+}
+
+function drawBalloon(ctx: CanvasRenderingContext2D, st: DayState, ui: UiState, c: Customer, x: number, y: number): void {
+  drawSealsBalloon(ctx, c.lines, c.state === 'aguardando', c.patience / c.patienceMax, x, y);
+  const t = ticketOf(st, c.id);
+  if (t) drawOwnerPlate(ctx, t, x, y - 37, ui.flash?.ticketId === t.id && Math.floor(ui.clock * 6) % 2 === 0); // placa com o número da comanda (RN-185)
 }
 
 function drawTacho(ctx: CanvasRenderingContext2D, st: DayState, ui: UiState, z: Zone, index: number): void {
@@ -228,16 +248,19 @@ function drawBasket(ctx: CanvasRenderingContext2D, x: number, y: number, w: numb
 
 /** Posição do lugar `seat` da mesa `table` na zona das mesas (2×2 mesas de 4 lugares). */
 export function seatSpot(z: Zone, table: number, seat: number): { x: number; y: number } {
-  const tx = z.x + 12 + (table % 2) * 146;
-  const ty = z.y + 26 + Math.floor(table / 2) * 68;
-  return { x: tx + 14 + (seat % 2) * 56, y: ty + (seat < 2 ? 18 : 62) };
+  const { tx, ty } = tableSpot(z, table);
+  return { x: tx + 12 + (seat % 2) * 64, y: ty + (seat < 2 ? 18 : 62) };
+}
+
+/** Canto da mesa `table` na zona das mesas: 2×2 compactas em 200 de largura (RN-196), abaixo da placa. */
+function tableSpot(z: Zone, table: number): { tx: number; ty: number } {
+  return { tx: z.x + 6 + (table % 2) * 96, ty: z.y + 30 + Math.floor(table / 2) * 66 };
 }
 
 function drawTables(ctx: CanvasRenderingContext2D, st: DayState, z: Zone, ui: UiState): void {
   st.tables.forEach((t, i) => {
-    const tx = z.x + 12 + (i % 2) * 146;
-    const ty = z.y + 26 + Math.floor(i / 2) * 68;
-    if (!drawArt(ctx, 'equip/mesa', tx + 14, ty + 22)) box(ctx, { x: tx + 14, y: ty + 22, w: 90, h: 22 }, PAL.wood, PAL.woodDark);
+    const { tx, ty } = tableSpot(z, i);
+    if (!drawArt(ctx, 'equip/mesa', tx, ty + 22)) box(ctx, { x: tx, y: ty + 22, w: 90, h: 22 }, PAL.wood, PAL.woodDark);
     t.seats.forEach((seat, j) => {
       const p = seatSpot(z, i, j);
       if (seat === 'sujo') {
@@ -258,25 +281,54 @@ function drawTables(ctx: CanvasRenderingContext2D, st: DayState, z: Zone, ui: Ui
     });
     const first = seatSpot(z, g.table, g.seats[0]);
     if (c.place === 'comendo') bar(ctx, first.x - 10, first.y - 46, 40, 4, 1 - c.timer / 25, PAL.gold);
-    else if (c.place === 'mesa') drawBalloon(ctx, c, first.x + 14, first.y - 30);
+    else if (c.place === 'mesa') drawBalloon(ctx, st, ui, c, first.x + 14, first.y - 30);
   }
 }
 
-function drawDispatch(ctx: CanvasRenderingContext2D, st: DayState, z: Zone): void {
-  st.comandas.slice(0, 4).forEach((c, i) => {
-    const x = z.x + 8 + i * 24;
-    const y = z.y + 26;
-    const done = c.packed.filter((p) => p !== null).length;
-    if (!drawArt(ctx, c.motoboy !== null ? 'equip/sacola_app_motoboy' : 'equip/sacola_app', x, y)) box(ctx, { x, y, w: 20, h: 28 }, c.motoboy !== null ? PAL.green : PAL.tile, PAL.woodDark);
-    bar(ctx, x, y + 32, 20, 4, done / c.items.length, PAL.gold);
-    const left = c.pickupAt - now(st);
-    if (left > 0) textCenter(ctx, String(Math.ceil(left)), x + 10, y + 8, PAL.ink, 1, null);
-  });
-  st.motoboys.slice(0, 2).forEach((m, i) => {
-    const x = z.x + z.w - 22 - i * 34;
-    const y = z.y + z.h - 10;
-    drawCliente(ctx, aparenciaDe(st.seed, 100000 + m.id), 'parado', x, y, { flip: true, ribbon: PAL.green });
-    bar(ctx, x - 12, y - 44, 24, 4, m.waitLeft / 25, m.waitLeft > 8 ? PAL.green : PAL.red);
+/** Balcão próprio da Expedição (RN-190): largura do móvel e onde ele começa na zona. */
+export function dispatchCounter(z: Zone): Rect {
+  const w = Math.min(100, z.w - 8);
+  return { x: z.x + z.w - w - 4, y: z.y + 54, w, h: 72 };
+}
+
+/** Posição do dono `i` da fila da Expedição (frente à direita, encostada no balcão próprio, RN-191). */
+export function dispatchSpot(z: Zone, i: number): { x: number; y: number } {
+  const c = dispatchCounter(z);
+  return { x: c.x - 16 - i * 40, y: z.y + z.h - 10 };
+}
+
+/**
+ * Expedição (RN-190, RN-191): trilho no topo, balcão próprio com as sacolas e as caixas das comandas (número
+ * e progresso) e a fila de motoboys e clientes de encomenda à frente, com balão, placa e paciência.
+ */
+function drawDispatch(ctx: CanvasRenderingContext2D, layout: Layout, st: DayState, ui: UiState, z: Zone): void {
+  drawRail(ctx, layout, st, ui, 'expedicao');
+  const c = dispatchCounter(z);
+  if (!drawThree(ctx, 'moveis/balcao', c.x, c.y, c.w)) box(ctx, c, PAL.wood, PAL.woodDark);
+  let x = c.x + 6;
+  for (const t of openTickets(st, 'expedicao')) {
+    const enc = t.kind === 'encomenda';
+    const w = enc ? 26 : 20;
+    if (x + w > c.x + c.w - 4) break;
+    const done = t.slots.filter((l) => l.filled !== null).length;
+    const full = done === t.slots.length;
+    const art = enc ? (full ? 'equip/caixa_encomenda_pronta' : 'equip/caixa_encomenda') : full ? 'equip/sacola_app_motoboy' : 'equip/sacola_app';
+    const y = c.y + (enc ? 10 : 2);
+    if (!drawArt(ctx, art, x, y)) box(ctx, { x, y, w, h: enc ? 20 : 28 }, full ? PAL.green : PAL.tile, PAL.woodDark);
+    drawOwnerPlate(ctx, t, x + w / 2, c.y + 32, ui.flash?.ticketId === t.id && Math.floor(ui.clock * 6) % 2 === 0);
+    bar(ctx, x, c.y + 43, w, 3, done / t.slots.length, PAL.gold);
+    x += w + 6;
+  }
+  st.dispatchQueue.forEach((e, i) => {
+    const p = dispatchSpot(z, i);
+    if (p.x < z.x - 4) return; // a fila sai pela borda da zona
+    const t = st.tickets.find((k) => k.id === e.ticketId);
+    const look = aparenciaDe(st.seed, 100000 + e.id);
+    if (e.who === 'motoboy') drawMotoboy(ctx, look, 'parado', p.x, p.y, true);
+    else drawCliente(ctx, look, 'parado', p.x, p.y, { flip: true });
+    if (!t) return;
+    drawSealsBalloon(ctx, t.slots.slice(0, 5), false, e.patience / e.patienceMax, p.x, p.y - 38);
+    drawOwnerPlate(ctx, t, p.x, p.y - 75);
   });
 }
 
@@ -324,17 +376,18 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   queueOf(st).forEach((c, i) => {
     const p = queueSpot(layout, i);
     drawCliente(ctx, aparenciaDe(st.seed, c.id), c.patience < c.patienceMax * 0.3 ? 'bravo' : 'parado', p.x, p.y, { flip: true, ribbon: PROFILE_COLOR[c.profile] });
-    drawBalloon(ctx, c, p.x, p.y - 38);
+    drawBalloon(ctx, st, ui, c, p.x, p.y - 38);
   });
 
   // balcão: prontos, copos e moedas
   const bal = layout.byId.get('balcao');
   if (bal) {
     drawWarmer(ctx, st, bal, ui);
-    st.ready.filter((r) => !r.warmed).slice(0, 10).forEach((r, i) => {
+    // prontos, copos e moedas numa fileira só, abaixo do trilho de comandas (RN-181)
+    st.ready.filter((r) => !r.warmed).slice(0, 6).forEach((r, i) => {
       const q = currentQuality(r, now(st));
-      const x = bal.x + 8 + (i % 5) * 28;
-      const y = bal.y + 26 + Math.floor(i / 5) * 22;
+      const x = bal.x + 8 + i * 24;
+      const y = bal.y + 54;
       if (!drawPastelFlavor(ctx, r.item, q >= 50 ? 'ponto' : 'passado', x, y, 22, 14)) {
         ctx.fillStyle = itemColor(r.item);
         ctx.fillRect(x, y, 22, 14);
@@ -345,16 +398,17 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
         ctx.strokeRect(x - 1.5, y - 1.5, 25, 17);
       }
     });
-    st.cups.slice(0, 6).forEach((c, i) => {
-      if (drawPastel(ctx, c.item, 'ponto', bal.x + 150 + i * 12, bal.y + 28, 10, 14)) return;
+    st.cups.slice(0, 4).forEach((c, i) => {
+      if (drawPastel(ctx, c.item, 'ponto', bal.x + 160 + i * 12, bal.y + 54, 10, 14)) return;
       ctx.fillStyle = itemColor(c.item);
-      ctx.fillRect(bal.x + 150 + i * 12, bal.y + 28, 10, 14);
+      ctx.fillRect(bal.x + 160 + i * 12, bal.y + 54, 10, 14);
     });
-    st.coins.slice(0, 6).forEach((_c, i) => {
-      if (drawArt(ctx, 'itens/moeda', bal.x + bal.w - 22 - i * 12, bal.y + 52)) return;
+    st.coins.slice(0, 3).forEach((_c, i) => {
+      if (drawArt(ctx, 'itens/moeda', bal.x + bal.w - 22 - i * 12, bal.y + 56)) return;
       ctx.fillStyle = PAL.gold;
-      ctx.fillRect(bal.x + bal.w - 22 - i * 12, bal.y + 52, 10, 10);
+      ctx.fillRect(bal.x + bal.w - 22 - i * 12, bal.y + 56, 10, 10);
     });
+    drawRail(ctx, layout, st, ui, 'balcao');
   }
 
   // bancada
@@ -387,18 +441,8 @@ export function renderScene(ctx: CanvasRenderingContext2D, st: DayState, layout:
   const me = layout.byId.get('mesas');
   if (me) drawTables(ctx, st, me, ui);
   if (bal && st.tables.length > 0) drawPayQueue(ctx, st, bal);
-  const off = layout.byId.get('escritorio');
-  if (off) {
-    st.bigOrders.slice(0, 3).forEach((o, i) => {
-      const x = off.x + 10 + i * 30;
-      if (!drawArt(ctx, o.state === 'espera' ? 'equip/caixa_encomenda_pronta' : 'equip/caixa_encomenda', x, off.y + 60)) {
-        box(ctx, { x, y: off.y + 60, w: 26, h: 20 }, o.state === 'espera' ? PAL.green : PAL.wood, PAL.woodDark); // caixa de encomenda
-      }
-      bar(ctx, x, off.y + 84, 26, 4, o.boxed.length / o.qty, PAL.gold);
-    });
-  }
   const ex = layout.byId.get('expedicao');
-  if (ex) drawDispatch(ctx, st, ex);
+  if (ex) drawDispatch(ctx, layout, st, ui, ex);
   const fila = layout.byId.get('fila');
   if (fila) {
     // migalhas na calçada: 1 a partir de 30 de sujeira, mais 1 a cada 25 pontos

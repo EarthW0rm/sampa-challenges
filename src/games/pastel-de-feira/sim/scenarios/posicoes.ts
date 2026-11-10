@@ -1,3 +1,4 @@
+import { noteOrder } from '../../game/sim/stations/counter';
 import { STEP } from '../../game/constants';
 import { crewSpeed, flavorFor, fryerTachos, homeStation, speedFactor, workerStation } from '../../game/sim/staff';
 import { ITEMS } from '../../game/data/recipes';
@@ -31,7 +32,7 @@ const pos = (s: DayState, id: number): PositionId | null => s.workers.find((w) =
 /** Cliente já anotado com o pedido dado. */
 function ordered(s: DayState, items: string[]): Customer {
   const c = addCustomer(s, 'padrao', items);
-  c.state = 'anotado';
+  noteOrder(s, c);
   return c;
 }
 
@@ -249,7 +250,7 @@ export const posicoes: Scenario[] = [
       const s = sim.state;
       const w = s.workers[0];
       const c = addCustomer(s, 'padrao', ['carne']);
-      c.state = 'anotado';
+      noteOrder(s, c);
       advance(sim, secs(5));
       checkEq(s.assembled.length, 0, 'sem Montagem, ninguém monta: o Fritador não monta');
       check(w.task?.kind !== 'montar', 'o Fritador nunca pega a tarefa de montar');

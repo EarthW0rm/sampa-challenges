@@ -4,21 +4,20 @@ import { MANAGEMENT_SPEED, MANAGER_SPEED } from '../data/office';
 import { AUTO_PRIORITY, ATTENDANCE_FACTOR, CARE_BONUS, ENERGY, FRYER_ONLY, FRY_COURSE_BONUS, OIL_COURSE_FACTOR, RAPID_FACTOR, RESISTANT_FATIGUE, WORK, WRONG_FLAVOR_CHANCE, type PositionId } from '../data/staff';
 import { ITEMS, type ItemId } from '../data/recipes';
 import type { ItemRef, StationId } from '../types';
-import { lineMatches, deliverItem, noteOrder, takeCoins } from './stations/counter';
+import { noteOrder, takeCoins } from './stations/counter';
+import { fill, openTickets, slotFor } from './tickets';
 import { chargeGroup } from './stations/tables';
-import { packPastry } from './delivery';
 import { autoMillActive, cardMachineActive, timerActive } from './automation';
-import { boxPastry } from './orders';
 import { addDirt, cleanTable, dirtyTable } from './dirt';
 import { assembleItem } from './stations/bench';
 import { makeCup, millSeconds } from './stations/cane';
 import { fryWindow, isChanging, nextFreeBasket, placeBasket, startWorkerOilChange, takeBasket } from './stations/fryer';
 import { currentQuality } from './quality';
 import { fatigueFactor, ignite, maybeBurnWorker, canSurprise } from './world';
-import { emit, now, type Customer, type DayState, type Worker, type WorkerTask } from './state';
+import { emit, now, type Customer, type DayState, type Ticket, type Worker, type WorkerTask } from './state';
 import { canMake } from './stock';
 import { BENCH_CAPACITY, OIL_DIRTY_THRESHOLD } from '../constants';
-import { unmetItems } from './demand';
+import { unmet } from './production';
 
 const EPS = 1e-9;
 
@@ -197,32 +196,43 @@ function start(w: Worker, s: DayState, task: Omit<WorkerTask, 'total' | 'left'>,
   w.task = { ...task, total, left: total };
 }
 
-/** Melhor item pronto para um cliente: o pastel de maior nota que atende; senão um copo (RN-18). */
-function bestFor(s: DayState, c: Customer): ItemRef | null {
+/** Pronto que outro funcionário já vai pôr numa comanda. */
+const refTaken = (s: DayState, me: Worker, ref: ItemRef): boolean =>
+  s.workers.some((o) => o !== me && o.task?.kind === 'preencher' && o.task.ref?.kind === ref.kind && o.task.ref.id === ref.id);
+
+/** Melhor pronto livre para a comanda: o pastel de maior nota que ela aceita; senão um copo (RN-18, RN-182). */
+function bestFor(s: DayState, w: Worker, t: Ticket): ItemRef | null {
   let pastry: { id: number; q: number } | null = null;
   let cup: number | null = null;
-  for (const line of c.lines) {
-    if (line.delivered !== null) continue;
-    for (const r of s.ready) {
-      if (r.reservedFor !== undefined || !lineMatches(c, line, r.item)) continue;
-      const q = currentQuality(r, now(s));
-      if (!pastry || q > pastry.q) pastry = { id: r.id, q };
-    }
-    for (const x of s.cups) if (cup === null && lineMatches(c, line, x.item)) cup = x.id;
+  for (const r of s.ready) {
+    if (slotFor(s, t, r.item) < 0 || refTaken(s, w, { kind: 'pastel', id: r.id })) continue;
+    const q = currentQuality(r, now(s));
+    if (!pastry || q > pastry.q) pastry = { id: r.id, q };
   }
+  for (const x of s.cups) if (cup === null && slotFor(s, t, x.item) >= 0 && !refTaken(s, w, { kind: 'copo', id: x.id })) cup = x.id;
   if (pastry) return { kind: 'pastel', id: pastry.id };
   return cup !== null ? { kind: 'copo', id: cup } : null;
 }
 
-function pickBalcao(s: DayState, w: Worker): boolean {
-  for (const c of s.customers) {
-    if (c.state !== 'anotado' || c.place !== 'fila' || claimed(s, w, 'entregar', c.id)) continue;
-    const found = bestFor(s, c);
+/**
+ * Põe um pronto na comanda mais antiga que o aceita (RN-188). No trilho do balcão, só as comandas cujo dono
+ * está no lugar dado: na fila (Balcão) ou na mesa (Garçom); no da Expedição, todas. 1,5 s, −20% com o curso
+ * de Atendimento.
+ */
+function pickFill(s: DayState, w: Worker, track: 'balcao' | 'expedicao', place?: Customer['place']): boolean {
+  for (const t of openTickets(s, track)) {
+    if (place && s.customers.find((c) => c.id === t.owner)?.place !== place) continue;
+    const found = bestFor(s, w, t);
     if (found) {
-      start(w, s, { kind: 'entregar', customerId: c.id, ref: found }, WORK.deliver, true);
+      start(w, s, { kind: 'preencher', ticketId: t.id, ref: found }, WORK.deliver, true);
       return true;
     }
   }
+  return false;
+}
+
+function pickBalcao(s: DayState, w: Worker): boolean {
+  if (pickFill(s, w, 'balcao', 'fila')) return true;
   if (!cardMachineActive(s) && s.payQueue.length > 0 && !claimed(s, w, 'pagar')) {
     start(w, s, { kind: 'pagar' }, WORK.collect, true);
     return true;
@@ -236,33 +246,23 @@ function pickBalcao(s: DayState, w: Worker): boolean {
     start(w, s, { kind: 'cobrar' }, WORK.collect, true);
     return true;
   }
-  return pickDispatch(s, w); // sem outra coisa a fazer, o Balcão também guarda pastéis nas encomendas
+  return false; // o Balcão não preenche o trilho da Expedição (RN-183)
 }
 
 /** Garçom: anota o grupo na mesa e entrega o pedido pronto (RN-83, RN-86). */
 function pickWaiter(s: DayState, w: Worker): boolean {
-  for (const c of s.customers) {
-    if (c.state !== 'anotado' || c.place !== 'mesa' || claimed(s, w, 'entregar', c.id)) continue;
-    const found = bestFor(s, c);
-    if (found) {
-      start(w, s, { kind: 'entregar', customerId: c.id, ref: found }, WORK.deliver, true);
-      return true;
-    }
-  }
+  if (pickFill(s, w, 'balcao', 'mesa')) return true;
   const next = s.customers.find((c) => c.state === 'aguardando' && c.place === 'mesa' && !claimed(s, w, 'anotar', c.id));
   if (!next) return false;
   start(w, s, { kind: 'anotar', customerId: next.id }, WORK.takeOrder, true);
   return true;
 }
 
-/** Expedição: embala pastéis prontos nas comandas do app (RN-40, RN-96). */
-function pickDispatch(s: DayState, w: Worker): boolean {
-  if (s.workers.some((o) => o !== w && o.task?.kind === 'embalar')) return false;
-  const r = s.ready.find((x) => x.reservedFor === undefined && (s.comandas.some((c) => c.items.some((it, k) => c.packed[k] === null && ITEMS[it].base === ITEMS[x.item].base)) || s.bigOrders.some((o) => o.boxed.length < o.qty && ITEMS[o.item].base === ITEMS[x.item].base)));
-  if (!r) return false;
-  start(w, s, { kind: 'embalar', ref: { kind: 'pastel', id: r.id } }, WORK.deliver, true);
-  return true;
-}
+/**
+ * Expedição: põe os prontos do balcão e da estufa na sacola ou caixa mais antiga (RN-183, RN-188). A entrega
+ * ao dono da frente da fila acontece sozinha enquanto ele está na posição (`dispatch.ts`, RN-191).
+ */
+const pickDispatch = (s: DayState, w: Worker): boolean => pickFill(s, w, 'expedicao');
 
 /** Ajudante: limpa a mesa suja (3 s) e, ocioso, varre a barraca: 10 pontos a cada 3 s (RN-84, RN-132). */
 function pickHelper(s: DayState, w: Worker): boolean {
@@ -294,7 +294,7 @@ const pickPlaceAny = (s: DayState, w: Worker): boolean => s.tachos.some((_, i) =
 function pickAssemble(s: DayState, w: Worker): boolean {
   if (s.assembled.length >= BENCH_CAPACITY) return false;
   const inProgress = s.workers.filter((o) => o.task?.kind === 'montar').map((o) => o.task!.item as ItemId);
-  const want = unmetItems(s, false, inProgress).find((id) => canMake(s, ITEMS[id]));
+  const want = unmet(s, false, inProgress).find((id) => canMake(s, ITEMS[id]));
   if (!want) return false;
   const item = ITEMS[want];
   start(w, s, { kind: 'montar', item: want }, WORK.assembleBase + WORK.assemblePerStep * item.steps);
@@ -304,7 +304,7 @@ function pickAssemble(s: DayState, w: Worker): boolean {
 function pickCaldo(s: DayState, w: Worker): boolean {
   if (autoMillActive(s)) return false; // moenda automática: o funcionário não soma (RN-161)
   const inProgress = s.workers.filter((o) => o.task?.kind === 'caldo').map((o) => o.task!.item as ItemId);
-  const want = unmetItems(s, true, inProgress).find((id) => canMake(s, ITEMS[id]));
+  const want = unmet(s, true, inProgress).find((id) => canMake(s, ITEMS[id]));
   if (!want) return false;
   start(w, s, { kind: 'caldo', item: want }, millSeconds(s) + WORK.drinkExtra);
   return true;
@@ -393,15 +393,14 @@ function complete(s: DayState, w: Worker, t: WorkerTask): void {
     case 'limpar':
       if (t.tacho !== undefined) cleanTable(s, t.tacho);
       break;
-    case 'embalar':
-      if (t.ref && !packPastry(s, t.ref.id)) boxPastry(s, t.ref.id);
-      break;
     case 'varrer':
       addDirt(s, -HELPER_CLEAN_POINTS);
       break;
-    case 'entregar':
-      if (t.customerId !== undefined && t.ref) deliverItem(s, t.ref, t.customerId, w);
+    case 'preencher': {
+      const ticket = s.tickets.find((x) => x.id === t.ticketId);
+      if (ticket && t.ref) fill(s, ticket, t.ref, w); // revalida: o pronto ou a comanda podem ter sumido
       break;
+    }
     case 'montar': {
       assembleItem(s, flavorFor(s, w, t.item!), w.traits.includes('caprichoso') ? CARE_BONUS : 0);
       break;

@@ -88,9 +88,9 @@ export function mill(game: GamePage, seconds: number, label: string | RegExp = '
   });
 }
 
-/** No balcão: seleciona o pastel pronto (ou copo) pelo id e toca no cliente da frente. */
+/** No balcão: seleciona o pronto (ou copo) pelo id e toca na comanda do cliente da fila (RN-182). */
 export function deliver(game: GamePage, ref: { kind: 'pastel' | 'copo'; id: number }, queueIndex = 0): Promise<void> {
-  return game.step(`Entregar ${ref.kind} #${ref.id} ao cliente na posição ${queueIndex} da fila`, () => deliverSteps(game, ref, queueIndex));
+  return game.step(`Pôr ${ref.kind} #${ref.id} na comanda do cliente na posição ${queueIndex} da fila`, () => deliverSteps(game, ref, queueIndex));
 }
 
 async function deliverSteps(game: GamePage, ref: { kind: 'pastel' | 'copo'; id: number }, queueIndex: number): Promise<void> {
@@ -99,7 +99,7 @@ async function deliverSteps(game: GamePage, ref: { kind: 'pastel' | 'copo'; id: 
     const st = pf.sim.state;
     const ctl = pf.controls();
     const base = ctl.findIndex((c) => c.label === 'VASSOURA') + 1;
-    const ready = st.ready.filter((x) => x.reservedFor === undefined).slice(0, 7);
+    const ready = st.ready.slice(0, 7);
     if (r.kind === 'pastel') return base + ready.findIndex((x) => x.id === r.id);
     return base + ready.length + st.cups.slice(0, 5).findIndex((x) => x.id === r.id);
   }, ref);
@@ -111,7 +111,11 @@ async function deliverSteps(game: GamePage, ref: { kind: 'pastel' | 'copo'; id: 
   });
   await game.ev.action(`Selecionar ${ref.kind} #${ref.id} no painel do balcão ("${ctl.label}")`);
   expect(await game.hook((pf) => pf.env.ui.selected), 'item selecionado').toEqual(ref);
-  await game.tapCustomer(queueIndex);
+  const owner = await game.hook((pf, i) => pf.queue()[i]?.id ?? -1, queueIndex);
+  const t = await game.comanda({ owner });
+  // a comanda do trilho; se ela estiver no "+N", o atalho de tocar no dono (RN-185)
+  if (t?.rect) await game.porNaComanda(t.label);
+  else await game.tapCustomer(queueIndex);
 }
 
 /** Atende por completo o cliente da frente (anota, monta, frita no ponto, mói, entrega). Devolve o id. */
@@ -135,7 +139,7 @@ async function serveSteps(game: GamePage, id: number): Promise<void> {
     if (st === 'anotado') break;
     await game.tapControl('ANOTAR');
   }
-  const items = await game.hook((pf, cid) => pf.sim.state.customers.find((k) => k.id === cid)!.lines.filter((l) => l.delivered === null).map((l) => l.item), id);
+  const items = await game.hook((pf, cid) => pf.sim.state.customers.find((k) => k.id === cid)!.lines.filter((l) => l.filled === null).map((l) => l.item), id);
   for (const item of items) {
     if (isDrink(item)) {
       const before = await game.hook((pf) => pf.sim.state.cups.map((x) => x.id));
@@ -165,5 +169,26 @@ export function collect(game: GamePage): Promise<void> {
   return game.step('Cobrar (recolher as moedas do balcão)', async () => {
     await game.goTo('balcao');
     await game.tapControl('COBRAR');
+  });
+}
+
+/**
+ * Na Expedição: escolhe o pronto no painel (os prontos ficam no balcão e na estufa, CE-20) e toca na comanda
+ * do trilho da Expedição pelo controle do painel, que cobre o trilho quando está aberto (RN-182, RN-183).
+ */
+export function pack(game: GamePage, id: number, label: string): Promise<void> {
+  return game.step(`Pôr o pastel #${id} na comanda ${label} pela Expedição`, async () => {
+    await game.goTo('expedicao');
+    const ctl = await game.hook((pf, rid) => {
+      const list = pf.controls();
+      const base = list.findIndex((c) => c.label === 'EMBALAGEM') + 1;
+      return list[base + pf.sim.state.ready.slice(0, 6).findIndex((r) => r.id === rid)];
+    }, id);
+    expect(ctl, `pronto #${id} no painel da Expedição`).toBeTruthy();
+    await game.ev.quiet(async () => {
+      await game.tapAt(ctl.x + ctl.w / 2, ctl.y + ctl.h / 2);
+      await game.frames(1);
+    });
+    await game.tapControl(label);
   });
 }

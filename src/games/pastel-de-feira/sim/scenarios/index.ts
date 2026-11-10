@@ -4,6 +4,7 @@ import { balcao } from './balcao';
 import { catalogo } from './catalogo';
 import { clientes } from './clientes';
 import { combinacoes } from './combinacoes';
+import { comandas } from './comandas';
 import { delivery } from './delivery';
 import { encomendas } from './encomendas';
 import { desafios } from './desafios';
@@ -38,6 +39,7 @@ import { velocidade } from './velocidade';
 /** Grupos de cenários. Cada TF de regra acrescenta o seu aqui. */
 export const GROUPS: Readonly<Record<string, Scenario[]>> = {
   catalogo,
+  comandas,
   balcao,
   clientes,
   relogio,

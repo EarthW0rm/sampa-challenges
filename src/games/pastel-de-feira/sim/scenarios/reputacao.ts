@@ -3,7 +3,7 @@ import { devConfig } from '../testConfig';
 import { currentQuality, drinkValue, pastryValue, qualityFactor, reputationPremium } from '../../game/sim/quality';
 import { buildResult, reputationChange } from '../../game/sim/result';
 import { addCustomer } from '../../game/sim/customers';
-import { advance, check, checkEq, checkNear, makeSim, type Scenario } from '../harness';
+import { advance, check, checkEq, checkNear, makeSim, type Scenario, fillCmd } from '../harness';
 
 const dayWith = (seed: number, rep = 3) => {
   const sim = makeSim(seed, devConfig({ reputation: rep }));
@@ -68,7 +68,7 @@ export const reputacao: Scenario[] = [
       sim.dispatch({ type: 'tapSlot', station: 'balcao', slot: { k: 'anotar' } });
       sim.step();
       s.ready.push({ id: 1, item: 'carne', quality: 20, readyAt: 0 }); // Padrão exige 50 (recém-pronto: sem decaimento)
-      sim.dispatch({ type: 'deliver', item: { kind: 'pastel', id: 1 }, customerId: c.id });
+      sim.dispatch(fillCmd(sim, { kind: 'pastel', id: 1 }, c.id));
       sim.step();
       checkEq(s.coins.length, 1, 'é pago');
       checkEq(s.rep.successes, 0, 'mas não é sucesso');
@@ -88,7 +88,7 @@ export const reputacao: Scenario[] = [
       sim.dispatch({ type: 'tapSlot', station: 'balcao', slot: { k: 'anotar' } });
       sim.step();
       s.ready.push({ id: 1, item: 'carne', quality: 80, readyAt: s.tick / 60 });
-      sim.dispatch({ type: 'deliver', item: { kind: 'pastel', id: 1 }, customerId: c.id });
+      sim.dispatch(fillCmd(sim, { kind: 'pastel', id: 1 }, c.id));
       sim.step();
       checkNear(s.coins[0].amount, 7 * (0.8 + 0.4 * 0.7), 'nota 70 depois do desconto de 10 pontos');
     },

@@ -5,7 +5,9 @@ import { isChanging, isDirty, isLocked } from '../sim/stations/fryer';
 import type { DayState } from '../sim/state';
 import { canMake } from '../sim/stock';
 import type { UiState } from '../ui';
-import { box, drawArt, PAL, textCenter } from './draw';
+import { box, drawArt, drawFlavor, itemColor, PAL, textCenter } from './draw';
+import { drawPixelText, textWidth } from '../pixelFont';
+import { railSpots } from './rail';
 
 /** Avisos ativos, do mais urgente ao menos (RN-75). Texto curto, sem acento (fonte de pixels). */
 export function activeAlerts(st: DayState): string[] {
@@ -34,7 +36,19 @@ export function drawAlerts(ctx: CanvasRenderingContext2D, st: DayState, ui: UiSt
   if (offer) {
     // cartão de oferta do app: tocável, sempre acima do painel (RN-75, RN-91)
     if (!drawArt(ctx, 'ui/faixa_oferta', 0, 0)) box(ctx, ALERT_BAND, '#1f5f3a');
-    textCenter(ctx, `APP: ${offer.items.length} PASTEIS - TOQUE ${Math.ceil(offer.left)}S`, ALERT_BAND.w / 2, 5, PAL.text, 2);
+    // os selos dos sabores pedidos, os mesmos do jogo (RN-195, CE-17)
+    const head = 'APP:';
+    const tail = `TOQUE ${Math.ceil(offer.left)}S`;
+    const total = textWidth(head, 2) + 6 + offer.items.length * 16 + 4 + textWidth(tail, 2);
+    let x = Math.round(ALERT_BAND.w / 2 - total / 2);
+    drawPixelText(ctx, head, x, 5, PAL.text, 2);
+    x += textWidth(head, 2) + 6;
+    for (const item of offer.items) {
+      box(ctx, { x, y: 4, w: 14, h: 14 }, PAL.paper, PAL.ink);
+      if (!drawFlavor(ctx, item, x + 1, 5)) box(ctx, { x: x + 2, y: 6, w: 10, h: 10 }, itemColor(item), PAL.ink);
+      x += 16;
+    }
+    drawPixelText(ctx, tail, x + 4, 5, PAL.text, 2);
     return;
   }
   const list = activeAlerts(st);
@@ -45,10 +59,12 @@ export function drawAlerts(ctx: CanvasRenderingContext2D, st: DayState, ui: UiSt
 }
 
 /** Contorno dourado pulsante na estação do passo do tutorial (RN-170). */
-export function drawHighlight(ctx: CanvasRenderingContext2D, layout: Layout, station: StationId | null, ui: UiState): void {
+export function drawHighlight(ctx: CanvasRenderingContext2D, layout: Layout, station: StationId | null, ui: UiState, st?: DayState, ticket: number | null = null): void {
   const z = station ? layout.byId.get(station) : undefined;
   if (!z) return;
   ctx.strokeStyle = Math.floor(ui.clock * 3) % 2 === 0 ? PAL.gold : PAL.paper;
   ctx.lineWidth = 2;
   ctx.strokeRect(z.x + 1, z.y + 1, z.w - 2, z.h - 2);
+  const spot = st && ticket !== null ? railSpots(layout, st, 'balcao').spots.find((s) => s.ticket.id === ticket) : undefined;
+  if (spot) ctx.strokeRect(spot.rect.x - 3, spot.rect.y - 3, spot.rect.w + 6, spot.rect.h + 6); // a comanda do passo
 }

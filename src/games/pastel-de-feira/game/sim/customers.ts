@@ -15,6 +15,7 @@ import { FORECAST } from '../data/events';
 import { drawGroupSize, findTable, occupySeats, releaseSeats, waiterPresent } from './stations/tables';
 import { canMake, unitsMakeable } from './stock';
 import { emit, newId, now, type Customer, type DayState } from './state';
+import { cancelTicket, ticketOf } from './tickets';
 
 const EPS = 1e-9;
 const clamp01 = (x: number): number => Math.max(0, Math.min(1, x));
@@ -133,7 +134,7 @@ export function addCustomer(s: DayState, profile: Profile, items: readonly ItemI
     ceiling: ceilingFor(profile, s.config.reputation),
     patience,
     patienceMax: patience,
-    lines: items.map((item) => ({ item, delivered: null })),
+    lines: items.map((item) => ({ item, filled: null })),
     state: 'aguardando',
     arrivedAt: now(s),
     wrong: false,
@@ -151,6 +152,8 @@ export function addCustomer(s: DayState, profile: Profile, items: readonly ItemI
 export function removeCustomer(s: DayState, c: Customer): void {
   const i = s.customers.indexOf(c);
   if (i >= 0) s.customers.splice(i, 1);
+  const t = ticketOf(s, c.id);
+  if (t) cancelTicket(s, t); // saiu antes de receber tudo: a comanda é cancelada (RN-06)
   if (c.place === 'fila' || c.place === 'mesa') releaseSeats(s, c, 'livre'); // quem desiste antes de comer deixa os lugares limpos
 }
 
@@ -217,7 +220,7 @@ function spawnIndividual(s: DayState, profile: Profile): void {
   if (order.lost) return loseCustomer(s, order.lost);
   const c = addCustomer(s, profile, order.items);
   const gift = giftFor(s, order.items);
-  if (gift) c.lines.push({ item: gift, delivered: null, gift: true });
+  if (gift) c.lines.push({ item: gift, filled: null, gift: true });
   emit(s, 'cliente_chegou', c.id);
 }
 
@@ -255,7 +258,7 @@ function seatGroup(s: DayState, profiles: Profile[]): boolean {
   const c = addCustomer(s, profiles[0], lines.map((l) => l.item));
   c.lines.forEach((l, i) => (l.profile = lines[i].profile));
   const gift = giftFor(s, lines.map((l) => l.item));
-  if (gift) c.lines.push({ item: gift, delivered: null, gift: true, profile: profiles[0] });
+  if (gift) c.lines.push({ item: gift, filled: null, gift: true, profile: profiles[0] });
   const base = Math.min(...profiles.map((p) => PATIENCE[p])) * TABLE_PATIENCE_FACTOR * (s.config.profile === 'boa-praca' ? 1.15 : 1);
   c.patience = base;
   c.patienceMax = base;
@@ -329,7 +332,7 @@ export function swapDemand(s: DayState): void {
     const item = ITEMS[m.item];
     if (canMake(s, item)) continue;
     const demand: { c: Customer; line: Customer['lines'][number] }[] = [];
-    for (const c of s.customers) for (const line of c.lines) if (line.delivered === null && line.item === m.item) demand.push({ c, line });
+    for (const c of s.customers) for (const line of c.lines) if (line.filled === null && line.item === m.item) demand.push({ c, line });
     demand.sort((a, b) => a.c.arrivedAt - b.c.arrivedAt || a.c.id - b.c.id);
     const gone = new Set<Customer>();
     for (const { c, line } of demand.slice(supplyOf(s, m.item))) {

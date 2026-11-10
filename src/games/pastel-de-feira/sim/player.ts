@@ -1,9 +1,10 @@
 import { STEP } from '../game/constants';
 import { ITEMS, type ItemId } from '../game/data/recipes';
-import { unmetItems } from '../game/sim/demand';
+import { unmet } from '../game/sim/production';
 import type { DaySim } from '../game/sim/day';
 import { fryOutcome, fryWindow, isChanging, isDirty, isLocked, nextFreeBasket } from '../game/sim/stations/fryer';
 import type { DayState } from '../game/sim/state';
+import { openTickets, slotFor, ticketOf } from '../game/sim/tickets';
 import type { Command, StationId } from '../game/types';
 
 /** Jogador automático do Dia de Feira: lê o estado e manda `Command` como o toque faria. Só para testes e calibração. */
@@ -14,6 +15,8 @@ export interface PlayerStyle {
   attentive: boolean;
   /** Aceita toda oferta do app com um toque (de qualquer posição, PA-14). */
   acceptOffers?: boolean;
+  /** Sem funcionário na Expedição, o pasteleiro põe os prontos nas sacolas e caixas e atende a fila (RN-183, RN-191). */
+  attendDispatch?: boolean;
 }
 
 export const DEFAULT_STYLE: PlayerStyle = { reaction: 12, attentive: true };
@@ -55,7 +58,7 @@ export class Player {
     const hold = s.pasteleiro.hold;
     if (hold?.action === 'moenda') {
       // um copo por vez: solta para entregar e voltar a moer se ainda faltar
-      if (s.cups.length > 0 || unmetItems(s, true).length === 0 || burnIn(s) < 0.8) sim.dispatch({ type: 'holdEnd' });
+      if (s.cups.length > 0 || unmet(s, true).length === 0 || burnIn(s) < 0.8) sim.dispatch({ type: 'holdEnd' });
       return;
     }
     if (hold?.action === 'limpar') {
@@ -97,6 +100,16 @@ export class Player {
     // 3) entregar o que está pronto
     const delivery = this.findDelivery(s);
     if (delivery) return this.go(s, 'balcao', delivery);
+    // 3b) Expedição sem funcionário: sacolas e caixas, e ficar lá enquanto o da frente recebe a sua (RN-191)
+    if (this.style.attendDispatch && !s.workers.some((w) => w.position === 'expedicao')) {
+      const front = s.dispatchQueue[0];
+      const ft = front && s.tickets.find((t) => t.id === front.ticketId);
+      if (ft && ft.slots.every((l) => l.filled !== null)) return s.pasteleiro.at === 'expedicao' ? null : { type: 'tapStation', station: 'expedicao' };
+      for (const t of openTickets(s, 'expedicao')) {
+        const r = s.ready.find((x) => slotFor(s, t, x.item) >= 0);
+        if (r) return this.go(s, 'expedicao', { type: 'fill', item: { kind: 'pastel', id: r.id }, ticketId: t.id });
+      }
+    }
     // 4) cobrar as moedas
     if (s.coins.length > 0) return this.go(s, 'balcao', { type: 'tapSlot', station: 'balcao', slot: { k: 'moedas' } });
     // 5) pagar mesas
@@ -119,13 +132,13 @@ export class Player {
       }
     }
     // 7) montar o que falta
-    const missing = unmetItems(s, false);
+    const missing = unmet(s, false);
     if (missing.length > 0 && s.assembled.length < 4) {
       const cmd = this.assemble(s, missing[0]);
       if (cmd) return cmd;
     }
     // 8) caldo
-    if (unmetItems(s, true).length > 0 && s.config.stations.includes('moenda') && burnIn(s) > 6.5) {
+    if (unmet(s, true).length > 0 && s.config.stations.includes('moenda') && burnIn(s) > 6.5) {
       return s.pasteleiro.at === 'moenda'
         ? { type: 'holdStart', station: 'moenda', action: 'moenda' }
         : { type: 'tapStation', station: 'moenda' };
@@ -136,16 +149,18 @@ export class Player {
   private findDelivery(s: DayState): Command | null {
     for (const c of s.customers) {
       if (c.state !== 'anotado' || c.place !== 'fila') continue;
+      const t = ticketOf(s, c.id);
+      if (!t) continue;
       for (const line of c.lines) {
-        if (line.delivered !== null) continue;
+        if (line.filled !== null) continue;
         const wanted = ITEMS[line.item];
         if (wanted.kind === 'bebida') {
           const cup = s.cups.find((x) => x.item === line.item);
-          if (cup) return { type: 'deliver', item: { kind: 'copo', id: cup.id }, customerId: c.id };
+          if (cup) return { type: 'fill', item: { kind: 'copo', id: cup.id }, ticketId: t.id };
           continue;
         }
-        const ready = s.ready.find((r) => r.reservedFor === undefined && (r.item === line.item || (c.profile !== 'exigente' && ITEMS[r.item].base === wanted.base)));
-        if (ready) return { type: 'deliver', item: { kind: 'pastel', id: ready.id }, customerId: c.id };
+        const ready = s.ready.find((r) => (r.item === line.item || (c.profile !== 'exigente' && ITEMS[r.item].base === wanted.base)));
+        if (ready) return { type: 'fill', item: { kind: 'pastel', id: ready.id }, ticketId: t.id };
       }
     }
     return null;

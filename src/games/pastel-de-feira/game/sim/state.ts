@@ -12,8 +12,8 @@ export interface OrderLine {
   profile?: Profile;
   /** Pastel de brinde: não paga, dá encanto na entrega (RN-120, RN-122). */
   gift?: boolean;
-  /** Item entregue, quando já foi. */
-  delivered: ItemId | null;
+  /** Pronto já posto na comanda (pastel ou copo), ou null enquanto falta (RN-182). */
+  filled: Ready | Cup | null;
 }
 
 export type SeatState = 'livre' | 'ocupado' | 'sujo';
@@ -114,10 +114,8 @@ export interface Ready {
   /** Nota na saída do óleo, já com modificadores. */
   quality: number;
   readyAt: number;
-  /** Reservado para uma comanda do app ou encomenda (RN-96, RN-104). */
-  reservedFor?: number;
-  /** Na caixa de encomenda: nota congelada por 60 s, sem ocupar a estufa (RN-104). */
-  boxed?: boolean;
+  /** Na sacola do app ou na caixa da encomenda: o decaimento é reduzido até a retirada (RN-189). */
+  bagged?: boolean;
   /** Está na estufa: a nota fica congelada por 60 s (RN-27). */
   warmed?: boolean;
 }
@@ -137,13 +135,15 @@ export interface Pasteleiro {
   hold: { action: HoldAction; station: StationId; item?: ItemId } | null;
 }
 
-export type TaskKind = 'anotar' | 'cobrar' | 'pagar' | 'entregar' | 'montar' | 'colocar' | 'caldo' | 'trocar' | 'limpar' | 'varrer' | 'embalar';
+export type TaskKind = 'anotar' | 'cobrar' | 'pagar' | 'preencher' | 'montar' | 'colocar' | 'caldo' | 'trocar' | 'limpar' | 'varrer';
 
 export interface WorkerTask {
   kind: TaskKind;
   total: number;
   left: number;
   customerId?: number;
+  /** Comanda que recebe o pronto (tarefa `preencher`, RN-188). */
+  ticketId?: number;
   ref?: ItemRef;
   item?: ItemId;
   tacho?: number;
@@ -181,36 +181,44 @@ export interface AppOffer {
   left: number;
 }
 
-export interface Comanda {
+/** Tipo da comanda: define o prefixo do número, o trilho e a saída (RN-180, RN-181). */
+export type TicketKind = 'balcao' | 'mesa' | 'app' | 'encomenda';
+
+/** Trilho onde a comanda fica pendurada (RN-181). */
+export type Track = 'balcao' | 'expedicao';
+
+/**
+ * Comanda: todo pedido vira uma, no momento em que entra (RN-180). Nas comandas de cliente e de mesa,
+ * `slots` é o próprio `Customer.lines` (mesmos objetos), então a troca por esgotamento (RN-35) e o balão
+ * enxergam a mesma coisa.
+ */
+export interface Ticket {
   id: number;
-  items: ItemId[];
-  /** Pastel pronto reservado para cada item, ou null. */
-  packed: (number | null)[];
-  /** Itens que são brinde (RN-120). */
-  gifts: boolean[];
-  /** Instante do dia (s) da retirada (RN-91). */
-  pickupAt: number;
-  motoboy: number | null;
+  /** Número visível, sequencial no dia a partir de 1. */
+  num: number;
+  kind: TicketKind;
+  track: Track;
+  /** Cliente ou grupo dono (balcão e mesa); null no app e na encomenda até o dono chegar. */
+  owner: number | null;
+  /** Instante da entrada do pedido: ordena a lista de produção (RN-187). */
+  enteredAt: number;
+  slots: OrderLine[];
+  /** App e encomenda: instante em que o dono chega à fila da Expedição (RN-191, RN-193). */
+  pickupAt?: number;
+  /** Encomenda: pagamento e multa combinados no Preparo (RN-102, RN-104). */
+  pay?: number;
+  fine?: number;
 }
 
-export interface Motoboy {
+/** Quem espera na fila da Expedição: o motoboy do app ou o cliente da encomenda (RN-191). */
+export interface DispatchEntry {
   id: number;
-  comandas: number[];
-  waitLeft: number;
-}
-
-/** Encomenda em andamento no dia (RN-102, RN-104). */
-export interface BigOrder {
-  id: number;
-  item: ItemId;
-  qty: number;
-  pickupAt: number;
-  pay: number;
-  fine: number;
-  /** Pastéis prontos já na caixa da encomenda. */
-  boxed: number[];
-  state: 'pendente' | 'espera';
-  waitLeft: number;
+  ticketId: number;
+  who: 'motoboy' | 'encomenda';
+  patience: number;
+  patienceMax: number;
+  /** Segundos que faltam da entrega em andamento (1,5 s), ou null (RN-191). */
+  handoffLeft: number | null;
 }
 
 /** Estado dos eventos surpresa: no máximo 1 por dia (RN-150). */
@@ -290,11 +298,13 @@ export interface DayState {
   stock: StockLot[];
   consumables: Record<ConsumableId, number>;
   customers: Customer[];
-  /** Grupos que já receberam o pedido e estão comendo. */
-  bigOrders: BigOrder[];
+  /** Comandas abertas nos trilhos, da mais antiga para a mais nova (RN-180). */
+  tickets: Ticket[];
+  /** Próximo número visível de comanda (RN-180). */
+  nextTicketNum: number;
+  /** Fila da Expedição: motoboys e clientes de encomenda (RN-191). */
+  dispatchQueue: DispatchEntry[];
   offers: AppOffer[];
-  comandas: Comanda[];
-  motoboys: Motoboy[];
   offerLeft: number;
   acceptedToday: number;
   /** Eventos surpresa do dia (RN-150, RN-152). */
@@ -347,10 +357,10 @@ export function createState(config: DayConfig, seed: number): DayState {
     stock: config.stock.map((l) => ({ ...l })),
     consumables: { ...config.consumables },
     customers: [],
-    bigOrders: config.orders.map((o) => ({ ...o, boxed: [], state: 'pendente' as const, waitLeft: 0 })),
+    tickets: [],
+    nextTicketNum: 1,
+    dispatchQueue: [],
     offers: [],
-    comandas: [],
-    motoboys: [],
     offerLeft: 10 + rng.customers.next() * 10,
     acceptedToday: 0,
     world: { kind: null, at: 0, fired: false, used: false, powerLeft: 0, excursionLeft: 0, excursionGap: 0, log: [], pending: [] },

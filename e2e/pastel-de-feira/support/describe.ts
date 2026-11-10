@@ -33,6 +33,7 @@ export const pastelDescriber = describer((w) => {
 
   type Hook = {
     sim: { state: { tick: number; paused: boolean; pasteleiro: { at: string; to: string | null }; customers: { place: string }[]; ready: unknown[]; cups: unknown[] } };
+    tickets?: () => { label: string; track: string; slots: { filled: boolean }[] }[];
     env: { ui: { panel: string | null; selected: { kind: string; id: number } | null } };
     controls: () => { label: string }[];
   };
@@ -49,6 +50,11 @@ export const pastelDescriber = describer((w) => {
     for (const c of st.customers) places.set(c.place, (places.get(c.place) ?? 0) + 1);
     out.push(['Clientes', st.customers.length ? [...places].map(([p, n]) => `${n} ${p}`).join(', ') : 'nenhum']);
     out.push(['Prontos', `${st.ready.length} pastel(éis), ${st.cups.length} copo(s)`]);
+    const tickets = pf.tickets?.() ?? [];
+    if (tickets.length) {
+      const fmt = (track: string) => tickets.filter((t) => t.track === track).map((t) => `${t.label} ${t.slots.filter((x) => x.filled).length}/${t.slots.length}`).join(', ') || '-';
+      out.push(['Comandas', `balcão: ${fmt('balcao')} · Expedição: ${fmt('expedicao')}`]);
+    }
   }
   return out;
 });

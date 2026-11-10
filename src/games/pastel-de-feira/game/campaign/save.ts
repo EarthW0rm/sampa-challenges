@@ -11,7 +11,7 @@ import { PASTRY_PROFILES, type Campaign, type DayHistory, type InvLot, type Them
 /** Persistência da campanha (plan.md 3.3): schema versionado, type guards à mão e migrações. Sem `localStorage` direto. */
 
 export const SAVE_KEY = 'pastel-de-feira:campanha';
-export const CURRENT_VERSION = 2;
+export const CURRENT_VERSION = 3;
 const MAX_SAVE_CHARS = 400_000;
 
 /** O que o save precisa do navegador; o node usa um fake em memória. */
@@ -27,16 +27,16 @@ export type SavePhase = 'preparo' | 'dia' | 'fim';
  * `campaign` é o estado de campanha da fase: no Preparo, o atual; em `dia`, o checkpoint do início
  * do Dia de Feira (a retomada recomeça dali); em `fim`, o estado depois da falência.
  */
-export interface SaveV2 {
-  version: 2;
+export interface SaveV3 {
+  version: 3;
   phase: SavePhase;
   campaign: Campaign;
 }
 
-export type LoadWarning = 'invalido' | 'semPersistencia';
+export type LoadWarning = 'invalido' | 'semPersistencia' | 'encomendaDescartada';
 
 export interface LoadResult {
-  save: SaveV2 | null;
+  save: SaveV3 | null;
   aviso?: LoadWarning;
 }
 
@@ -48,6 +48,12 @@ export const MIGRATIONS: Record<number, Migration> = {
     const v = save as { version: number; campaign?: { staff?: { position?: unknown }[] } };
     const staff = Array.isArray(v.campaign?.staff) ? v.campaign!.staff.map((w) => (typeof w?.position === 'string' && /^colocador[1-3]$/.test(w.position) ? { ...w, position: w.position.replace('colocador', 'montagem') } : w)) : v.campaign?.staff;
     return { ...v, version: 2, campaign: v.campaign && { ...v.campaign, staff, settings: { staffFatigue: true, unlockAll: false } } };
+  },
+  // v2 → v3: encomenda passou a exigir a área de delivery (RN-102, CE-22); sem ela, a aceita é descartada sem multa
+  2: (save) => {
+    const v = save as { version: number; campaign?: { owned?: { delivery?: unknown }; orders?: unknown[] } };
+    const drop = v.campaign && v.campaign.owned?.delivery !== true && Array.isArray(v.campaign.orders) && v.campaign.orders.length > 0;
+    return { ...v, version: 3, campaign: v.campaign && (drop ? { ...v.campaign, orders: [] } : v.campaign), ...(drop ? { encomendaDescartada: true } : {}) };
   },
 };
 
@@ -82,7 +88,7 @@ function isChallenge(v: unknown): boolean {
 function isOrder(v: unknown, owned: Rec): boolean {
   return (
     isRec(v) && isStr(v.id) && isInt(v.dayId, 1) && isStr(v.item) && ITEMS[v.item] !== undefined && Array.isArray(owned.items) && (owned.items as string[]).includes(v.item) &&
-    isInt(v.qty, 10, 40) && isNum(v.hour) && v.hour >= 9 && v.hour <= 13.5 && isNum(v.pay) && v.pay > 0 && isNum(v.fine) && v.fine > 0 && !!owned.office
+    isInt(v.qty, 10, 40) && isNum(v.hour) && v.hour >= 9 && v.hour <= 13.5 && isNum(v.pay) && v.pay > 0 && isNum(v.fine) && v.fine > 0 && !!owned.office && !!owned.delivery
   );
 }
 
@@ -155,7 +161,7 @@ export function isCampaign(v: unknown): v is Campaign {
   return true;
 }
 
-export function isSave(v: unknown): v is SaveV2 {
+export function isSave(v: unknown): v is SaveV3 {
   return isRec(v) && v.version === CURRENT_VERSION && (v.phase === 'preparo' || v.phase === 'dia' || v.phase === 'fim') && isCampaign(v.campaign);
 }
 
@@ -209,7 +215,9 @@ export function load(storage: StorageLike | null, table: Record<number, Migratio
     warn('estrutura fora do schema');
     return { save: null, aviso: 'invalido' };
   }
-  return { save: migrated };
+  // aviso único da migração v2 → v3 (encomenda sem área de delivery descartada)
+  const dropped = isRec(migrated) && (migrated as Rec).encomendaDescartada === true;
+  return dropped ? { save: migrated, aviso: 'encomendaDescartada' } : { save: migrated };
 }
 
 /** Grava o save. Cota cheia: reduz o histórico pela metade e tenta mais uma vez. Devolve false se não gravou. */
@@ -217,7 +225,7 @@ export function saveCampaign(storage: StorageLike | null, campaign: Campaign, ph
   if (!storage) return false;
   const write = (c: Campaign): boolean => {
     try {
-      storage.setItem(SAVE_KEY, JSON.stringify({ version: CURRENT_VERSION, phase, campaign: c } satisfies SaveV2));
+      storage.setItem(SAVE_KEY, JSON.stringify({ version: CURRENT_VERSION, phase, campaign: c } satisfies SaveV3));
       return true;
     } catch {
       return false;

@@ -3,7 +3,7 @@ import { devConfig } from '../testConfig';
 import { addCustomer } from '../../game/sim/customers';
 import { stockQty } from '../../game/sim/stock';
 import type { Command, StationId } from '../../game/types';
-import { advance, check, checkEq, checkNear, makeSim, type Scenario } from '../harness';
+import { advance, check, checkEq, checkNear, makeSim, type Scenario, fillCmd } from '../harness';
 import type { DaySim } from '../../game/sim/day';
 
 const go = (sim: DaySim, station: StationId) => {
@@ -85,7 +85,7 @@ export const balcao: Scenario[] = [
       // fritura simulada (TF-110-07): o pastel sai no ponto e chega ao balcão
       s.ready.push({ id: 500, item: 'queijo', quality: 80, readyAt: s.tick * STEP });
       go(sim, 'balcao');
-      sim.dispatch({ type: 'deliver', item: { kind: 'pastel', id: 500 }, customerId: c.id });
+      sim.dispatch(fillCmd(sim, { kind: 'pastel', id: 500 }, c.id));
       sim.step();
       checkEq(s.customers.length, 0, 'cliente saiu');
       checkEq(s.coins.length, 1, 'moeda no balcão');
@@ -98,8 +98,8 @@ export const balcao: Scenario[] = [
     },
   },
   {
-    id: 'rn63-item-errado-uma-vez',
-    rules: 'RN-63',
+    id: 'rn63-sabor-errado-recusado-sem-custo',
+    rules: 'RN-63, RN-182',
     run(seed) {
       const sim = quiet(seed);
       const s = sim.state;
@@ -107,19 +107,18 @@ export const balcao: Scenario[] = [
       slot(sim, 'balcao', { k: 'anotar' });
       s.ready.push({ id: 1, item: 'queijo', quality: 80, readyAt: 0 });
       for (let i = 0; i < 3; i++) {
-        sim.dispatch({ type: 'deliver', item: { kind: 'pastel', id: 1 }, customerId: c.id });
+        sim.dispatch(fillCmd(sim, { kind: 'pastel', id: 1 }, c.id));
         sim.step();
       }
-      checkEq(s.ready.length, 1, 'o item volta para a bancada');
-      checkEq(s.stats.wrong, 1, 'um erro por pedido');
-      checkNear(s.rep.failures, 1, 'falha de peso 1,0 uma vez só');
-      // depois entrega certo: o pedido continua marcado como falha, sem sucesso
+      checkEq(s.ready.length, 1, 'o pastel de outro sabor continua pronto');
+      checkEq(s.stats.wrong, 0, 'sabor errado não conta como item errado');
+      checkNear(s.rep.failures, 0, 'sem falha');
+      check(s.events.some((e) => e.type === 'ticket_recusou'), 'a comanda recusa');
       s.ready.push({ id: 2, item: 'carne', quality: 80, readyAt: 0 });
-      sim.dispatch({ type: 'deliver', item: { kind: 'pastel', id: 2 }, customerId: c.id });
+      sim.dispatch(fillCmd(sim, { kind: 'pastel', id: 2 }, c.id));
       sim.step();
-      checkEq(s.rep.successes, 0, 'sem sucesso depois de errar');
-      checkNear(s.rep.failures, 1, 'sem falha em dobro');
-      checkEq(s.coins.length, 1, 'mas é pago');
+      checkEq(s.rep.successes, 1, 'o sabor certo completa o pedido com sucesso');
+      checkEq(s.coins.length, 1, 'e é pago');
     },
   },
   {
@@ -130,7 +129,7 @@ export const balcao: Scenario[] = [
       const s = sim.state;
       const c = addCustomer(s, 'padrao', ['carne']);
       s.ready.push({ id: 1, item: 'carne', quality: 80, readyAt: 0 });
-      sim.dispatch({ type: 'deliver', item: { kind: 'pastel', id: 1 }, customerId: c.id });
+      sim.dispatch(fillCmd(sim, { kind: 'pastel', id: 1 }, c.id));
       sim.step();
       checkEq(s.rejected, 1, 'cliente ainda não anotado: descartado');
       checkEq(s.ready.length, 1, 'item continua pronto');

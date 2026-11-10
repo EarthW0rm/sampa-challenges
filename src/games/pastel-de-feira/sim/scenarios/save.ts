@@ -185,7 +185,7 @@ export const save: Scenario[] = [
     },
   },
   {
-    id: 'migracao-v1-para-v2-colocador-vira-montagem',
+    id: 'migracao-v1-para-v3-colocador-vira-montagem',
     rules: 'plan 3.3, RN-40',
     run() {
       const c = sample();
@@ -195,8 +195,24 @@ export const save: Scenario[] = [
       ];
       const out = load(raw({ version: 1, phase: 'preparo', campaign: { ...c, staff } }));
       check(out.save !== null, 'save v1 migrou e validou');
-      checkEq(out.save!.version, 2, 'versão 2');
+      checkEq(out.save!.version, 3, 'versão atual (3)');
       checkEq(out.save!.campaign.staff.map((w) => w.position).join(','), 'montagem2,fritador1', 'Colocador 2 vira Montagem 2; o resto fica');
+    },
+  },
+  {
+    id: 'migracao-v2-para-v3-encomenda-sem-delivery',
+    rules: 'RN-102, CE-22, spec 4',
+    run() {
+      const c = sample();
+      const order = { id: '3-enc-0', dayId: 31, item: 'carne', qty: 10, hour: 10, pay: 104, fine: 52 };
+      const sem = load(raw({ version: 2, phase: 'preparo', campaign: { ...c, owned: { ...c.owned, office: true, delivery: false, extraM2: 7 }, orders: [order] } }));
+      check(sem.save !== null, 'save v2 migrou e validou');
+      checkEq(sem.save!.campaign.orders.length, 0, 'encomenda sem área de delivery descartada');
+      checkEq(sem.aviso, 'encomendaDescartada', 'com aviso único');
+      const com = load(raw({ version: 2, phase: 'preparo', campaign: { ...c, owned: { ...c.owned, office: true, delivery: true, extraM2: 7 }, orders: [order] } }));
+      check(com.save !== null, 'com delivery migrou e validou');
+      checkEq(com.save!.campaign.orders.length, 1, 'com delivery a encomenda continua');
+      checkEq(com.aviso, undefined, 'sem aviso');
     },
   },
   {

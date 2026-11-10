@@ -73,6 +73,7 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
     let tip = '';
     let guided = !!tutorial;
     let highlight: TutorialStation = null;
+    let highlightTicket: number | null = null;
 
     const pause = () => sim.dispatch({ type: 'pause' });
     const loop = (nowMs: number) => {
@@ -85,6 +86,7 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
         tip = v.text;
         guided = !v.done;
         highlight = v.station;
+        highlightTicket = v.ticket;
       }
       if (!sim.state.paused && !sim.isOver()) {
         const r = stepsFor(acc, dt, sim.state.speed);
@@ -95,7 +97,7 @@ export function DayScreen({ config, seed, onDone, onExit }: Props) {
       renderScene(ctx, sim.state, layout, env.ui, statics);
       drawPanel(ctx, sim.state, env.ui);
       drawAlerts(ctx, sim.state, env.ui);
-      drawHighlight(ctx, layout, highlight, env.ui);
+      drawHighlight(ctx, layout, highlight, env.ui, sim.state, highlightTicket);
       sound.play(sim.drainEvents());
 
       if (nowMs - hudAt > 100) {

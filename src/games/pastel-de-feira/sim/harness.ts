@@ -1,7 +1,9 @@
 import { DAY_TICKS } from '../game/constants';
 import { devConfig } from './testConfig';
 import { DaySim } from '../game/sim/day';
-import type { Command, DayConfig } from '../game/types';
+import type { Command, DayConfig, ItemRef } from '../game/types';
+import type { DayState, Worker } from '../game/sim/state';
+import { fill, ticketForCustomer, ticketOf } from '../game/sim/tickets';
 
 /** Utilitários dos cenários: assertivas com mensagem legível. Roda em node; não entra no bundle do jogo. */
 
@@ -67,4 +69,20 @@ export function hashOf(value: unknown): string {
     h = Math.imul(h, 16777619);
   }
   return (h >>> 0).toString(16);
+}
+
+/** Comando de pôr na comanda do cliente (RN-182); sem comanda, o id -1 faz o comando ser rejeitado. */
+export function fillCmd(sim: DaySim, item: ItemRef, customerId: number): Command {
+  return { type: 'fill', item, ticketId: ticketOf(sim.state, customerId)?.id ?? -1 };
+}
+
+/**
+ * Atalho dos cenários: põe o pronto direto na comanda do cliente, sem passar pela estação. Cenários que
+ * marcam o cliente como anotado à mão ganham a comanda aqui.
+ */
+export function serve(s: DayState, item: ItemRef, customerId: number, by?: Worker): boolean {
+  const c = s.customers.find((x) => x.id === customerId);
+  if (!c || c.state !== 'anotado') return false;
+  const t = ticketOf(s, customerId) ?? ticketForCustomer(s, c);
+  return fill(s, t, item, by);
 }

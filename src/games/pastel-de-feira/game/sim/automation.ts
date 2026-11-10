@@ -1,6 +1,6 @@
 import { STEP } from '../constants';
 import { ITEMS } from '../data/recipes';
-import { unmetItems } from './demand';
+import { unmet } from './production';
 import { makeCup, millSeconds } from './stations/cane';
 import { fryWindow, takeBasket } from './stations/fryer';
 import { takeCoins } from './stations/counter';
@@ -39,10 +39,10 @@ export function updateAutomation(s: DayState, dt: number): void {
       s.autoMill -= dt;
       if (s.autoMill <= EPS) {
         s.autoMill = 0;
-        const want = unmetItems(s, true).find((id) => canMake(s, ITEMS[id]));
+        const want = unmet(s, true).find((id) => canMake(s, ITEMS[id]));
         if (want) makeCup(s, want);
       }
-    } else if (unmetItems(s, true).some((id) => canMake(s, ITEMS[id]))) {
+    } else if (unmet(s, true).some((id) => canMake(s, ITEMS[id]))) {
       s.autoMill = millSeconds(s); // com o chorinho configurado (RN-160)
     }
   } else s.autoMill = 0;

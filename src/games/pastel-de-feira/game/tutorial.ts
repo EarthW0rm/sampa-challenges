@@ -2,6 +2,7 @@ import { ITEMS } from './data/recipes';
 import { STEP } from './constants';
 import { fryOutcome, fryWindow } from './sim/stations/fryer';
 import type { DayState } from './sim/state';
+import { openTickets, ticketLabel } from './sim/tickets';
 import type { StationId } from './types';
 
 /** Passos do dia 1 guiado (RN-170), na ordem do primeiro pedido. */
@@ -12,6 +13,8 @@ export interface TutorialView {
   /** Estação a destacar (a fila destaca o balcão). */
   station: StationId | null;
   text: string;
+  /** Comanda a destacar no passo de pôr na comanda (RN-170, RN-182). */
+  ticket: number | null;
   /** O relógio fica parado enquanto o jogador pode fazer o passo agora. */
   hold: boolean;
   done: boolean;
@@ -23,7 +26,7 @@ const TEXT: Record<TutorialStep, string> = {
   colocar: 'Vá ao tacho e toque num cesto vazio para colocar o pastel no óleo.',
   tirar: 'Espere o ponto (o alarme avisa) e toque no cesto para tirar o pastel.',
   caldo: 'O pedido leva caldo: vá à moenda e segure o botão para moer a cana.',
-  entregar: 'Volte ao balcão, escolha o item pronto e toque no cliente para entregar.',
+  entregar: 'Volte ao balcão, escolha o item pronto no painel e toque na comanda dele.',
   cobrar: 'Toque nas moedas do balcão para cobrar.',
 };
 
@@ -65,15 +68,20 @@ export class Tutorial {
   observe(st: DayState): TutorialView {
     for (;;) {
       const step = ORDER[this.index];
-      if (!step) return { step: null, station: null, text: '', hold: false, done: true };
+      if (!step) return { step: null, station: null, text: '', ticket: null, hold: false, done: true };
       if (!this.finished(step, st)) break;
       this.index++;
     }
     const step = ORDER[this.index];
     const waiting = step === 'anotar' ? st.customers.some((c) => c.state === 'aguardando') : true;
-    if (!waiting) return { step, station: null, text: 'Aguarde o primeiro cliente chegar.', hold: false, done: false };
+    if (!waiting) return { step, station: null, text: 'Aguarde o primeiro cliente chegar.', ticket: null, hold: false, done: false };
     const hold = step === 'tirar' ? inPonto(st) : true;
-    return { step, station: STATION[step], text: step === 'tirar' && hold ? 'No ponto! Toque no cesto para tirar o pastel.' : TEXT[step], hold, done: false };
+    const t = step === 'entregar' ? openTickets(st, 'balcao')[0] : undefined;
+    if (t) {
+      // pôr na comanda: aponta a comanda pelo número (RN-170)
+      return { step, station: STATION[step], text: `Volte ao balcão, escolha o item pronto no painel e toque na comanda ${ticketLabel(t)}.`, ticket: t.id, hold, done: false };
+    }
+    return { step, station: STATION[step], text: step === 'tirar' && hold ? 'No ponto! Toque no cesto para tirar o pastel.' : TEXT[step], ticket: null, hold, done: false };
   }
 
   private finished(step: TutorialStep, st: DayState): boolean {

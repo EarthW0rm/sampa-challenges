@@ -32,9 +32,7 @@ export type Slot =
   | { k: 'limpar' }
   | { k: 'montado'; id: number }
   | { k: 'pagar' }
-  | { k: 'encomenda'; id: number }
-  | { k: 'cesto'; index: number }
-  | { k: 'pronto'; id: number };
+  | { k: 'cesto'; index: number };
 
 /** Item pronto que pode ser entregue a um cliente. */
 export type ItemRef = { kind: 'pastel' | 'copo'; id: number };
@@ -48,7 +46,7 @@ export type Command =
   | { type: 'tapSlot'; station: StationId; slot: Slot; g?: number }
   | { type: 'holdStart'; station: StationId; action: HoldAction; item?: ItemId; g?: number }
   | { type: 'holdEnd'; g?: number }
-  | { type: 'deliver'; item: ItemRef; customerId: number; g?: number }
+  | { type: 'fill'; ticketId: number; item: ItemRef; g?: number }
   | { type: 'sendRest'; staffId: number; g?: number }
   | { type: 'acceptOffer'; offerId: number; g?: number }
   | { type: 'pause' }
@@ -212,6 +210,11 @@ export type SimEventType =
   | 'cobrou'
   | 'paciencia_esgotou'
   | 'troca_sabor'
+  | 'ticket_criada'
+  | 'ticket_preenchida'
+  | 'ticket_recusou'
+  | 'ticket_entregue'
+  | 'ticket_cancelada'
   | 'corte_seco';
 
 export interface SimEvent {

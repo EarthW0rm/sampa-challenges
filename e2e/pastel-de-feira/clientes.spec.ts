@@ -111,11 +111,11 @@ test.describe('Clientes, fila e paciência', () => {
     await deliver(game, { kind: 'pastel', id: p.id }, 2);
     const c = await game.hook((pf, id) => {
       const x = pf.sim.state.customers.find((k) => k.id === id);
-      return x ? { wrong: x.wrong, delivered: x.lines.some((l) => l.delivered !== null) } : { wrong: false, delivered: true };
+      return x ? { wrong: x.wrong, delivered: x.lines.some((l) => l.filled !== null) } : { wrong: false, delivered: true };
     }, target);
     expect(c.wrong || c.delivered, 'o cliente da 3ª posição recebeu (ou recusou) o pastel').toBe(true);
     // e ninguém mais recebeu nada
-    const others = await game.hook((pf, id) => pf.sim.state.customers.filter((k) => k.id !== id).some((k) => k.wrong || k.lines.some((l) => l.delivered !== null)), target);
+    const others = await game.hook((pf, id) => pf.sim.state.customers.filter((k) => k.id !== id).some((k) => k.wrong || k.lines.some((l) => l.filled !== null)), target);
     expect(others).toBe(false);
   });
 });

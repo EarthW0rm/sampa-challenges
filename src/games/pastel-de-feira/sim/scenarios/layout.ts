@@ -11,6 +11,20 @@ const FREQUENT = new Set<string>(['fila', 'balcao', 'bancada', 'tacho1', 'tacho2
 
 export const layout: Scenario[] = [
   {
+    id: 'rn196-faixa-inferior-mesas-expedicao-escritorio-descanso',
+    rules: 'RN-196, RN-74',
+    run() {
+      const all: StationId[] = ['balcao', 'bancada', 'tacho1', 'tacho2', 'tacho3', 'moenda', 'mesas', 'expedicao', 'escritorio', 'descanso'];
+      const l = buildLayout(all, { coolers: 2 });
+      const w = (id: StationId) => l.byId.get(id)!.w;
+      checkEq(`${w('mesas')},${w('expedicao')},${w('escritorio')},${w('descanso')}`, '200,200,100,100', 'larguras da faixa inferior');
+      const low = ['mesas', 'expedicao', 'escritorio', 'descanso'].map((id) => l.byId.get(id as StationId)!);
+      checkEq(low.map((z) => z.x).join(','), '8,214,420,526', 'nessa ordem, com 6 entre as zonas');
+      check(low.every((z) => z.x + z.w <= 640), 'cabem na largura');
+      for (let i = 0; i < l.zones.length; i++) for (let j = i + 1; j < l.zones.length; j++) check(!overlap(l.zones[i], l.zones[j]), `${l.zones[i].id} sobrepõe ${l.zones[j].id}`);
+    },
+  },
+  {
     id: 'rn74-zonas-sem-sobreposicao',
     rules: 'RN-74, RN-75',
     run() {

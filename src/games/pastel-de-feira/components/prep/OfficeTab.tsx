@@ -47,7 +47,8 @@ export function OfficeTab({ campaign: c, onChange }: Props) {
 
       <h3 className="group">Encomendas de hoje</h3>
       <ul className="list">
-        {offers.length === 0 && <li className="hint">Nenhuma oferta hoje.</li>}
+        {!c.owned.delivery && <li className="hint">Encomendas exigem também a área de delivery: é a Expedição que monta a caixa e atende o cliente.</li>}
+        {c.owned.delivery && offers.length === 0 && <li className="hint">Nenhuma oferta hoje.</li>}
         {offers.map((o) => {
           const short = orderShortfall(c, o);
           return (

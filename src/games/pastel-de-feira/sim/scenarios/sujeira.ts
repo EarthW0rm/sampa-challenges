@@ -1,7 +1,7 @@
+import { noteOrder } from '../../game/sim/stations/counter';
 import { PATIENCE, STEP } from '../../game/constants';
 import { addCustomer, spawnCustomer } from '../../game/sim/customers';
-import { deliverItem } from '../../game/sim/stations/counter';
-import { advance, check, checkEq, checkNear, type Scenario } from '../harness';
+import { advance, check, checkEq, checkNear, type Scenario, serve } from '../harness';
 import { tableSim } from './mesas';
 import { member } from './posicoes';
 
@@ -17,9 +17,9 @@ export const sujeira: Scenario[] = [
       checkEq(s.dirt, 0, 'começa limpa');
       // +1 por pedido entregue
       const c = addCustomer(s, 'padrao', ['carne']);
-      c.state = 'anotado';
+      noteOrder(s, c);
       s.ready.push({ id: 1, item: 'carne', quality: 80, readyAt: 0 });
-      deliverItem(s, { kind: 'pastel', id: 1 }, c.id);
+      serve(s, { kind: 'pastel', id: 1 }, c.id);
       checkEq(s.dirt, 1, '+1 por pedido entregue');
       // +3 por pastel queimado e +5 por troca de óleo
       s.assembled.push({ id: 5, item: 'carne' });
@@ -45,8 +45,8 @@ export const sujeira: Scenario[] = [
       suja.state.dirt = 60;
       const a = addCustomer(limpa.state, 'padrao', ['carne']);
       const b = addCustomer(suja.state, 'padrao', ['carne']);
-      a.state = 'anotado'; // a paciência só conta depois de anotar (RN-06)
-      b.state = 'anotado';
+      noteOrder(limpa.state, a); // a paciência só conta depois de anotar (RN-06)
+      noteOrder(suja.state, b);
       advance(limpa, secs(10));
       advance(suja, secs(10));
       checkNear(a.patience, PATIENCE.padrao - 10, 'barraca limpa: 10 s gastam 10 s', 0.05);
@@ -67,18 +67,18 @@ export const sujeira: Scenario[] = [
       s.dirt = 80;
       s.customers.length = 0;
       const c = addCustomer(s, 'padrao', ['carne']);
-      c.state = 'anotado';
+      noteOrder(s, c);
       s.ready.push({ id: 1, item: 'carne', quality: 90, readyAt: s.tick * STEP });
       const before = s.rep.failures;
-      deliverItem(s, { kind: 'pastel', id: 1 }, c.id);
+      serve(s, { kind: 'pastel', id: 1 }, c.id);
       checkNear(s.rep.failures - before, 0.25, '+0,25 de falha');
       checkEq(s.rep.successes, 1, 'o pedido segue contando como sucesso');
       s.dirt = 79;
       const d = addCustomer(s, 'padrao', ['carne']);
-      d.state = 'anotado';
+      noteOrder(s, d);
       s.ready.push({ id: 2, item: 'carne', quality: 90, readyAt: s.tick * STEP });
       const b2 = s.rep.failures;
-      deliverItem(s, { kind: 'pastel', id: 2 }, d.id);
+      serve(s, { kind: 'pastel', id: 2 }, d.id);
       checkNear(s.rep.failures - b2, 0, 'abaixo de 80 não pesa');
     },
   },
@@ -89,9 +89,9 @@ export const sujeira: Scenario[] = [
       const s = sim.state;
       s.dirt = 99;
       const c = addCustomer(s, 'padrao', ['carne']);
-      c.state = 'anotado';
+      noteOrder(s, c);
       s.ready.push({ id: 1, item: 'carne', quality: 90, readyAt: 0 });
-      deliverItem(s, { kind: 'pastel', id: 1 }, c.id);
+      serve(s, { kind: 'pastel', id: 1 }, c.id);
       checkEq(s.dirt, 100, 'limitada a 100');
     },
   },
@@ -163,8 +163,7 @@ export const sujeira: Scenario[] = [
       const sim = tableSim(seed, 0, { staff: [member('geral', { mode: 'fixo', position: 'balcao' }, [], ['higiene'])] });
       const s = sim.state;
       sim.step();
-      const c = addCustomer(s, 'padrao', ['carne']);
-      c.state = 'anotado';
+      noteOrder(s, addCustomer(s, 'padrao', ['carne']));
       s.ready.push({ id: 1, item: 'carne', quality: 90, readyAt: s.tick * STEP });
       advance(sim, secs(3));
       checkNear(s.dirt, 0.7, 'a entrega do funcionário com Higiene gera 30% menos sujeira', 0.01);

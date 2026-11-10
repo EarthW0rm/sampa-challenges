@@ -129,6 +129,19 @@ export function drawCliente(ctx: CanvasRenderingContext2D, a: Aparencia, pose: P
   dog(ctx, x, y, o.fallbackFur ?? furOf(0), { flip: o.flip, ribbon: o.ribbon });
 }
 
+/** Motoboy do app com sprite próprio (RN-194); sem o sprite, o cachorro com capacete vermelho e baú. */
+export function drawMotoboy(ctx: CanvasRenderingContext2D, a: Aparencia, pose: Pose, x: number, y: number, flip = false): void {
+  const img = getAssets()?.motoboy(a.cor, pose);
+  if (img) {
+    blitFeet(ctx, img, x, y, flip);
+    return;
+  }
+  drawCliente(ctx, a, pose, x, y, { flip });
+  const top = Math.round(y) - 36;
+  box(ctx, { x: Math.round(x) - 8, y: top - 1, w: 16, h: 9 }, PAL.red, PAL.ink); // capacete
+  box(ctx, { x: Math.round(x) + (flip ? -16 : 6), y: top + 13, w: 10, h: 12 }, PAL.red, PAL.ink); // baú
+}
+
 export function drawEquipe(ctx: CanvasRenderingContext2D, kind: Equipe, cor: string, pose: Pose, x: number, y: number, o: { flip?: boolean; bob?: number } = {}): void {
   const img = getAssets()?.equipe(kind, cor, pose);
   if (img) {

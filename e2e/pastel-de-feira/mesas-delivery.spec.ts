@@ -1,7 +1,7 @@
 import { APP_PICKUP_DELAY, APP_MOTO_WAIT, EAT_SECONDS, HOLD_CLEAN_TABLE } from '../../src/games/pastel-de-feira/game/constants';
 import type { Campaign } from '../../src/games/pastel-de-feira/game/campaign/types';
 import { expect, test } from './support/game';
-import { assemble, collect, fry, serveCustomer } from './support/flow';
+import { assemble, fry, pack, serveCustomer } from './support/flow';
 
 const withTables = (c: Campaign): Campaign => ({ ...c, cash: 2000, owned: { ...c.owned, tables: 2, extraM2: 4 } });
 const withDelivery = (c: Campaign): Campaign => ({
@@ -49,7 +49,7 @@ test.describe('Delivery', () => {
     await game.advanceUntil((pf) => pf.sim.state.offers.length > 0, 60, undefined, 30);
     await game.tapAt(320, 10);
     await game.frames(1);
-    const r = await game.hook((pf) => ({ comandas: pf.sim.state.comandas.length, emb: pf.sim.state.consumables.embalagem, offers: pf.sim.state.offers.length }));
+    const r = await game.hook((pf) => ({ comandas: pf.tickets().filter((t) => t.kind === 'app').length, emb: pf.sim.state.consumables.embalagem, offers: pf.sim.state.offers.length }));
     expect(r).toEqual({ comandas: 1, emb: 9, offers: 0 });
   });
 
@@ -63,7 +63,7 @@ test.describe('Delivery', () => {
     expect(r.f).toBe(0);
   });
 
-  test('RN-92/RN-94: comanda não pronta quando o motoboy sai é cancelada (falha 3,0)', async ({ game }) => {
+  test('RN-92/RN-94/RN-192: sacola não completa quando a paciência do motoboy acaba é cancelada (falha 3,0)', async ({ game }) => {
     await game.startDay({ campaign: { patch: withDelivery } });
     await game.advanceUntil((pf) => pf.sim.state.offers.length > 0, 60, undefined, 30);
     await game.tapAt(320, 10);
@@ -75,30 +75,22 @@ test.describe('Delivery', () => {
     expect(r.f - f0).toBeGreaterThanOrEqual(3);
   });
 
-  test('RN-93/RN-96: comanda completa é retirada pelo motoboy e paga com 20% de taxa', async ({ game }) => {
+  test('RN-93/RN-191: sacola completa é entregue ao motoboy na Expedição e paga com 20% de taxa', async ({ game }) => {
     test.setTimeout(240_000);
     await game.startDay({ campaign: { patch: withDelivery } });
     await game.advanceUntil((pf) => pf.sim.state.offers.length > 0, 60, undefined, 30);
     await game.tapAt(320, 10);
     await game.frames(1);
-    const items = await game.hook((pf) => pf.sim.state.comandas[0].items);
-    for (const item of items) {
+    const t = await game.hook((pf) => pf.tickets().find((x) => x.kind === 'app')!);
+    for (const item of t.slots.map((x) => x.item)) {
       await assemble(game, item);
       const p = await fry(game, 6.5);
-      await game.goTo('expedicao');
-      const ctl = await game.hook((pf, id) => {
-        const list = pf.controls();
-        const ready = pf.sim.state.ready.filter((x) => x.reservedFor === undefined).slice(0, 6);
-        return list[2 + ready.findIndex((r) => r.id === id)];
-      }, p.id);
-      await game.tapAt(ctl.x + ctl.w / 2, ctl.y + ctl.h / 2);
-      await game.frames(1);
+      await pack(game, p.id, t.label);
     }
-    expect(await game.hook((pf) => pf.sim.state.comandas[0].packed.every((x) => x !== null))).toBe(true);
-    await game.advanceUntil((pf) => pf.sim.state.stats.appPicked > 0, APP_PICKUP_DELAY + APP_MOTO_WAIT, undefined, 30);
+    expect(await game.hook((pf, id) => pf.tickets().find((x) => x.id === id)!.slots.every((x) => x.filled), t.id)).toBe(true);
+    await game.atenderExpedicao(APP_PICKUP_DELAY + APP_MOTO_WAIT);
     const r = await game.hook((pf) => ({ app: pf.sim.state.stats.appRevenue, cancelled: pf.sim.state.stats.appCancelled }));
     expect(r.cancelled).toBe(0);
     expect(r.app).toBeGreaterThan(0);
-    void collect;
   });
 });

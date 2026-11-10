@@ -3,7 +3,7 @@ import { devConfig } from '../testConfig';
 import { addCustomer } from '../../game/sim/customers';
 import { stockQty } from '../../game/sim/stock';
 import type { DaySim } from '../../game/sim/day';
-import { advance, check, checkEq, checkNear, makeSim, type Scenario } from '../harness';
+import { advance, check, checkEq, checkNear, makeSim, type Scenario, fillCmd } from '../harness';
 
 const secs = (n: number): number => Math.round(n / STEP);
 
@@ -78,7 +78,7 @@ export const moenda: Scenario[] = [
       advance(sim, secs(2));
       sim.dispatch({ type: 'tapSlot', station: 'balcao', slot: { k: 'anotar' } });
       sim.step();
-      sim.dispatch({ type: 'deliver', item: { kind: 'copo', id: 1 }, customerId: c.id });
+      sim.dispatch(fillCmd(sim, { kind: 'copo', id: 1 }, c.id));
       sim.step();
       checkEq(s.coins.length, 1, 'pago');
       checkNear(s.coins[0].amount, 6 * 1.1, 'preço × prêmio de reputação (4 estrelas), sem fator de qualidade');

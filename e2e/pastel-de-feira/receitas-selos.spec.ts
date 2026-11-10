@@ -71,7 +71,7 @@ test.describe('Receitas e selos de sabor', () => {
     expect(ctl.find((c) => c.flavor === pastel), `pastel ${pastel} pronto no balcão`).toMatchObject({ icon: 'itens/pastel_salgado_ponto' });
     await deliver(game, { kind: 'pastel', id: p.id });
     // linha entregue: o cliente continua na fila com o pedido marcado
-    const delivered = await game.hook((pf, item) => pf.sim.state.customers.some((c) => c.lines.some((l) => l.item === item && l.delivered !== null)) || pf.sim.state.stats.served > 0, pastel);
+    const delivered = await game.hook((pf, item) => pf.sim.state.customers.some((c) => c.lines.some((l) => l.item === item && l.filled !== null)) || pf.sim.state.stats.served > 0, pastel);
     expect(delivered).toBe(true);
   });
 

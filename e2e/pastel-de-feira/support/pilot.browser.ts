@@ -145,8 +145,9 @@ function plan(cmd: Command): Step[] {
           return { kind: 'up', why: 'soltar' };
         },
       ];
-    case 'deliver': {
+    case 'fill': {
       const ref = cmd.item;
+      const owner = (): number | null => hook().sim.state.tickets.find((t) => t.id === cmd.ticketId)?.owner ?? null;
       return [
         ...openPanel('balcao'),
         () => {
@@ -154,16 +155,19 @@ function plan(cmd: Command): Step[] {
           const list = pf.controls();
           const base = list.findIndex((c) => c.label === 'VASSOURA') + 1;
           const st = pf.sim.state;
-          const ready = st.ready.filter((x) => x.reservedFor === undefined).slice(0, 7);
+          const ready = st.ready.slice(0, 7);
           const i = ref.kind === 'pastel' ? ready.findIndex((x) => x.id === ref.id) : st.cups.slice(0, 5).findIndex((x) => x.id === ref.id);
           if (i < 0) return miss(`item ${ref.kind} ${ref.id} fora do painel`);
           const ctl = list[base + (ref.kind === 'pastel' ? i : ready.length + i)];
           return { kind: 'tap', ...center(ctl), why: `escolher ${ref.kind} ${ref.id}` };
         },
         () => {
-          const q = hook().queue().find((c) => c.id === cmd.customerId);
-          if (!q) return miss(`cliente ${cmd.customerId} fora da fila`);
-          return { kind: 'tap', x: q.x, y: q.y - 20, why: `entregar ao cliente ${cmd.customerId}` };
+          const t = hook().tickets().find((x) => x.id === cmd.ticketId);
+          if (t?.rect) return { kind: 'tap', x: t.rect.x + t.rect.w / 2, y: t.rect.y + t.rect.h / 2, why: `pôr na comanda ${t.label}` };
+          const id = owner(); // comanda no "+N": o atalho de tocar no dono (RN-185)
+          const q = hook().queue().find((c) => c.id === id);
+          if (!q) return miss(`dono da comanda ${cmd.ticketId} fora da fila`);
+          return { kind: 'tap', x: q.x, y: q.y - 20, why: `pôr na comanda do cliente ${id}` };
         },
       ];
     }
