@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/EarthW0rm/sampa-challenges/compare/v1.4.0...v1.5.0) (2026-11-10)
+
+
+### Features
+
+* **pastel-de-feira:** comandas no balcão e Expedição com balcão próprio (US-135 a US-137) ([#20](https://github.com/EarthW0rm/sampa-challenges/issues/20)) ([71e40fa](https://github.com/EarthW0rm/sampa-challenges/commit/71e40fab611175008e6e9eacc0041a1c3d6699c4))
+
 ## [1.4.0](https://github.com/EarthW0rm/sampa-challenges/compare/v1.3.1...v1.4.0) (2026-10-25)
 
 
